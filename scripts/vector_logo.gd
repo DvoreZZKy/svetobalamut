@@ -1,5 +1,5 @@
 extends Control
-## Геометрический неоновый логотип: рубленые штрихи, фаски и многослойное свечение.
+## Неоновый логотип из плавных световых трубок с мягкими изгибами и живым свечением.
 
 const GLYPHS := {
 	"С": [[[0.92,0.08],[0.20,0.08],[0.04,0.24],[0.04,0.76],[0.20,0.92],[0.92,0.92]]],
@@ -22,26 +22,40 @@ func _process(dt: float) -> void:
 	queue_redraw()
 
 
-func _draw_segment(a: Vector2, b: Vector2, width: float, color: Color) -> void:
-	var delta := b - a
-	if delta.length_squared() < 0.001:
+func _smooth_points(points: PackedVector2Array, steps: int = 5) -> PackedVector2Array:
+	if points.size() < 3:
+		return points
+	var result := PackedVector2Array()
+	for i in range(points.size() - 1):
+		var p0: Vector2 = points[maxi(i - 1, 0)]
+		var p1: Vector2 = points[i]
+		var p2: Vector2 = points[i + 1]
+		var p3: Vector2 = points[mini(i + 2, points.size() - 1)]
+		for j in range(steps):
+			var t := float(j) / float(steps)
+			var t2 := t * t
+			var t3 := t2 * t
+			var point := 0.5 * ((2.0 * p1) + (-p0 + p2) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3)
+			result.append(point)
+	result.append(points[-1])
+	return result
+
+
+func _draw_tube(points: PackedVector2Array, width: float, color: Color) -> void:
+	if points.size() < 2:
 		return
-	var dir := delta.normalized()
-	var normal := Vector2(-dir.y, dir.x) * width * 0.5
-	var bevel := minf(width * 0.48, delta.length() * 0.14)
-	var points := PackedVector2Array([
-		a + dir * bevel + normal, b - dir * bevel + normal,
-		b - dir * bevel * 0.35, b - dir * bevel - normal,
-		a + dir * bevel - normal, a + dir * bevel * 0.35
-	])
-	draw_colored_polygon(points, color)
+	draw_polyline(points, color, width, true)
+	var cap_radius := width * 0.5
+	draw_circle(points[0], cap_radius, color, true)
+	draw_circle(points[-1], cap_radius, color, true)
 
 
 func _draw_path(points: Array, origin: Vector2, glyph_size: Vector2, width: float, color: Color) -> void:
-	for i in range(points.size() - 1):
-		var a := origin + Vector2(points[i][0] * glyph_size.x, points[i][1] * glyph_size.y)
-		var b := origin + Vector2(points[i + 1][0] * glyph_size.x, points[i + 1][1] * glyph_size.y)
-		_draw_segment(a, b, width, color)
+	var raw := PackedVector2Array()
+	for point in points:
+		raw.append(origin + Vector2(point[0] * glyph_size.x, point[1] * glyph_size.y))
+	var smooth := _smooth_points(raw, 6)
+	_draw_tube(smooth, width, color)
 
 
 func _draw() -> void:
@@ -61,13 +75,13 @@ func _draw() -> void:
 		var paths: Array = GLYPHS.get(letter, [])
 		var origin := start + Vector2(i * (w + spacing), 0)
 		for path in paths:
-			_draw_path(path, origin + Vector2(0, 1.2), Vector2(w, h), 12.0 * scale_factor, Color("#8b4dff", 0.11 * pulse))
+			_draw_path(path, origin + Vector2(0, 1.0), Vector2(w, h), 18.0 * scale_factor, Color("#963cff", 0.10 * pulse))
 		for path in paths:
-			_draw_path(path, origin, Vector2(w, h), 9.0 * scale_factor, Color("#22dfff", 0.25 * pulse))
+			_draw_path(path, origin, Vector2(w, h), 13.0 * scale_factor, Color("#12cfff", 0.16 * pulse))
 		for path in paths:
-			_draw_path(path, origin, Vector2(w, h), 5.0 * scale_factor, Color("#e6fbff"))
+			_draw_path(path, origin, Vector2(w, h), 7.0 * scale_factor, Color("#43eaff", 0.9))
 		for path in paths:
-			_draw_path(path, origin, Vector2(w, h), 1.35 * scale_factor, Color("#7ceeff"))
+			_draw_path(path, origin, Vector2(w, h), 2.5 * scale_factor, Color("#eaffff"))
 	var y := start.y + h + 9.0 * scale_factor
 	var left := start.x + 8.0 * scale_factor
 	var right := start.x + word_width - 8.0 * scale_factor
