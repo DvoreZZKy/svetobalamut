@@ -543,6 +543,9 @@ func _layout_pause_menu() -> void:
 func _toggle_pause() -> void:
 	pause_open = not pause_open
 	pause_layer.visible = pause_open
+	if is_instance_valid(cursor_canvas):
+		cursor_canvas.visible = not pause_open
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if pause_open else Input.MOUSE_MODE_HIDDEN
 	if pause_open:
 		pause_title.text = "ПАУЗА" if (not Net.online or G.tutorial_active) else "МЕНЮ МАТЧА"
 		pause_menu_btn.text = "ВЫЙТИ ИЗ МАТЧА"
@@ -658,9 +661,10 @@ func _update_views(dt: float) -> void:
 		actor.scale = Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
 		halo.scale = Vector2.ONE * (0.55 + 0.75 * lf)
 		if shadow:
-			actor.modulate = Color(0.65, 0.45, 0.95, 0.9)
-			halo.modulate = Color(0.5, 0.15, 1.2, 0.5)
-			actor.scale = Vector2.ONE * 0.5
+			var ghost_alpha := 0.66 + 0.10 * sin(t * 3.6 + float(id))
+			actor.modulate = Color(0.20, 0.11, 0.38, ghost_alpha)
+			halo.modulate = Color(0.48, 0.12, 1.35, 0.42 + 0.10 * sin(t * 2.8 + float(id)))
+			actor.scale = Vector2.ONE * 0.62 * (1.0 + 0.025 * sin(t * 4.0 + float(id)))
 		else:
 			var c := G.hdr(col, 0.78 + 0.42 * lf)
 			if pd.h > 0.0:
@@ -697,7 +701,7 @@ func _update_views(dt: float) -> void:
 			line.remove_point(0)
 		var sm: ShaderMaterial = pv.mat
 		sm.set_shader_parameter("tint", Color(0.6, 0.2, 1.0) if shadow else col)
-		sm.set_shader_parameter("hdr", 5.0 if pd.dt else 2.2 + 1.6 * lf)
+		sm.set_shader_parameter("hdr", 1.7 if shadow else (5.0 if pd.dt else 2.2 + 1.6 * lf))
 	for id in pviews.keys():
 		if not seen.has(id):
 			pviews[id].root.queue_free()
