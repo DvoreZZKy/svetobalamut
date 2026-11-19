@@ -41,6 +41,7 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	_build_particles()
+	_apply_menu_quality()
 	title = VectorLogo.new()
 	title.position = Vector2(0, 14)
 	title.size = Vector2(1280, 112)
@@ -110,6 +111,25 @@ func _ready() -> void:
 	st.add_child(name_edit)
 	_slider(st, "Музыка", G.vol_music, func(v: float): G.vol_music = v; Sfx.refresh_volume())
 	_slider(st, "Звуки", G.vol_sfx, func(v: float): G.vol_sfx = v; Sfx.play("shot"))
+	var quality_row := HBoxContainer.new()
+	var quality_label := Label.new()
+	quality_label.text = "Графика"
+	quality_label.custom_minimum_size = Vector2(110, 0)
+	quality_label.add_theme_font_size_override("font_size", 20)
+	quality_row.add_child(quality_label)
+	var quality_select := OptionButton.new()
+	quality_select.custom_minimum_size = Vector2(260, 42)
+	quality_select.add_theme_font_size_override("font_size", 18)
+	for preset in G.GRAPHICS_PRESETS:
+		quality_select.add_item(preset)
+	quality_select.select(G.graphics_quality)
+	quality_select.item_selected.connect(func(index: int):
+		G.graphics_quality = index
+		G.apply_graphics()
+		_apply_menu_quality()
+		G.save_settings())
+	quality_row.add_child(quality_select)
+	st.add_child(quality_row)
 	var sh := CheckBox.new()
 	sh.text = "Эффекты камеры"
 	sh.button_pressed = G.shake_on
@@ -224,20 +244,23 @@ func _on_match_started() -> void:
 func _process(dt: float) -> void:
 	t += dt
 	_update_lobby_frames()
-	for i in bg_shards.size():
+	var shard_count := [bg_shards.size(), 18, 8, 0][G.graphics_quality]
+	for i in shard_count:
 		var shard := bg_shards[i]
 		shard.rotation += dt * (0.16 if i % 2 == 0 else -0.12)
 		shard.position.y += sin(t * 0.75 + float(i)) * dt * 5.0
 		if shard.position.y > 740.0:
 			shard.position.y = -30.0
 		shard.position.x += sin(t * 0.42 + float(i) * 0.7) * dt * 7.0
-	for i in bg_orbs.size():
+	var orb_count := [bg_orbs.size(), 5, 2, 0][G.graphics_quality]
+	for i in orb_count:
 		var orb := bg_orbs[i]
 		orb.rotation += dt * (0.035 if i % 2 == 0 else -0.028)
 		var wave := 1.0 + 0.10 * sin(t * 0.8 + float(i) * 1.7)
 		orb.scale = Vector2.ONE * wave
 		orb.position.y += sin(t * 0.25 + float(i)) * dt * 3.0
-	for i in bg_dots.size():
+	var dot_count := [bg_dots.size(), 24, 8, 0][G.graphics_quality]
+	for i in dot_count:
 		var dot := bg_dots[i]
 		dot.position += bg_dot_velocities[i] * dt
 		dot.rotation += dt * (0.8 if i % 2 == 0 else -0.65)
@@ -573,3 +596,15 @@ func _on_lobby_changed() -> void:
 	else:
 		lobby_info.text = "ОЖИДАНИЕ ХОСТА • ПОДКЛЮЧЕНИЕ ПО IP:ПОРТ"
 		start_btn.visible = false
+
+
+func _apply_menu_quality() -> void:
+	var shard_count := [bg_shards.size(), 18, 8, 0][G.graphics_quality]
+	var orb_count := [bg_orbs.size(), 5, 2, 0][G.graphics_quality]
+	var dot_count := [bg_dots.size(), 24, 8, 0][G.graphics_quality]
+	for i in bg_shards.size():
+		bg_shards[i].visible = i < shard_count
+	for i in bg_orbs.size():
+		bg_orbs[i].visible = i < orb_count
+	for i in bg_dots.size():
+		bg_dots[i].visible = i < dot_count
