@@ -729,7 +729,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 		line.visible = false
 	trail_layer.add_child(line)
 	return {"root": root, "halo": halo, "actor": actor, "lbl": lbl, "line": line, "mat": sm,
-		"local_ring": local_ring, "ability_ring": ability_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
+		"local_ring": local_ring, "ability_ring": ability_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle() + PI * 0.5,
 		"kick": 0.0, "kind": pd.k, "ci": pd.c}
 
 
@@ -793,7 +793,10 @@ func _update_views(dt: float) -> void:
 			ability_ring.scale = Vector2.ONE * (1.0 + 0.08 * sin(t * 12.0))
 		line.visible = vis and not _is_potato()
 		root.position = pv.pos
-		pv.rot = lerp_angle(pv.rot, (pd.a as Vector2).angle(), minf(1.0, 30.0 * dt))
+		# The character artwork's forward side (and hat) points upward in local space.
+		# Rotate that top edge toward the aim vector instead of aligning its X axis.
+		var aim_rotation := (pd.a as Vector2).angle() + PI * 0.5
+		pv.rot = lerp_angle(pv.rot, aim_rotation, minf(1.0, 30.0 * dt))
 		actor.rotation = pv.rot
 		pv.kick = maxf(0.0, pv.kick - dt * 7.0)
 		var pulse := 1.0 + 0.07 * sin(t * 11.0 + id)
