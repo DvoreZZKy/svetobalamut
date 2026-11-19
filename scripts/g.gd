@@ -20,6 +20,7 @@ var fullscreen := false
 var tutorial_done := false
 var tutorial_active := false
 var tutorial_return_to_lobby := false
+var tutorial_previous_mode := "single"
 
 var mode := "single"        # single | host | client
 var cfg: Array = []         # [{id:int, name:String, human:bool}]
@@ -99,6 +100,8 @@ func start_single() -> void:
 
 func start_tutorial_game(return_to_lobby: bool) -> void:
 	tutorial_return_to_lobby = return_to_lobby
+	if return_to_lobby:
+		tutorial_previous_mode = mode
 	tutorial_active = true
 	mode = "single"
 	cfg = [{"id": 1, "name": player_name, "human": true, "color": profile_color,
