@@ -51,6 +51,31 @@ func _next_track() -> void:
 	music.play()
 
 
+func play_tribe_music() -> void:
+	# TRIBE must never inherit the energetic chaos playlist.
+	var folder := "res://assets/music/tribe"
+	var dir := DirAccess.open(folder)
+	if dir == null:
+		music.stop()
+		return
+	var candidates: Array[String] = []
+	for file_name in dir.get_files():
+		var clean := file_name.trim_suffix(".import").trim_suffix(".remap")
+		if clean.get_extension().to_lower() in EXT and not clean.ends_with(".import"):
+			candidates.append(folder.path_join(clean))
+	if candidates.is_empty():
+		music.stop()
+		return
+	candidates.shuffle()
+	var stream = load(candidates[0])
+	if stream == null:
+		music.stop()
+		return
+	music.stream = stream
+	music.volume_db = linear_to_db(maxf(G.vol_music, 0.0001)) - 7.0
+	music.play()
+
+
 func refresh_volume() -> void:
 	music.volume_db = linear_to_db(maxf(G.vol_music, 0.0001)) - 4.0
 
