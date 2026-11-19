@@ -178,38 +178,21 @@ func _process(dt: float) -> void:
 
 
 func _build_particles() -> void:
-	var g := Gradient.new()
-	g.set_color(0, Color(1, 1, 1, 1))
-	g.set_color(1, Color(1, 1, 1, 0))
-	var tex := GradientTexture2D.new()
-	tex.gradient = g
-	tex.fill = GradientTexture2D.FILL_RADIAL
-	tex.fill_from = Vector2(0.5, 0.5)
-	tex.fill_to = Vector2(1.0, 0.5)
-	tex.width = 64
-	tex.height = 64
-	var p := CPUParticles2D.new()
-	p.position = Vector2(640, 760)
-	p.texture = tex
-	p.amount = 48
-	p.lifetime = 7.0
-	p.preprocess = 7.0
-	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	p.emission_rect_extents = Vector2(660, 10)
-	p.direction = Vector2.UP
-	p.spread = 12.0
-	p.gravity = Vector2.ZERO
-	p.initial_velocity_min = 60.0
-	p.initial_velocity_max = 220.0
-	p.scale_amount_min = 0.1
-	p.scale_amount_max = 0.45
-	p.color = Color(0.35, 0.85, 1.15, 0.62)
-	var ramp := Gradient.new()
-	ramp.set_color(0, Color(1, 1, 1, 1))
-	ramp.set_color(1, Color(1.0, 0.3, 1.0, 0))
-	p.color_ramp = ramp
-	add_child(p)
-
+	var shard_colors := [Color("#164c62"), Color("#24446b"), Color("#3b2d68"), Color("#1b6870")]
+	for i in 26:
+		var shard := Polygon2D.new()
+		var w := randf_range(5.0, 13.0)
+		var h := randf_range(8.0, 24.0)
+		shard.polygon = PackedVector2Array([
+			Vector2(0, -h), Vector2(w * 0.7, -h * 0.25),
+			Vector2(w, h * 0.45), Vector2(0, h), Vector2(-w, h * 0.35),
+			Vector2(-w * 0.55, -h * 0.35)
+		])
+		shard.position = Vector2(randf_range(20.0, 1260.0), randf_range(20.0, 700.0))
+		shard.rotation = randf_range(0.0, TAU)
+		shard.color = shard_colors[i % shard_colors.size()]
+		shard.color.a = randf_range(0.12, 0.28)
+		add_child(shard)
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
