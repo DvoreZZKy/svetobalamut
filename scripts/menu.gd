@@ -244,7 +244,7 @@ func _on_match_started() -> void:
 func _process(dt: float) -> void:
 	t += dt
 	_update_lobby_frames()
-	var shard_count := [bg_shards.size(), 18, 8, 0][G.graphics_quality]
+	var shard_count: int := [bg_shards.size(), 18, 8, 0][G.graphics_quality]
 	for i in shard_count:
 		var shard := bg_shards[i]
 		shard.rotation += dt * (0.16 if i % 2 == 0 else -0.12)
@@ -252,14 +252,14 @@ func _process(dt: float) -> void:
 		if shard.position.y > 740.0:
 			shard.position.y = -30.0
 		shard.position.x += sin(t * 0.42 + float(i) * 0.7) * dt * 7.0
-	var orb_count := [bg_orbs.size(), 5, 2, 0][G.graphics_quality]
+	var orb_count: int := [bg_orbs.size(), 5, 2, 0][G.graphics_quality]
 	for i in orb_count:
 		var orb := bg_orbs[i]
 		orb.rotation += dt * (0.035 if i % 2 == 0 else -0.028)
 		var wave := 1.0 + 0.10 * sin(t * 0.8 + float(i) * 1.7)
 		orb.scale = Vector2.ONE * wave
 		orb.position.y += sin(t * 0.25 + float(i)) * dt * 3.0
-	var dot_count := [bg_dots.size(), 24, 8, 0][G.graphics_quality]
+	var dot_count: int := [bg_dots.size(), 24, 8, 0][G.graphics_quality]
 	for i in dot_count:
 		var dot := bg_dots[i]
 		dot.position += bg_dot_velocities[i] * dt
@@ -599,9 +599,9 @@ func _on_lobby_changed() -> void:
 
 
 func _apply_menu_quality() -> void:
-	var shard_count := [bg_shards.size(), 18, 8, 0][G.graphics_quality]
-	var orb_count := [bg_orbs.size(), 5, 2, 0][G.graphics_quality]
-	var dot_count := [bg_dots.size(), 24, 8, 0][G.graphics_quality]
+	var shard_count: int := [bg_shards.size(), 18, 8, 0][G.graphics_quality]
+	var orb_count: int := [bg_orbs.size(), 5, 2, 0][G.graphics_quality]
+	var dot_count: int := [bg_dots.size(), 24, 8, 0][G.graphics_quality]
 	for i in bg_shards.size():
 		bg_shards[i].visible = i < shard_count
 	for i in bg_orbs.size():
