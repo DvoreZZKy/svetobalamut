@@ -26,8 +26,8 @@ func _poly(points: Array, color: Color, outline := true) -> void:
 		draw_colored_polygon(p, fill)
 		var closed := p.duplicate()
 		closed.append(p[0])
-		var edge := color
-		edge.a = 0.96
+		var edge := color.lightened(0.62)
+		edge.a = 0.98
 		draw_polyline(closed, edge, 2.2, true)
 	else:
 		draw_colored_polygon(p, color)
@@ -59,7 +59,7 @@ func _draw() -> void:
 		1:
 			# Capsule: a clear upright capsule shell with flat end caps and visor.
 			_poly([Vector2(-12,-22),Vector2(8,-22),Vector2(15,-15),Vector2(15,14),Vector2(8,22),Vector2(-8,22),Vector2(-15,14),Vector2(-15,-14)], dark)
-			_poly([Vector2(-9,-18),Vector2(7,-18),Vector2(11,-13),Vector2(11,12),Vector2(6,17),Vector2(-6,17),Vector2(-11,12),Vector2(-11,-12)], mid, false)
+			_poly([Vector2(-9,-18),Vector2(7,-18),Vector2(11,-13),Vector2(11,12),Vector2(6,17),Vector2(-6,17),Vector2(-11,12),Vector2(-11,-12)], mid, true)
 			_poly([Vector2(-8,-12),Vector2(7,-12),Vector2(9,-8),Vector2(9,2),Vector2(-9,2),Vector2(-9,-8)], Color("#14243d"))
 			_poly([Vector2(-6,-10),Vector2(0,-10),Vector2(-3,-3),Vector2(-8,-3)], Color("#d9fbff"), false)
 			_poly([Vector2(-8,7),Vector2(8,7),Vector2(6,14),Vector2(-6,14)], light, false)
@@ -76,10 +76,10 @@ func _draw() -> void:
 		3:
 			# Crystal: faceted diamond prism, matching the heavy artillery class.
 			_poly([Vector2(0,-25),Vector2(15,-12),Vector2(19,5),Vector2(0,24),Vector2(-19,5),Vector2(-15,-12)], dark)
-			_poly([Vector2(0,-20),Vector2(10,-10),Vector2(13,4),Vector2(0,18),Vector2(-13,4),Vector2(-10,-10)], mid, false)
-			_poly([Vector2(0,-20),Vector2(10,-10),Vector2(0,0),Vector2(-10,-10)], light, false)
-			_poly([Vector2(0,0),Vector2(13,4),Vector2(0,18),Vector2(-2,3)], tint.darkened(0.12), false)
-			_poly([Vector2(0,-20),Vector2(-10,-10),Vector2(-13,4),Vector2(-2,3)], tint.lightened(0.25), false)
+			_poly([Vector2(0,-20),Vector2(10,-10),Vector2(13,4),Vector2(0,18),Vector2(-13,4),Vector2(-10,-10)], mid, true)
+			_poly([Vector2(0,-20),Vector2(10,-10),Vector2(0,0),Vector2(-10,-10)], light, true)
+			_poly([Vector2(0,0),Vector2(13,4),Vector2(0,18),Vector2(-2,3)], tint.darkened(0.12), true)
+			_poly([Vector2(0,-20),Vector2(-10,-10),Vector2(-13,4),Vector2(-2,3)], tint.lightened(0.25), true)
 			draw_line(Vector2(-7,-10),Vector2(0,-17),Color.WHITE,1.8,true)
 	# Одежда строится по силуэту конкретного класса, а не одной юбкой для всех.
 	if outfit > 0:
