@@ -17,6 +17,8 @@ var vol_music := 0.7
 var vol_sfx := 0.9
 var shake_on := true
 var fullscreen := false
+var tutorial_done := false
+var tutorial_return_to_lobby := false
 
 var mode := "single"        # single | host | client
 var cfg: Array = []         # [{id:int, name:String, human:bool}]
@@ -87,6 +89,14 @@ func local_ips() -> Array:
 
 
 func start_single() -> void:
+	tutorial_return_to_lobby = false
+	if not tutorial_done:
+		get_tree().change_scene_to_file("res://scenes/tutorial.tscn")
+		return
+	start_single_game()
+
+
+func start_single_game() -> void:
 	mode = "single"
 	cfg = [{"id": 1, "name": player_name, "human": true, "color": profile_color,
 		"kind": profile_kind, "outfit": profile_outfit, "hat": profile_hat}]
@@ -106,6 +116,7 @@ func save_settings() -> void:
 	c.set_value("s", "sfx", vol_sfx)
 	c.set_value("s", "shake", shake_on)
 	c.set_value("s", "fullscreen", fullscreen)
+	c.set_value("s", "tutorial_done", tutorial_done)
 	c.save(SAVE_PATH)
 
 
@@ -122,6 +133,7 @@ func load_settings() -> void:
 	vol_sfx = c.get_value("s", "sfx", vol_sfx)
 	shake_on = c.get_value("s", "shake", shake_on)
 	fullscreen = c.get_value("s", "fullscreen", fullscreen)
+	tutorial_done = c.get_value("s", "tutorial_done", tutorial_done)
 	apply_display()
 
 
