@@ -400,7 +400,7 @@ func _update_views(dt: float) -> void:
 		var lf: float = pd.l / 100.0
 		var col: Color = G.col(pd.c)
 		var root: Node2D = pv.root
-		var actor: Node2D = pv.actor
+		var actor: VectorActor = pv.actor
 		var halo: Sprite2D = pv.halo
 		var local_ring: Line2D = pv.local_ring
 		actor.setup(int(pd.k), G.col(int(pd.c)), int(pd.get("outfit", 0)), int(pd.get("hat", 0)))
