@@ -73,6 +73,35 @@ func hdr(c: Color, k: float) -> Color:
 	return Color(c.r * k, c.g * k, c.b * k, c.a)
 
 
+# Shared render resources live in this autoload, so scene changes and match restarts
+# do not recreate the same halo texture/material.
+var _shared_halo_texture: GradientTexture2D
+var _shared_additive_material: CanvasItemMaterial
+
+
+func get_halo_texture() -> GradientTexture2D:
+	if _shared_halo_texture == null:
+		var gradient := Gradient.new()
+		gradient.set_color(0, Color(1, 1, 1, 1))
+		gradient.set_color(1, Color(1, 1, 1, 0))
+		gradient.add_point(0.35, Color(1, 1, 1, 0.35))
+		_shared_halo_texture = GradientTexture2D.new()
+		_shared_halo_texture.gradient = gradient
+		_shared_halo_texture.fill = GradientTexture2D.FILL_RADIAL
+		_shared_halo_texture.fill_from = Vector2(0.5, 0.5)
+		_shared_halo_texture.fill_to = Vector2(1.0, 0.5)
+		_shared_halo_texture.width = 128
+		_shared_halo_texture.height = 128
+	return _shared_halo_texture
+
+
+func get_additive_material() -> CanvasItemMaterial:
+	if _shared_additive_material == null:
+		_shared_additive_material = CanvasItemMaterial.new()
+		_shared_additive_material.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	return _shared_additive_material
+
+
 func make_env() -> WorldEnvironment:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_CANVAS
