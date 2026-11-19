@@ -120,6 +120,8 @@ func _ready() -> void:
 
 	var lobby := _box("lobby")
 	_title(lobby, "КОМНАТА")
+	_add_facet_panel(lobby, Vector2(0, 105), Vector2(535, 455), Color("#10283a"), Color("#287e91"))
+	_add_facet_panel(lobby, Vector2(565, 105), Vector2(610, 455), Color("#1b1b3b"), Color("#51458c"))
 	lobby_info = Label.new()
 	lobby_info.add_theme_font_size_override("font_size", 17)
 	lobby_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -232,6 +234,26 @@ func _refresh_profile() -> void:
 		"Тяжёлый • медленные мощные снаряды • Q: круговой залп"
 	]
 	profile_info.text = "%s\n%s\n%s • %s" % [kinds[G.profile_kind], class_notes[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
+
+
+func _add_facet_panel(parent: Node, pos: Vector2, panel_size: Vector2, fill: Color, edge: Color) -> void:
+	var shape := Polygon2D.new()
+	shape.position = pos
+	shape.z_index = -1
+	shape.polygon = PackedVector2Array([
+		Vector2(18, 0), Vector2(panel_size.x - 18, 0), Vector2(panel_size.x, 18),
+		Vector2(panel_size.x, panel_size.y - 18), Vector2(panel_size.x - 18, panel_size.y),
+		Vector2(18, panel_size.y), Vector2(0, panel_size.y - 18), Vector2(0, 18)
+	])
+	shape.color = fill
+	parent.add_child(shape)
+	var outline := Line2D.new()
+	outline.position = pos
+	outline.width = 2.0
+	outline.default_color = edge
+	outline.closed = true
+	outline.points = shape.polygon
+	parent.add_child(outline)
 
 
 func _make_vector_preview(parent: Node) -> VectorActor
