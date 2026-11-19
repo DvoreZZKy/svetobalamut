@@ -265,7 +265,7 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 	_wall_bounce(p)
 	if want_poss and p.poss_cd <= 0.0:
 		var best: Dictionary = {}
-		var bd := 95.0 * 95.0
+		var bd := 145.0 * 145.0
 		for o in players.values():
 			if o.shadow or o.derp_t > 0.0:
 				continue
@@ -595,7 +595,7 @@ func _bomb_tick(dt: float) -> void:
 
 # ---------------------------------------------------------------- боты ---
 func _bot_think(p: Dictionary, dt: float) -> void:
-	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false}
+	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false, "ability": false}
 	var b: Dictionary = p.bot
 	b.t -= dt
 	if p.shadow:
@@ -604,8 +604,8 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 			var to: Vector2 = target.pos - p.pos
 			var distance := to.length()
 			inp.mv = to.normalized()
-			inp.poss = distance < 125.0
-			if distance > 180.0 and p.dash_cd <= 0.0 and rng.randf() < 0.035:
+			inp.poss = distance < 145.0
+			if distance > 190.0 and p.dash_cd <= 0.0 and rng.randf() < 0.055:
 				inp.dash = true
 		inputs[p.id] = inp
 		return
@@ -625,6 +625,8 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 	if not tgt.is_empty():
 		var to: Vector2 = tgt.pos - p.pos
 		var d := to.length()
+		if p.ability_cd <= 0.0 and rng.randf() < dt * 0.72:
+			inp.ability = true
 		var dirv := to / maxf(d, 1.0)
 		mv += dirv.orthogonal() * b.strafe * 0.9
 		if d > b.want + 60.0:
@@ -683,9 +685,11 @@ func _check_end() -> void:
 		real.append(p)
 		if not p.shadow:
 			lit.append(p)
-	if real.size() >= 2 and lit.size() == 1 and time_left <= MATCH_TIME - MIN_SURVIVAL_TIME:
+	# The last remaining light wins immediately; no arbitrary 60-second delay.
+	if real.size() >= 2 and lit.size() == 1:
 		_end(lit[0].id)
-	elif lit.is_empty():
+		return
+	if lit.is_empty() and not real.is_empty():
 		var best := -1
 		var cand: Array = []
 		for p in real:
@@ -695,7 +699,8 @@ func _check_end() -> void:
 			elif p.pts == best:
 				cand.append(p)
 		_end(cand[rng.randi() % cand.size()].id)
-	elif time_left <= 0.0:
+		return
+	if time_left <= 0.0:
 		# лотерея по хаос-поинтам: билетов = 1 + pts
 		var total := 0
 		for p in real:
