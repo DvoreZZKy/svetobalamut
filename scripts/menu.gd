@@ -342,7 +342,7 @@ func _make_player_portrait(parent: Node, kind: int, color: int, outfit: int, hat
 	var vp := SubViewport.new()
 	vp.size = Vector2i(140, 140)
 	vp.transparent_bg = true
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	vp.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	container.add_child(vp)
 	parent.add_child(container)
 	var actor := VectorActor.new()
