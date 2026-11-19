@@ -13,6 +13,10 @@ var lobby_info: Label
 var start_btn: Button
 var profile_preview: Node2D
 var lobby_preview: Node2D
+var lobby_color_btn: Button
+var lobby_kind_btn: Button
+var lobby_outfit_btn: Button
+var lobby_hat_btn: Button
 var profile_info: Label
 var profile_color_btn: Button
 var profile_kind_btn: Button
@@ -149,10 +153,10 @@ func _ready() -> void:
 	lobby_editor_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_editor_info.add_theme_font_size_override("font_size", 14)
 	editor_panel.add_child(lobby_editor_info)
-	_btn("Цвет: изменить", editor_panel, func(): G.profile_color = (G.profile_color + 1) % G.PROFILE_COLORS.size(); _refresh_profile(); _sync_lobby_profile())
-	_btn("Персонаж: изменить", editor_panel, func(): G.profile_kind = (G.profile_kind + 1) % 4; _refresh_profile(); _sync_lobby_profile())
-	_btn("Костюм: изменить", editor_panel, func(): G.profile_outfit = (G.profile_outfit + 1) % 5; _refresh_profile(); _sync_lobby_profile())
-	_btn("Шапка: изменить", editor_panel, func(): G.profile_hat = (G.profile_hat + 1) % 5; _refresh_profile(); _sync_lobby_profile())
+	lobby_color_btn = _btn("Цвет", editor_panel, func(): G.profile_color = (G.profile_color + 1) % G.PROFILE_COLORS.size(); _refresh_profile(); _sync_lobby_profile())
+	lobby_kind_btn = _btn("Персонаж", editor_panel, func(): G.profile_kind = (G.profile_kind + 1) % 4; _refresh_profile(); _sync_lobby_profile())
+	lobby_outfit_btn = _btn("Костюм", editor_panel, func(): G.profile_outfit = (G.profile_outfit + 1) % 5; _refresh_profile(); _sync_lobby_profile())
+	lobby_hat_btn = _btn("Шапка", editor_panel, func(): G.profile_hat = (G.profile_hat + 1) % 5; _refresh_profile(); _sync_lobby_profile())
 	for child in editor_panel.get_children():
 		if child is Button:
 			child.custom_minimum_size = Vector2(520, 38)
@@ -216,6 +220,10 @@ func _refresh_profile() -> void:
 	profile_kind_btn.text = "Персонаж: " + kinds[G.profile_kind]
 	profile_outfit_btn.text = "Костюм: " + outfits[G.profile_outfit]
 	profile_hat_btn.text = "Шапка: " + hats[G.profile_hat]
+	if is_instance_valid(lobby_color_btn): lobby_color_btn.text = "Цвет: " + colors[G.profile_color]
+	if is_instance_valid(lobby_kind_btn): lobby_kind_btn.text = "Персонаж: " + kinds[G.profile_kind]
+	if is_instance_valid(lobby_outfit_btn): lobby_outfit_btn.text = "Костюм: " + outfits[G.profile_outfit]
+	if is_instance_valid(lobby_hat_btn): lobby_hat_btn.text = "Шапка: " + hats[G.profile_hat]
 	var class_notes := [
 		"Быстрый • очередь из 3 зарядов • Q: ускорение и скорострельность",
 		"Танк • много здоровья • Q: щит, снижающий урон",
