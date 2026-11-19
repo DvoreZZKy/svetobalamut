@@ -163,19 +163,9 @@ func _to_menu() -> void:
 
 # --------------------------------------------------------------- ресурсы --
 func _build_resources() -> void:
-	var g := Gradient.new()
-	g.set_color(0, Color(1, 1, 1, 1))
-	g.set_color(1, Color(1, 1, 1, 0))
-	g.add_point(0.35, Color(1, 1, 1, 0.35))
-	halo_tex = GradientTexture2D.new()
-	halo_tex.gradient = g
-	halo_tex.fill = GradientTexture2D.FILL_RADIAL
-	halo_tex.fill_from = Vector2(0.5, 0.5)
-	halo_tex.fill_to = Vector2(1.0, 0.5)
-	halo_tex.width = 128
-	halo_tex.height = 128
-	add_mat = CanvasItemMaterial.new()
-	add_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	# Reuse autoload-owned resources across every arena instance and match restart.
+	halo_tex = G.get_halo_texture()
+	add_mat = G.get_additive_material()
 	trail_curve = Curve.new()
 	trail_curve.add_point(Vector2(0.0, 0.0))
 	trail_curve.add_point(Vector2(1.0, 1.0))
@@ -431,20 +421,25 @@ func _update_ambient(dt: float) -> void:
 	ambient_layer.queue_redraw()
 
 
+# Unit geometry is allocated once; each mote only changes its draw transform.
+const AMBIENT_DIAMOND := PackedVector2Array([
+	Vector2(0, -2), Vector2(1, 0), Vector2(0, 2), Vector2(-1, 0)
+])
+const AMBIENT_H_LINE := PackedVector2Array([Vector2(-3, 0), Vector2(3, 0)])
+const AMBIENT_V_LINE := PackedVector2Array([Vector2(0, -3), Vector2(0, 3)])
+
+
 func _draw_ambient() -> void:
 	var palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
 	for mote in ambient_motes:
-		var p: Vector2 = mote.p
 		var r: float = mote.r
 		var pulse := 0.45 + 0.35 * sin(t * 1.7 + float(mote.phase))
 		var color: Color = palette[int(mote.tone)]
-		var points := PackedVector2Array([
-			p + Vector2(0, -r * 2.0), p + Vector2(r, 0),
-			p + Vector2(0, r * 2.0), p + Vector2(-r, 0)
-		])
-		ambient_layer.draw_colored_polygon(points, Color(color, pulse * 0.32))
-		ambient_layer.draw_line(p + Vector2(-r * 3.0, 0), p + Vector2(r * 3.0, 0), Color(color, pulse * 0.22), 1.0, true)
-		ambient_layer.draw_line(p + Vector2(0, -r * 3.0), p + Vector2(0, r * 3.0), Color(color, pulse * 0.22), 1.0, true)
+		ambient_layer.draw_set_transform(mote.p, 0.0, Vector2(r, r))
+		ambient_layer.draw_colored_polygon(AMBIENT_DIAMOND, Color(color, pulse * 0.32))
+		ambient_layer.draw_polyline(AMBIENT_H_LINE, Color(color, pulse * 0.22), 1.0, true)
+		ambient_layer.draw_polyline(AMBIENT_V_LINE, Color(color, pulse * 0.22), 1.0, true)
+	ambient_layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_bullets() -> void:
