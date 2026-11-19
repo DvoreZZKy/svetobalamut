@@ -1,6 +1,6 @@
 extends Control
 
-const PixelArt = preload("res://scripts/pixel_art.gd")
+const VectorActor = preload("res://scripts/vector_actor.gd")
 ## Главное меню и подэкраны профиля, подключения, настроек и лобби.
 
 var t := 0.0
@@ -11,7 +11,8 @@ var ip_edit: LineEdit
 var lobby_list: Label
 var lobby_info: Label
 var start_btn: Button
-var profile_preview: TextureRect
+var profile_preview: Node2D
+var lobby_preview: Node2D
 var profile_info: Label
 var profile_color_btn: Button
 var profile_kind_btn: Button
@@ -61,13 +62,7 @@ func _ready() -> void:
 	profile.size = Vector2(500, 560)
 	profile.add_theme_constant_override("separation", 5)
 	_title(profile, "ТВОЙ ПЕРСОНАЖ")
-	profile_preview = TextureRect.new()
-	profile_preview.custom_minimum_size = Vector2(100, 64)
-	profile_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	profile_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	profile_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	profile_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	profile.add_child(profile_preview)
+	profile_preview = _make_vector_preview(profile)
 	profile_info = Label.new()
 	profile_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	profile_info.add_theme_font_size_override("font_size", 15)
@@ -179,8 +174,8 @@ func _build_particles() -> void:
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
-	b.position = Vector2(440, 180 if key == "main" else 145)
-	b.size = Vector2(400, 560)
+	b.position = Vector2(50, 35) if key == "lobby" else Vector2(440, 180 if key == "main" else 145)
+	b.size = Vector2(1180, 650) if key == "lobby" else Vector2(400, 560)
 	b.add_theme_constant_override("separation", 14)
 	add_child(b)
 	boxes[key] = b
@@ -192,8 +187,9 @@ func _refresh_profile() -> void:
 	var kinds := ["Светляк", "Капсула", "Призрак", "Кристалл"]
 	var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
 	var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
-	profile_preview.texture = PixelArt.make_player(G.profile_kind)
-	profile_preview.modulate = G.col(G.profile_color)
+	profile_preview.setup(G.profile_kind, G.col(G.profile_color), G.profile_outfit, G.profile_hat)
+	if is_instance_valid(lobby_preview):
+		lobby_preview.setup(G.profile_kind, G.col(G.profile_color), G.profile_outfit, G.profile_hat)
 	profile_color_btn.text = "Цвет: " + colors[G.profile_color]
 	profile_kind_btn.text = "Персонаж: " + kinds[G.profile_kind]
 	profile_outfit_btn.text = "Костюм: " + outfits[G.profile_outfit]
@@ -230,10 +226,10 @@ func _btn(text: String, parent: Node, cb: Callable) -> Button:
 	b.add_theme_font_size_override("font_size", 26)
 	for st in ["normal", "hover", "pressed"]:
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0.04, 0.05, 0.12) if st == "normal" else Color(0.14, 0.06, 0.26)
+		sb.bg_color = Color(0.035, 0.045, 0.075) if st == "normal" else Color(0.08, 0.12, 0.2)
 		sb.set_border_width_all(2)
-		sb.border_color = Color(0.3, 1.4, 2.0) if st == "normal" else Color(2.0, 0.5, 2.4)
-		sb.set_corner_radius_all(8)
+		sb.border_color = Color(0.22, 0.65, 0.78) if st == "normal" else Color(0.4, 0.9, 1.0)
+		sb.set_corner_radius_all(0)
 		b.add_theme_stylebox_override(st, sb)
 	b.pressed.connect(cb)
 	parent.add_child(b)
