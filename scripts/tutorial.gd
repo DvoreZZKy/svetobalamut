@@ -1,6 +1,8 @@
 extends Control
 
 func _ready() -> void:
+	if Net.online:
+		Net.match_started.connect(_on_match_started)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = Color("#080d19")
@@ -70,3 +72,8 @@ func _finish() -> void:
 		get_tree().change_scene_to_file("res://scenes/menu.tscn")
 	else:
 		G.start_single_game()
+
+
+func _on_match_started() -> void:
+	G.tutorial_return_to_lobby = false
+	get_tree().change_scene_to_file("res://scenes/arena.tscn")
