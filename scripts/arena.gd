@@ -322,7 +322,9 @@ func _process(dt: float) -> void:
 		if not G.tutorial_active:
 			for pid in Net.inputs:
 				sim.inputs[pid] = Net.inputs[pid]
-		if hitstop > 0.0:
+		if G.tutorial_active and Engine.time_scale <= 0.001:
+			pass
+		elif hitstop > 0.0:
 			hitstop -= dt
 		else:
 			sim.step(minf(dt, 0.05))
