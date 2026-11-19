@@ -335,7 +335,7 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 
 
 func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
-	var reduced := dmg * p.defense
+	var reduced: float = dmg * float(p.get("defense", 1.0))
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.25
 	p.light -= reduced
