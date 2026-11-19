@@ -38,6 +38,7 @@ var fade_grad: Gradient
 var trail_shader: Shader
 var fx_mat: ShaderMaterial
 const VectorActor = preload("res://scripts/vector_actor.gd")
+const FacetButton = preload("res://scripts/facet_button.gd")
 var invert_cur := 0.0
 var blind_cur := 0.0
 
@@ -94,9 +95,13 @@ func _ready() -> void:
 		Net.peer_left.connect(_on_peer_left)
 		view = sim.snapshot()
 	if G.tutorial_active:
-		var tutorial_controller := Node.new()
-		tutorial_controller.set_script(load("res://scripts/arena_tutorial.gd"))
-		add_child(tutorial_controller)
+		var tutorial_script: Script = load("res://scripts/arena_tutorial.gd")
+		if tutorial_script == null:
+			push_error("Не удалось загрузить scripts/arena_tutorial.gd")
+		else:
+			var tutorial_controller := Node.new()
+			tutorial_controller.set_script(tutorial_script)
+			add_child(tutorial_controller)
 	Sfx.play_music()
 
 
