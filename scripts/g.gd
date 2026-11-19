@@ -35,6 +35,7 @@ func _setup_input() -> void:
 		"right": [KEY_D, KEY_RIGHT],
 		"dash": [KEY_SPACE, KEY_SHIFT],
 		"possess": [KEY_E, KEY_F],
+		"ability": [KEY_Q],
 		"restart": [KEY_ENTER, KEY_KP_ENTER],
 	}
 	for a in keys:
