@@ -16,6 +16,7 @@ const MIN_FILL := 6
 var is_host := false
 var online := false
 var names := {}            # peer_id -> имя (только лобби)
+var profiles := {}         # peer_id -> внешний вид
 var inputs := {}           # на хосте: peer_id -> dict ввода
 var latest_snap := {}
 var snap_seq := 0
@@ -39,6 +40,7 @@ func host() -> int:
 	online = true
 	G.mode = "host"
 	names = {1: G.player_name}
+	profiles = {1: _local_profile()}
 	return OK
 
 
@@ -61,13 +63,14 @@ func leave() -> void:
 	online = false
 	is_host = false
 	names.clear()
+	profiles.clear()
 	inputs.clear()
 	latest_snap = {}
 	snap_seq = 0
 
 
 func _on_connected() -> void:
-	_hello.rpc_id(1, G.player_name)
+	_hello.rpc_id(1, G.player_name, _local_profile())
 
 
 func _on_peer_connected(_id: int) -> void:
@@ -77,24 +80,33 @@ func _on_peer_connected(_id: int) -> void:
 func _on_peer_disconnected(id: int) -> void:
 	if is_host:
 		names.erase(id)
+		profiles.erase(id)
 		inputs.erase(id)
-		_names.rpc(names)
+		_names.rpc(names, profiles)
 		lobby_changed.emit()
 	peer_left.emit(id)
 
 
+func _local_profile() -> Dictionary:
+	return {"color": G.profile_color, "kind": G.profile_kind,
+		"outfit": G.profile_outfit, "hat": G.profile_hat}
+
+
 @rpc("any_peer", "reliable")
-func _hello(pname: String) -> void:
+func _hello(pname: String, profile: Dictionary) -> void:
 	if not is_host:
 		return
-	names[multiplayer.get_remote_sender_id()] = pname.substr(0, 16)
-	_names.rpc(names)
+	var id := multiplayer.get_remote_sender_id()
+	names[id] = pname.substr(0, 16)
+	profiles[id] = profile
+	_names.rpc(names, profiles)
 	lobby_changed.emit()
 
 
 @rpc("authority", "reliable")
-func _names(d: Dictionary) -> void:
+func _names(d: Dictionary, p: Dictionary) -> void:
 	names = d
+	profiles = p
 	lobby_changed.emit()
 
 
@@ -104,7 +116,10 @@ func start_match() -> void:
 		return
 	var cfg: Array = []
 	for id in names:
-		cfg.append({"id": id, "name": names[id], "human": true})
+		var profile: Dictionary = profiles.get(id, {})
+		cfg.append({"id": id, "name": names[id], "human": true,
+			"color": profile.get("color", 0), "kind": profile.get("kind", 0),
+			"outfit": profile.get("outfit", 0), "hat": profile.get("hat", 0)})
 	var i := 0
 	while cfg.size() < MIN_FILL:
 		cfg.append({"id": -(i + 1), "name": G.BOT_NAMES[i % G.BOT_NAMES.size()], "human": false})
