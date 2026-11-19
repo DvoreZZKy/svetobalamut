@@ -4,7 +4,7 @@ extends RefCounted
 ## Клиенты эту симуляцию не считают — они рисуют снапшоты (см. snapshot()).
 
 const A := Vector2(1600, 900)
-const MAX_LIGHT := 100.0
+const MAX_LIGHT := 125.0
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
 const DASH_TIME := 0.18
@@ -12,14 +12,15 @@ const INV_TIME := 0.2
 const DASH_CD := 1.5
 const FIRE_CD := 0.1
 const BULLET_SPEED := 1300.0
-const BULLET_DMG := 12.0
-const SHOT_COST := 2.2
-const MOVE_COST := 3.0
+const BULLET_DMG := 9.0
+const SHOT_COST := 1.5
+const MOVE_COST := 1.8
 const DASH_COST := 4.0
-const REGEN_STILL := 7.0
-const REGEN_ZONE := 24.0
-const KILL_BONUS := 30.0
-const MATCH_TIME := 150.0
+const REGEN_STILL := 10.0
+const REGEN_ZONE := 30.0
+const KILL_BONUS := 24.0
+const MATCH_TIME := 240.0
+const MIN_SURVIVAL_TIME := 60.0
 const P_RADIUS := 28.0
 const ZONES := [Vector3(420, 250, 125), Vector3(1180, 250, 125), Vector3(420, 650, 125), Vector3(1180, 650, 125), Vector3(800, 450, 95)]
 const CHAOS := ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]
@@ -55,8 +56,8 @@ func reset(cfg: Array) -> void:
 	time_left = MATCH_TIME
 	phase = "play"
 	winner = 0
-	chaos_timer = 4.0
-	eater_timer = 3.0
+	chaos_timer = 10.0
+	eater_timer = 4.0
 	bomb_id = 0
 	var n := cfg.size()
 	var shuffled := range(n)
@@ -65,13 +66,15 @@ func reset(cfg: Array) -> void:
 		var c: Dictionary = cfg[i]
 		var ang := TAU * i / n
 		var pos := A / 2.0 + Vector2(cos(ang) * 620.0, sin(ang) * 330.0)
-		var ci: int = shuffled[i]
-		players[c.id] = _new_player(c.id, c.name, c.human, ci % 4, ci, pos)
+		var ci: int = int(c.get("color", shuffled[i])) if c.human else shuffled[i] % G.PROFILE_COLORS.size()
+		var kind: int = int(c.get("kind", ci % 4)) if c.human else ci % 4
+		players[c.id] = _new_player(c.id, c.name, c.human, kind, ci, pos,
+			int(c.get("hat", 0)), int(c.get("outfit", 0)))
 
 
-func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: Vector2) -> Dictionary:
+func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: Vector2, hat: int = 0, outfit: int = 0) -> Dictionary:
 	return {
-		"id": id, "name": pname, "human": human, "kind": kind, "ci": ci,
+		"id": id, "name": pname, "human": human, "kind": kind, "ci": ci, "hat": hat, "outfit": outfit,
 		"pos": pos, "vel": Vector2.ZERO, "aim": (A / 2.0 - pos).normalized(),
 		"light": MAX_LIGHT, "shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
@@ -452,7 +455,7 @@ func _update_eaters(dt: float) -> void:
 			if (p.pos - e.pos).length_squared() < pow(e.r + P_RADIUS - 6.0, 2):
 				if p.inv <= 0.0 and e.cd <= 0.0:
 					e.cd = 0.45
-					_damage(p, 14.0, 0, false)
+					_damage(p, 10.0, 0, false)
 					p.vel += (p.pos - e.pos).normalized() * 500.0
 		keep.append(e)
 	eaters = keep
@@ -463,7 +466,7 @@ func _chaos_tick(dt: float) -> void:
 	chaos_timer -= dt
 	if chaos_timer > 0.0:
 		return
-	chaos_timer = 5.0 + rng.randf_range(-2.0, 2.0)
+	chaos_timer = 9.5 + rng.randf_range(-2.5, 2.5)
 	trigger(CHAOS[rng.randi() % CHAOS.size()])
 	if time_left < MATCH_TIME * 0.4 and rng.randf() < 0.35:
 		trigger(CHAOS[rng.randi() % CHAOS.size()])
@@ -500,7 +503,7 @@ func trigger(name: String) -> void:
 					var src: Dictionary = lit[rng.randi() % lit.size()]
 					var id := -(1000 + next_id)
 					next_id += 1
-					var d := _new_player(id, "двойник", false, src.kind, src.ci, _edge_point().clamp(Vector2(60, 60), A - Vector2(60, 60)))
+					var d := _new_player(id, "двойник", false, src.kind, src.ci, _edge_point().clamp(Vector2(60, 60), A - Vector2(60, 60)), src.hat, src.outfit)
 					d.decoy = true
 					d.life = 12.0
 					d.light = 45.0
@@ -621,7 +624,7 @@ func _check_end() -> void:
 		real.append(p)
 		if not p.shadow:
 			lit.append(p)
-	if real.size() >= 2 and lit.size() == 1:
+	if real.size() >= 2 and lit.size() == 1 and time_left <= MATCH_TIME - MIN_SURVIVAL_TIME:
 		_end(lit[0].id)
 	elif lit.is_empty():
 		var best := -1
@@ -657,7 +660,8 @@ func snapshot() -> Dictionary:
 	var pl: Array = []
 	for p in players.values():
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
-			"s": p.shadow, "k": p.kind, "c": p.ci, "iv": p.inv, "dc": p.dash_cd, "pt": p.pts,
+			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
+			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts,
 			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var bl: Array = []
 	for b in bullets:
