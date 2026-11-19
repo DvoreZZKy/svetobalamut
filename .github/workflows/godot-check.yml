@@ -1,0 +1,26 @@
+name: Godot project check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  headless-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: false
+      - name: Import and parse project
+        run: godot --headless --editor --path . --quit
+      - name: Boot main scene headlessly
+        run: godot --headless --path . --quit-after 3
