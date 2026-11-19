@@ -159,12 +159,14 @@ func load_settings() -> void:
 
 
 func apply_display() -> void:
+	var window_id := DisplayServer.MAIN_WINDOW_ID
+	var screen := DisplayServer.window_get_current_screen(window_id)
 	if fullscreen:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false, window_id)
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN, window_id)
 	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
-		DisplayServer.window_set_size(Vector2i(1280, 720))
-		var screen := DisplayServer.window_get_current_screen()
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED, window_id)
+		DisplayServer.window_set_size(Vector2i(1280, 720), window_id)
 		var screen_size := DisplayServer.screen_get_size(screen)
 		var screen_pos := DisplayServer.screen_get_position(screen)
-		DisplayServer.window_set_position(screen_pos + (screen_size - Vector2i(1280, 720)) / 2)
+		DisplayServer.window_set_position(screen_pos + (screen_size - Vector2i(1280, 720)) / 2, window_id)
