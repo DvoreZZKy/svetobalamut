@@ -6,6 +6,7 @@ const FacetButton = preload("res://scripts/facet_button.gd")
 
 var t := 0.0
 var bg_shards: Array[Polygon2D] = []
+var bg_orbs: Array[Node2D] = []
 var title: Label
 var boxes := {}
 var status: Label
@@ -188,6 +189,12 @@ func _process(dt: float) -> void:
 		if shard.position.y > 740.0:
 			shard.position.y = -30.0
 		shard.position.x += sin(t * 0.42 + float(i) * 0.7) * dt * 7.0
+	for i in bg_orbs.size():
+		var orb := bg_orbs[i]
+		orb.rotation += dt * (0.035 if i % 2 == 0 else -0.028)
+		var wave := 1.0 + 0.10 * sin(t * 0.8 + float(i) * 1.7)
+		orb.scale = Vector2.ONE * wave
+		orb.position.y += sin(t * 0.25 + float(i)) * dt * 3.0
 	title.modulate = G.hdr(Color.from_hsv(fmod(t * 0.08 + 0.5, 1.0), 0.6, 1.0), 1.45 + 0.22 * sin(t * 2.2))
 
 
@@ -208,6 +215,27 @@ func _build_particles() -> void:
 		shard.color.a = randf_range(0.12, 0.28)
 		add_child(shard)
 		bg_shards.append(shard)
+	for i in 7:
+		var orb := Node2D.new()
+		orb.position = Vector2(100.0 + float(i) * 178.0, 120.0 + float(i % 3) * 205.0)
+		var disc := Polygon2D.new()
+		var points := PackedVector2Array()
+		var outline_points := PackedVector2Array()
+		for j in 48:
+			var point := Vector2.from_angle(TAU * float(j) / 48.0) * (34.0 + float(i % 3) * 12.0)
+			points.append(point)
+			outline_points.append(point)
+		disc.polygon = points
+		disc.color = [Color("#174b70", 0.055), Color("#4a347a", 0.06), Color("#176c72", 0.05)][i % 3]
+		orb.add_child(disc)
+		var ring := Line2D.new()
+		ring.points = outline_points
+		ring.closed = true
+		ring.width = 1.4
+		ring.default_color = [Color("#277a9a", 0.22), Color("#7254a8", 0.20), Color("#25858a", 0.18)][i % 3]
+		orb.add_child(ring)
+		add_child(orb)
+		bg_orbs.append(orb)
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
