@@ -55,6 +55,14 @@ var over_restart_btn: Button
 var over_menu_btn: Button
 var wait_lbl: Label
 var objective_lbl: Label
+var pause_layer: CanvasLayer
+var pause_shade: ColorRect
+var pause_shape: Polygon2D
+var pause_outline: Line2D
+var pause_title: Label
+var pause_resume_btn: Button
+var pause_menu_btn: Button
+var pause_open := false
 
 
 func _ready() -> void:
@@ -77,6 +85,7 @@ func _ready() -> void:
 	_build_resources()
 	_build_fx_overlay()
 	_build_hud()
+	_build_pause_menu()
 	if is_client:
 		Net.disconnected.connect(_to_menu)
 	else:
@@ -98,6 +107,9 @@ func _on_peer_left(id: int) -> void:
 
 
 func _to_menu() -> void:
+	pause_open = false
+	if is_instance_valid(pause_layer):
+		pause_layer.visible = false
 	if Net.online:
 		Net.leave()
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")
@@ -337,6 +349,11 @@ func _read_input() -> Dictionary:
 
 
 func _process(dt: float) -> void:
+	if Input.is_action_just_pressed("ui_cancel") and view.get("ph", "play") != "over":
+		_toggle_pause()
+	if pause_open and not Net.online:
+		# The scene and UI keep processing, but the offline match does not advance.
+		return
 	t += dt
 	var inp := _read_input()
 	if not is_client:
@@ -380,9 +397,6 @@ func _process(dt: float) -> void:
 		else:
 			snap_age = minf(snap_age + dt, 0.12)
 		wait_lbl.visible = view.is_empty()
-	if Input.is_action_just_pressed("ui_cancel"):
-		_to_menu()
-		return
 	if not view.is_empty():
 		_update_views(dt)
 		_update_fx(dt)
@@ -392,6 +406,72 @@ func _process(dt: float) -> void:
 	var s: float = shake if G.shake_on else 0.0
 	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * s
 	cam.rotation = randf_range(-1, 1) * s * 0.0006
+
+
+
+
+func _build_pause_menu() -> void:
+	pause_layer = CanvasLayer.new()
+	pause_layer.layer = 40
+	pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(pause_layer)
+	pause_shade = ColorRect.new()
+	pause_shade.color = Color(0.002, 0.004, 0.018, 0.78)
+	pause_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pause_shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause_layer.add_child(pause_shade)
+	pause_shape = Polygon2D.new()
+	pause_shape.color = Color("#101b32")
+	pause_layer.add_child(pause_shape)
+	pause_outline = Line2D.new()
+	pause_outline.width = 3.0
+	pause_outline.default_color = Color("#42eaff")
+	pause_outline.closed = true
+	pause_layer.add_child(pause_outline)
+	pause_title = _label("ПАУЗА", 38, Vector2.ZERO, Vector2(620, 64), pause_layer, true)
+	pause_title.add_theme_color_override("font_color", Color("#eafaff"))
+	pause_resume_btn = FacetButton.new()
+	pause_resume_btn.text = "ПРОДОЛЖИТЬ"
+	pause_resume_btn.custom_minimum_size = Vector2(300, 54)
+	pause_resume_btn.pressed.connect(_toggle_pause)
+	pause_layer.add_child(pause_resume_btn)
+	pause_menu_btn = FacetButton.new()
+	pause_menu_btn.text = "ВЫЙТИ В МЕНЮ"
+	pause_menu_btn.custom_minimum_size = Vector2(300, 54)
+	pause_menu_btn.pressed.connect(_to_menu)
+	pause_layer.add_child(pause_menu_btn)
+	pause_layer.visible = false
+	_layout_pause_menu()
+
+
+func _layout_pause_menu() -> void:
+	if not is_instance_valid(pause_layer):
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var w := minf(650.0, vp.x - 40.0)
+	var h := 310.0
+	var pos := (vp - Vector2(w, h)) * 0.5
+	var cut := 22.0
+	var pts := PackedVector2Array([
+		pos + Vector2(cut, 0), pos + Vector2(w - cut, 0),
+		pos + Vector2(w, cut), pos + Vector2(w, h - cut),
+		pos + Vector2(w - cut, h), pos + Vector2(cut, h),
+		pos + Vector2(0, h - cut), pos + Vector2(0, cut)
+	])
+	pause_shape.polygon = pts
+	pause_outline.points = pts
+	pause_title.position = Vector2(pos.x + 15, pos.y + 38)
+	pause_resume_btn.position = Vector2((vp.x - 300.0) * 0.5, pos.y + 135)
+	pause_menu_btn.position = Vector2((vp.x - 300.0) * 0.5, pos.y + 205)
+
+
+func _toggle_pause() -> void:
+	pause_open = not pause_open
+	pause_layer.visible = pause_open
+	if pause_open:
+		pause_title.text = "ПАУЗА" if not Net.online else "МЕНЮ МАТЧА"
+		pause_menu_btn.text = "ВЫЙТИ ИЗ МАТЧА"
+		_layout_pause_menu()
 
 
 func _clear_views() -> void:
@@ -608,6 +688,8 @@ func _update_fx(dt: float) -> void:
 
 
 func _update_hud(dt: float) -> void:
+	if pause_open:
+		_layout_pause_menu()
 	var over: bool = view.get("ph", "play") == "over"
 	var secs := maxi(0, int(view.get("tl", Sim.MATCH_TIME)))
 	timer_lbl.text = "%d:%02d" % [secs / 60, secs % 60]
