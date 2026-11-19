@@ -321,8 +321,10 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	root.add_child(halo)
 	var spr := Sprite2D.new()
 	spr.texture = player_tex[pd.k % 4]
+	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	root.add_child(spr)
 	var outfit := Polygon2D.new()
+	outfit.z_index = 3
 	var outfit_shapes := [
 		PackedVector2Array(),
 		PackedVector2Array([Vector2(-13, -5), Vector2(13, -5), Vector2(10, 12), Vector2(-10, 12)]),
@@ -331,9 +333,11 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 		PackedVector2Array([Vector2(-11, -5), Vector2(11, -5), Vector2(17, 17), Vector2(-17, 17)])
 	]
 	outfit.polygon = outfit_shapes[int(pd.get("outfit", 0)) % outfit_shapes.size()]
+	outfit.scale = Vector2(1.45, 1.45)
 	outfit.color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][int(pd.get("outfit", 0)) % 5]
 	root.add_child(outfit)
 	var hat := Polygon2D.new()
+	hat.z_index = 4
 	var hat_shapes := [
 		PackedVector2Array(),
 		PackedVector2Array([Vector2(-15, -22), Vector2(-10, -37), Vector2(-3, -27), Vector2(2, -42), Vector2(8, -27), Vector2(15, -22)]),
@@ -343,7 +347,17 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	]
 	hat.polygon = hat_shapes[int(pd.get("hat", 0)) % hat_shapes.size()]
 	hat.color = Color("#ffe27a")
+	hat.scale = Vector2(1.25, 1.25)
 	root.add_child(hat)
+	var local_ring := Line2D.new()
+	local_ring.width = 5.0
+	local_ring.default_color = Color(0.25, 0.95, 1.0, 0.95)
+	local_ring.closed = true
+	for i in 32:
+		local_ring.add_point(Vector2.from_angle(TAU * float(i) / 32.0) * 49.0)
+	local_ring.visible = false
+	local_ring.z_index = 5
+	root.add_child(local_ring)
 	var lbl := Label.new()
 	lbl.position = Vector2(-70, -66)
 	lbl.size = Vector2(140, 22)
@@ -361,7 +375,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	line.material = sm
 	trail_layer.add_child(line)
 	return {"root": root, "halo": halo, "spr": spr, "lbl": lbl, "line": line, "mat": sm,
-		"outfit": outfit, "hat": hat, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
+		"outfit": outfit, "hat": hat, "local_ring": local_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
 		"kick": 0.0, "kind": pd.k, "ci": pd.c}
 
 
@@ -404,8 +418,11 @@ func _update_views(dt: float) -> void:
 		var halo: Sprite2D = pv.halo
 		var outfit: Polygon2D = pv.outfit
 		var hat: Polygon2D = pv.hat
+		var local_ring: Line2D = pv.local_ring
 		var lbl: Label = pv.lbl
 		root.visible = vis
+		local_ring.visible = (id == local_id and not shadow)
+		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
 		line.visible = vis
 		root.position = pv.pos
 		if pv.kind != pd.k:
@@ -478,6 +495,7 @@ func _update_eaters(dt: float) -> void:
 			root.add_child(halo)
 			var spr := Sprite2D.new()
 			spr.texture = eater_tex[ed[3]]
+			spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 			root.add_child(spr)
 			ent_layer.add_child(root)
 			ev = {"root": root, "spr": spr, "halo": halo, "pos": ed[1], "rot": 0.0}
