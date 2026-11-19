@@ -336,8 +336,15 @@ func _on_lobby_changed() -> void:
 		_show("lobby")
 		return
 	var s := ""
+	var kind_names := ["Светляк", "Капсула", "Призрак", "Кристалл"]
+	var outfit_names := ["без костюма", "броня", "полосатый", "неоновый", "плащ"]
+	var hat_names := ["без шапки", "корона", "кепка", "рожки", "ауреол"]
 	for id in Net.names:
-		s += "%s%s\n" % [Net.names[id], "  (хост)" if id == 1 else ""]
+		var p: Dictionary = Net.profiles.get(id, {})
+		var k := int(p.get("kind", 0)) % 4
+		var o := int(p.get("outfit", 0)) % 5
+		var h := int(p.get("hat", 0)) % 5
+		s += "◆ %s%s\n   %s • %s • %s\n\n" % [Net.names[id], "  [ХОСТ]" if id == 1 else "", kind_names[k], outfit_names[o], hat_names[h]]
 	lobby_list.text = s
 	if Net.is_host:
 		var ips := G.local_ips()
