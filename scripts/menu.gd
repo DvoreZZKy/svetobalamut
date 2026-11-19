@@ -111,25 +111,51 @@ func _ready() -> void:
 	st.add_child(name_edit)
 	_slider(st, "Музыка", G.vol_music, func(v: float): G.vol_music = v; Sfx.refresh_volume())
 	_slider(st, "Звуки", G.vol_sfx, func(v: float): G.vol_sfx = v; Sfx.play("shot"))
-	var quality_row := HBoxContainer.new()
+	var quality_panel := VBoxContainer.new()
+	quality_panel.add_theme_constant_override("separation", 8)
+	var quality_heading := HBoxContainer.new()
+	quality_heading.add_theme_constant_override("separation", 8)
 	var quality_label := Label.new()
-	quality_label.text = "Графика"
-	quality_label.custom_minimum_size = Vector2(110, 0)
-	quality_label.add_theme_font_size_override("font_size", 20)
-	quality_row.add_child(quality_label)
-	var quality_select := OptionButton.new()
-	quality_select.custom_minimum_size = Vector2(260, 42)
-	quality_select.add_theme_font_size_override("font_size", 18)
-	for preset in G.GRAPHICS_PRESETS:
-		quality_select.add_item(preset)
-	quality_select.select(G.graphics_quality)
-	quality_select.item_selected.connect(func(index: int):
-		G.graphics_quality = index
-		G.apply_graphics()
-		_apply_menu_quality()
-		G.save_settings())
-	quality_row.add_child(quality_select)
-	st.add_child(quality_row)
+	quality_label.text = "КАЧЕСТВО ГРАФИКИ"
+	quality_label.add_theme_font_size_override("font_size", 17)
+	quality_label.add_theme_color_override("font_color", Color("#b9eefa"))
+	quality_heading.add_child(quality_label)
+	var quality_value := Label.new()
+	quality_value.text = G.GRAPHICS_PRESETS[G.graphics_quality].to_upper()
+	quality_value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quality_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	quality_value.add_theme_font_size_override("font_size", 14)
+	quality_value.add_theme_color_override("font_color", Color("#69eaff"))
+	quality_heading.add_child(quality_value)
+	quality_panel.add_child(quality_heading)
+	var quality_buttons := HBoxContainer.new()
+	quality_buttons.add_theme_constant_override("separation", 6)
+	var quality_group := ButtonGroup.new()
+	var quality_names := ["ВЫСОКАЯ", "СРЕДНЯЯ", "НИЗКАЯ", "КАРТОШКА"]
+	for i in G.GRAPHICS_PRESETS.size():
+		var preset_index := i
+		var quality_btn := FacetButton.new()
+		quality_btn.text = quality_names[i]
+		quality_btn.toggle_mode = true
+		quality_btn.button_group = quality_group
+		quality_btn.button_pressed = i == G.graphics_quality
+		quality_btn.custom_minimum_size = Vector2(0, 46)
+		quality_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		quality_btn.add_theme_font_size_override("font_size", 12)
+		quality_btn.pressed.connect(func():
+			G.graphics_quality = preset_index
+			quality_value.text = G.GRAPHICS_PRESETS[preset_index].to_upper()
+			G.apply_graphics()
+			_apply_menu_quality()
+			G.save_settings())
+		quality_buttons.add_child(quality_btn)
+	quality_panel.add_child(quality_buttons)
+	var quality_hint := Label.new()
+	quality_hint.text = "Меньше эффектов — выше производительность"
+	quality_hint.add_theme_font_size_override("font_size", 12)
+	quality_hint.add_theme_color_override("font_color", Color("#829bb5"))
+	quality_panel.add_child(quality_hint)
+	st.add_child(quality_panel)
 	var sh := CheckBox.new()
 	sh.text = "Эффекты камеры"
 	sh.button_pressed = G.shake_on
