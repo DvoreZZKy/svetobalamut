@@ -17,6 +17,8 @@ var vol_music := 0.7
 var vol_sfx := 0.9
 var shake_on := true
 var fullscreen := false
+var graphics_quality := 2
+var vsync_enabled := true
 var tutorial_done := false
 const TUTORIAL_VERSION := 4
 var tutorial_active := false
@@ -141,6 +143,8 @@ func save_settings() -> void:
 	c.set_value("s", "sfx", vol_sfx)
 	c.set_value("s", "shake", shake_on)
 	c.set_value("s", "fullscreen", fullscreen)
+	c.set_value("s", "graphics_quality", graphics_quality)
+	c.set_value("s", "vsync", vsync_enabled)
 	c.set_value("s", "tutorial_done", tutorial_done)
 	c.set_value("s", "tutorial_version", TUTORIAL_VERSION)
 	c.save(SAVE_PATH)
@@ -159,12 +163,15 @@ func load_settings() -> void:
 	vol_sfx = c.get_value("s", "sfx", vol_sfx)
 	shake_on = c.get_value("s", "shake", shake_on)
 	fullscreen = c.get_value("s", "fullscreen", fullscreen)
+	graphics_quality = clampi(int(c.get_value("s", "graphics_quality", graphics_quality)), 0, 2)
+	vsync_enabled = bool(c.get_value("s", "vsync", vsync_enabled))
 	var saved_tutorial_version := int(c.get_value("s", "tutorial_version", 0))
 	tutorial_done = bool(c.get_value("s", "tutorial_done", false)) if saved_tutorial_version >= TUTORIAL_VERSION else false
 	apply_display()
 
 
 func apply_display() -> void:
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED)
 	var window_id := DisplayServer.MAIN_WINDOW_ID
 	var screen := DisplayServer.window_get_current_screen(window_id)
 	if fullscreen:
