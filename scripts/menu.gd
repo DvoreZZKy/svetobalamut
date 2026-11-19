@@ -48,7 +48,7 @@ func _ready() -> void:
 
 	var main := _box("main")
 	_btn("Играть одному (с ботами)", main, func(): Sfx.play("click"); G.start_single())
-	_btn("Обучение", main, func(): Sfx.play("click"); G.start_tutorial_game(false))
+	_btn("Обучение", main, _start_tutorial_from_menu)
 	_btn("Создать комнату", main, _on_host)
 	_btn("Подключиться", main, func(): Sfx.play("click"); _show("join"))
 	_btn("Персонаж", main, func(): Sfx.play("click"); _refresh_profile(); _show("profile"))
@@ -406,6 +406,13 @@ func _make_vector_preview(parent: Node) -> Node2D:
 func _sync_lobby_profile() -> void:
 	if Net.online:
 		Net.set_local_profile()
+
+
+func _start_tutorial_from_menu() -> void:
+	Sfx.play("click")
+	G.tutorial_done = false
+	G.save_settings()
+	G.start_tutorial_game(false)
 
 
 func _open_lobby_tutorial() -> void:
