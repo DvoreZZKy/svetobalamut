@@ -363,12 +363,13 @@ func _show(key: String) -> void:
 		_on_lobby_changed()
 
 
-func _title(parent: Node, text: String) -> void:
+func _title(parent: Node, text: String) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", 30)
 	l.modulate = Color(1.2, 1.6, 2.2)
 	parent.add_child(l)
+	return l
 
 
 func _btn(text: String, parent: Node, cb: Callable) -> Button:
