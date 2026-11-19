@@ -10,7 +10,7 @@ var title: Label
 var boxes := {}
 var status: Label
 var ip_edit: LineEdit
-var lobby_list: Label
+var lobby_list: VBoxContainer
 var lobby_info: Label
 var start_btn: Button
 var profile_preview
@@ -139,10 +139,9 @@ func _ready() -> void:
 	var roster_scroll := ScrollContainer.new()
 	roster_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	players_panel.add_child(roster_scroll)
-	lobby_list = Label.new()
-	lobby_list.add_theme_font_size_override("font_size", 18)
-	lobby_list.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lobby_list.custom_minimum_size = Vector2(460, 0)
+	lobby_list = VBoxContainer.new()
+	lobby_list.add_theme_constant_override("separation", 8)
+	lobby_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	roster_scroll.add_child(lobby_list)
 	var editor_panel := VBoxContainer.new()
 	editor_panel.custom_minimum_size = Vector2(560, 390)
@@ -184,11 +183,11 @@ func _process(dt: float) -> void:
 	t += dt
 	for i in bg_shards.size():
 		var shard := bg_shards[i]
-		shard.rotation += dt * (0.08 if i % 2 == 0 else -0.06)
-		shard.position.y += sin(t * 0.35 + float(i)) * dt * 2.2
+		shard.rotation += dt * (0.16 if i % 2 == 0 else -0.12)
+		shard.position.y += sin(t * 0.75 + float(i)) * dt * 5.0
 		if shard.position.y > 740.0:
 			shard.position.y = -30.0
-		shard.position.x += sin(t * 0.22 + float(i) * 0.7) * dt * 3.0
+		shard.position.x += sin(t * 0.42 + float(i) * 0.7) * dt * 7.0
 	title.modulate = G.hdr(Color.from_hsv(fmod(t * 0.08 + 0.5, 1.0), 0.6, 1.0), 1.45 + 0.22 * sin(t * 2.2))
 
 
@@ -212,8 +211,15 @@ func _build_particles() -> void:
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
-	b.position = Vector2(50, 35) if key == "lobby" else Vector2(440, 180 if key == "main" else 145)
-	b.size = Vector2(1180, 650) if key == "lobby" else Vector2(400, 560)
+	if key == "lobby":
+		b.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		b.offset_left = 36
+		b.offset_top = 24
+		b.offset_right = -36
+		b.offset_bottom = -24
+	else:
+		b.position = Vector2(440, 180 if key == "main" else 145)
+		b.size = Vector2(400, 560)
 	b.add_theme_constant_override("separation", 14)
 	add_child(b)
 	boxes[key] = b
@@ -264,6 +270,24 @@ func _add_facet_panel(parent: Node, pos: Vector2, panel_size: Vector2, fill: Col
 	outline.closed = true
 	outline.points = shape.polygon
 	parent.add_child(outline)
+
+
+func _make_player_portrait(parent: Node, kind: int, color: int, outfit: int, hat: int) -> SubViewportContainer:
+	var container := SubViewportContainer.new()
+	container.stretch = true
+	container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var vp := SubViewport.new()
+	vp.size = Vector2i(180, 150)
+	vp.transparent_bg = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	container.add_child(vp)
+	parent.add_child(container)
+	var actor := VectorActor.new()
+	actor.position = Vector2(90, 76)
+	actor.scale = Vector2.ONE * 1.45
+	vp.add_child(actor)
+	actor.setup(kind, G.col(color), outfit, hat)
+	return container
 
 
 func _make_vector_preview(parent: Node) -> Node2D:
@@ -360,19 +384,31 @@ func _on_lobby_changed() -> void:
 	if not boxes["lobby"].visible:
 		_show("lobby")
 		return
-	var s := ""
-	var kind_names := ["Светляк", "Капсула", "Призрак", "Кристалл"]
-	var outfit_names := ["без костюма", "броня", "полосатый", "неоновый", "плащ"]
-	var hat_names := ["без шапки", "корона", "кепка", "рожки", "ауреол"]
-	var color_names := ["голубой", "розовый", "золотой", "фиолетовый", "мятный", "оранжевый", "белый", "маджента"]
+	for child in lobby_list.get_children():
+		child.queue_free()
 	for id in Net.names:
 		var p: Dictionary = Net.profiles.get(id, {})
-		var k := int(p.get("kind", 0)) % 4
-		var o := int(p.get("outfit", 0)) % 5
-		var h := int(p.get("hat", 0)) % 5
-		var c := int(p.get("color", 0)) % color_names.size()
-		s += "◆ %s%s\n   %s • %s • %s\n   Цвет: %s\n\n" % [Net.names[id], "  [ХОСТ]" if id == 1 else "", kind_names[k], outfit_names[o], hat_names[h], color_names[c]]
-	lobby_list.text = s
+		var row := HBoxContainer.new()
+		row.custom_minimum_size = Vector2(0, 82)
+		row.add_theme_constant_override("separation", 12)
+		var portrait := _make_player_portrait(row,
+			int(p.get("kind", 0)), int(p.get("color", 0)),
+			int(p.get("outfit", 0)), int(p.get("hat", 0)))
+		portrait.custom_minimum_size = Vector2(86, 76)
+		var details := VBoxContainer.new()
+		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		details.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(details)
+		var name_label := Label.new()
+		name_label.text = str(Net.names[id]) + ("  •  ХОСТ" if int(id) == 1 else "")
+		name_label.add_theme_font_size_override("font_size", 20)
+		details.add_child(name_label)
+		var role_label := Label.new()
+		role_label.text = "Участник комнаты"
+		role_label.add_theme_font_size_override("font_size", 13)
+		role_label.modulate = Color("#9bb4ce")
+		details.add_child(role_label)
+		lobby_list.add_child(row)
 	if Net.is_host:
 		var ips := G.local_ips()
 		lobby_info.text = "Адрес для друзей: %s : %d\nИгроков: %d / %d (до 6 добьём ботами)" % [
