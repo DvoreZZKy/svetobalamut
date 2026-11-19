@@ -437,7 +437,8 @@ func _show_completion() -> void:
 	_set_keys([])
 	next_button.visible = false
 	panel.visible = true
-	panel.position = Vector2((get_viewport_rect().size.x - 650) * 0.5, (get_viewport_rect().size.y - 190) * 0.5)
+	var viewport_size := get_viewport().get_visible_rect().size
+	panel.position = Vector2((viewport_size.x - 650) * 0.5, (viewport_size.y - 190) * 0.5)
 	panel.size = Vector2(650, 190)
 	var column := panel.get_child(0) as VBoxContainer
 	var actions := HBoxContainer.new()
