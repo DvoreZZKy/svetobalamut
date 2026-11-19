@@ -2,7 +2,7 @@ shader_type canvas_item;
 // Полноэкранные хаос-эффекты: инверсия света/тьмы, слепота (виден круг вокруг игрока),
 // хроматическая аберрация на вспышках, лёгкая виньетка.
 
-uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
 uniform float invert : hint_range(0.0, 1.0) = 0.0;
 uniform float blind : hint_range(0.0, 1.0) = 0.0;
 uniform vec2 center = vec2(0.5, 0.5);
