@@ -179,7 +179,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	_wall_bounce(p)
 
 	if want_fire and p.fire_cd <= 0.0 and p.light > SHOT_COST + 0.5:
-		var ang := p.aim.angle() + rng.randf_range(-0.025, 0.025)
+		var ang: float = p.aim.angle() + rng.randf_range(-0.025, 0.025)
 		var dir := Vector2.from_angle(ang)
 		bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * BULLET_SPEED + p.vel * 0.25,
 			"owner": p.id, "life": 1.4, "bn": 0})
