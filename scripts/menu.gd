@@ -11,8 +11,8 @@ var ip_edit: LineEdit
 var lobby_list: Label
 var lobby_info: Label
 var start_btn: Button
-var profile_preview: Node2D
-var lobby_preview: Node2D
+var profile_preview: VectorActor
+var lobby_preview: VectorActor
 var lobby_color_btn: Button
 var lobby_kind_btn: Button
 var lobby_outfit_btn: Button
@@ -233,7 +233,7 @@ func _refresh_profile() -> void:
 	profile_info.text = "%s\n%s\n%s • %s" % [kinds[G.profile_kind], class_notes[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
 
 
-func _make_vector_preview(parent: Node) -> Node2D:
+func _make_vector_preview(parent: Node) -> VectorActor
 	var container := SubViewportContainer.new()
 	container.custom_minimum_size = Vector2(180, 116)
 	container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
