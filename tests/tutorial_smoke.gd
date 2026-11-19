@@ -49,7 +49,19 @@ func _run() -> void:
 		push_error("Tutorial flag was unexpectedly cleared during arena startup")
 		quit(1)
 		return
-	print("Tutorial smoke test passed: arena, controller and visible tutorial overlay are active")
+	var trainee: Dictionary = arena.sim.players[arena.local_id]
+	var starting_light := float(trainee.light)
+	arena.sim._damage(trainee, 999.0, -1, false)
+	if not is_equal_approx(float(trainee.light), starting_light):
+		push_error("Tutorial trainee took damage despite the invulnerability flag")
+		quit(1)
+		return
+	arena.sim._make_shadow(trainee, 0, true)
+	if not bool(trainee.shadow):
+		push_error("Scripted shadow transformation was blocked by tutorial invulnerability")
+		quit(1)
+		return
+	print("Tutorial smoke test passed: overlay visible, trainee invulnerable, scripted shadow transformation works")
 	arena.queue_free()
 	await process_frame
 	quit(0)
