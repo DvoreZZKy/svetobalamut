@@ -422,11 +422,11 @@ func _update_ambient(dt: float) -> void:
 
 
 # Unit geometry is allocated once; each mote only changes its draw transform.
-const AMBIENT_DIAMOND := PackedVector2Array([
+var ambient_diamond := PackedVector2Array([
 	Vector2(0, -2), Vector2(1, 0), Vector2(0, 2), Vector2(-1, 0)
 ])
-const AMBIENT_H_LINE := PackedVector2Array([Vector2(-3, 0), Vector2(3, 0)])
-const AMBIENT_V_LINE := PackedVector2Array([Vector2(0, -3), Vector2(0, 3)])
+var ambient_h_line := PackedVector2Array([Vector2(-3, 0), Vector2(3, 0)])
+var ambient_v_line := PackedVector2Array([Vector2(0, -3), Vector2(0, 3)])
 
 
 func _draw_ambient() -> void:
@@ -436,9 +436,9 @@ func _draw_ambient() -> void:
 		var pulse := 0.45 + 0.35 * sin(t * 1.7 + float(mote.phase))
 		var color: Color = palette[int(mote.tone)]
 		ambient_layer.draw_set_transform(mote.p, 0.0, Vector2(r, r))
-		ambient_layer.draw_colored_polygon(AMBIENT_DIAMOND, Color(color, pulse * 0.32))
-		ambient_layer.draw_polyline(AMBIENT_H_LINE, Color(color, pulse * 0.22), 1.0, true)
-		ambient_layer.draw_polyline(AMBIENT_V_LINE, Color(color, pulse * 0.22), 1.0, true)
+		ambient_layer.draw_colored_polygon(ambient_diamond, Color(color, pulse * 0.32))
+		ambient_layer.draw_polyline(ambient_h_line, Color(color, pulse * 0.22), 1.0, true)
+		ambient_layer.draw_polyline(ambient_v_line, Color(color, pulse * 0.22), 1.0, true)
 	ambient_layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
