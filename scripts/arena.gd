@@ -37,6 +37,7 @@ var trail_grad: Gradient
 var fade_grad: Gradient
 var trail_shader: Shader
 var fx_mat: ShaderMaterial
+const PixelArt = preload("res://scripts/pixel_art.gd")
 var player_tex: Array = []
 var eater_tex: Array = []
 var invert_cur := 0.0
