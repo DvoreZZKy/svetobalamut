@@ -166,7 +166,7 @@ func _build_particles() -> void:
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
-	b.position = Vector2(440, 145)
+	b.position = Vector2(440, 180)
 	b.size = Vector2(400, 560)
 	b.add_theme_constant_override("separation", 14)
 	add_child(b)
