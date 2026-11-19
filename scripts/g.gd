@@ -18,6 +18,7 @@ var vol_sfx := 0.9
 var shake_on := true
 var fullscreen := false
 var tutorial_done := false
+const TUTORIAL_VERSION := 2
 var tutorial_active := false
 var tutorial_return_to_lobby := false
 var tutorial_previous_mode := "single"
@@ -134,6 +135,7 @@ func save_settings() -> void:
 	c.set_value("s", "shake", shake_on)
 	c.set_value("s", "fullscreen", fullscreen)
 	c.set_value("s", "tutorial_done", tutorial_done)
+	c.set_value("s", "tutorial_version", TUTORIAL_VERSION)
 	c.save(SAVE_PATH)
 
 
@@ -150,7 +152,8 @@ func load_settings() -> void:
 	vol_sfx = c.get_value("s", "sfx", vol_sfx)
 	shake_on = c.get_value("s", "shake", shake_on)
 	fullscreen = c.get_value("s", "fullscreen", fullscreen)
-	tutorial_done = c.get_value("s", "tutorial_done", tutorial_done)
+	var saved_tutorial_version := int(c.get_value("s", "tutorial_version", 0))
+	tutorial_done = bool(c.get_value("s", "tutorial_done", false)) if saved_tutorial_version >= TUTORIAL_VERSION else false
 	apply_display()
 
 
