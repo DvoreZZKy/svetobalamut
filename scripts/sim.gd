@@ -726,7 +726,7 @@ func snapshot() -> Dictionary:
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts,
-			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t,
+			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
 			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var bl: Array = []
 	for b in bullets:
