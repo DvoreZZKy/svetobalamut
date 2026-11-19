@@ -24,3 +24,5 @@ jobs:
         run: godot --headless --editor --path . --quit
       - name: Boot main scene headlessly
         run: godot --headless --path . --quit-after 3
+      - name: Verify interactive tutorial startup
+        run: godot --headless --path . --script res://tests/tutorial_smoke.gd
