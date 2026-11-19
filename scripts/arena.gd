@@ -786,7 +786,7 @@ func _update_views(dt: float) -> void:
 			ring_color.a = 0.55 + 0.35 * sin(t * 16.0)
 			ability_ring.default_color = ring_color
 			ability_ring.scale = Vector2.ONE * (1.0 + 0.08 * sin(t * 12.0))
-		line.visible = vis
+		line.visible = vis and not _is_potato()
 		root.position = pv.pos
 		pv.rot = lerp_angle(pv.rot, (pd.a as Vector2).angle(), minf(1.0, 30.0 * dt))
 		actor.rotation = pv.rot
@@ -798,18 +798,19 @@ func _update_views(dt: float) -> void:
 			halo.scale = Vector2.ONE * (0.55 + 0.75 * lf)
 		if shadow:
 			var ghost_alpha := 0.66 + 0.10 * sin(t * 3.6 + float(id))
-			actor.modulate = Color(0.20, 0.11, 0.38, ghost_alpha)
+			actor.modulate = Color(0.20, 0.11, 0.38, ghost_alpha) if not _is_potato() else Color(0.38, 0.32, 0.52, 0.9)
 			halo.modulate = Color(0.48, 0.12, 1.35, 0.42 + 0.10 * sin(t * 2.8 + float(id)))
-			actor.scale = Vector2.ONE * 0.62 * (1.0 + 0.025 * sin(t * 4.0 + float(id)))
+			if not _is_potato():
+				actor.scale = Vector2.ONE * 0.62 * (1.0 + 0.025 * sin(t * 4.0 + float(id)))
 		else:
-			var c := G.hdr(col, 0.78 + 0.42 * lf)
+			var c := col if _is_potato() else G.hdr(col, 0.78 + 0.42 * lf)
 			if pd.h > 0.0:
-				c = Color(3.2, 3.2, 3.2)
-			if pd.iv > 0.0:
+				c = Color.WHITE if _is_potato() else Color(3.2, 3.2, 3.2)
+			if pd.iv > 0.0 and not _is_potato():
 				c.a = 0.45 + 0.4 * sin(t * 70.0)
 			if bomb_id == id:
-				c = Color(3.4, 0.5, 0.3) if sin(t * (9.0 + (4.0 - bomb_t) * 7.0)) > 0.0 else Color(3.4, 3.4, 3.4)
-			if pd.dr > 0.0:
+				c = (Color("#ff654d") if sin(t * (9.0 + (4.0 - bomb_t) * 7.0)) > 0.0 else Color.WHITE) if _is_potato() else (Color(3.4, 0.5, 0.3) if sin(t * (9.0 + (4.0 - bomb_t) * 7.0)) > 0.0 else Color(3.4, 3.4, 3.4))
+			if pd.dr > 0.0 and not _is_potato():
 				c = Color(2.4, 0.4, 2.8) if int(t * 14.0) % 2 == 0 else Color(0.6, 2.0, 2.4)
 				root.position += Vector2(randf_range(-6, 6), randf_range(-6, 6))
 			actor.modulate = c
@@ -826,6 +827,11 @@ func _update_views(dt: float) -> void:
 		if bomb_id == id:
 			lbl.text = "БОМБА %.1f" % maxf(bomb_t, 0.0)
 		lbl.modulate = Color(1, 1, 1, 0.85)
+		# Potato mode removes trails completely, including their point updates.
+		if _is_potato():
+			if line.get_point_count() > 0:
+				line.clear_points()
+			continue
 		# трейл
 		var moving: bool = vel.length() > 60.0 or pd.dt
 		if moving:
@@ -877,6 +883,7 @@ func _update_eaters(dt: float) -> void:
 		var root: Node2D = ev.root
 		var spr: Polygon2D = ev.spr
 		var halo: Sprite2D = ev.halo
+		halo.visible = not _is_potato()
 		root.position = ev.pos
 		if vel.length() > 5.0:
 			ev.rot = lerp_angle(ev.rot, vel.angle(), minf(1.0, 12.0 * dt))
@@ -886,9 +893,11 @@ func _update_eaters(dt: float) -> void:
 		var c := Color(1.15, 0.35, 0.62) if ed[3] == 0 else Color(0.62, 0.38, 1.1)
 		if ed[5] > 0.0:
 			c = Color(3, 3, 3)
-		spr.modulate = c
-		halo.scale = Vector2.ONE * (1.3 if ed[3] == 0 else 0.9)
-		halo.modulate = Color(c.r * 0.5, c.g * 0.3, c.b * 0.5, 0.45)
+		spr.modulate = c if not _is_potato() else Color(c.r, c.g, c.b, 1.0)
+		halo.visible = not _is_potato()
+		if not _is_potato():
+			halo.scale = Vector2.ONE * (1.3 if ed[3] == 0 else 0.9)
+			halo.modulate = Color(c.r * 0.5, c.g * 0.3, c.b * 0.5, 0.45)
 	for id in eviews.keys():
 		if not seen.has(id):
 			eviews[id].root.queue_free()
