@@ -18,7 +18,7 @@ var vol_sfx := 0.9
 var shake_on := true
 var fullscreen := false
 var tutorial_done := false
-const TUTORIAL_VERSION := 2
+const TUTORIAL_VERSION := 3
 var tutorial_active := false
 var tutorial_return_to_lobby := false
 var tutorial_previous_mode := "single"
@@ -92,11 +92,12 @@ func local_ips() -> Array:
 
 
 func start_single() -> void:
+	# First launch after tutorial update always enters the guided flow.
 	tutorial_return_to_lobby = false
 	if not tutorial_done:
 		start_tutorial_game(false)
-		return
-	start_single_game()
+	else:
+		start_single_game()
 
 
 func start_tutorial_game(return_to_lobby: bool) -> void:
