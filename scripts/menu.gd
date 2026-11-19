@@ -115,15 +115,46 @@ func _ready() -> void:
 	_btn("Назад", st, func(): G.save_settings(); _show("main"))
 
 	var lobby := _box("lobby")
-	_title(lobby, "Комната")
+	_title(lobby, "КОМНАТА")
 	lobby_info = Label.new()
-	lobby_info.add_theme_font_size_override("font_size", 20)
+	lobby_info.add_theme_font_size_override("font_size", 17)
+	lobby_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lobby.add_child(lobby_info)
+	var lobby_columns := HBoxContainer.new()
+	lobby_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lobby_columns.add_theme_constant_override("separation", 22)
+	lobby.add_child(lobby_columns)
+	var players_panel := VBoxContainer.new()
+	players_panel.custom_minimum_size = Vector2(500, 390)
+	players_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lobby_columns.add_child(players_panel)
+	_title(players_panel, "УЧАСТНИКИ")
 	lobby_list = Label.new()
-	lobby_list.add_theme_font_size_override("font_size", 24)
-	lobby.add_child(lobby_list)
-	start_btn = _btn("СТАРТ", lobby, func(): Net.start_match())
-	_btn("Выйти из комнаты", lobby, func(): Net.leave(); _show("main"))
+	lobby_list.add_theme_font_size_override("font_size", 18)
+	lobby_list.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	players_panel.add_child(lobby_list)
+	var editor_panel := VBoxContainer.new()
+	editor_panel.custom_minimum_size = Vector2(560, 390)
+	editor_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	editor_panel.add_theme_constant_override("separation", 4)
+	lobby_columns.add_child(editor_panel)
+	_title(editor_panel, "ВАШ ПЕРСОНАЖ")
+	lobby_preview = _make_vector_preview(editor_panel)
+	var lobby_editor_info := Label.new()
+	lobby_editor_info.text = "Изменения сразу видны остальным игрокам"
+	lobby_editor_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lobby_editor_info.add_theme_font_size_override("font_size", 14)
+	editor_panel.add_child(lobby_editor_info)
+	_btn("Цвет: изменить", editor_panel, func(): G.profile_color = (G.profile_color + 1) % G.PROFILE_COLORS.size(); _refresh_profile(); _sync_lobby_profile())
+	_btn("Персонаж: изменить", editor_panel, func(): G.profile_kind = (G.profile_kind + 1) % 4; _refresh_profile(); _sync_lobby_profile())
+	_btn("Костюм: изменить", editor_panel, func(): G.profile_outfit = (G.profile_outfit + 1) % 5; _refresh_profile(); _sync_lobby_profile())
+	_btn("Шапка: изменить", editor_panel, func(): G.profile_hat = (G.profile_hat + 1) % 5; _refresh_profile(); _sync_lobby_profile())
+	var lobby_actions := HBoxContainer.new()
+	lobby_actions.add_theme_constant_override("separation", 12)
+	lobby.add_child(lobby_actions)
+	_btn("ПРОЙТИ ТУТОРИАЛ", lobby_actions, _open_lobby_tutorial)
+	start_btn = _btn("СТАРТ", lobby_actions, func(): Net.start_match())
+	_btn("ВЫЙТИ", lobby_actions, func(): Net.leave(); _show("main"))
 
 	Net.lobby_changed.connect(_on_lobby_changed)
 	Net.join_failed.connect(func(): status.text = "Не удалось подключиться"; _show("join"))
@@ -202,6 +233,33 @@ func _refresh_profile() -> void:
 	]
 	profile_info.text = "%s\n%s\n%s • %s" % [kinds[G.profile_kind], class_notes[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
 
+
+func _make_vector_preview(parent: Node) -> Node2D:
+	var container := SubViewportContainer.new()
+	container.custom_minimum_size = Vector2(180, 116)
+	container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	container.stretch = true
+	var vp := SubViewport.new()
+	vp.size = Vector2i(240, 150)
+	vp.transparent_bg = true
+	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	container.add_child(vp)
+	parent.add_child(container)
+	var actor := VectorActor.new()
+	actor.position = Vector2(120, 82)
+	vp.add_child(actor)
+	actor.setup(G.profile_kind, G.col(G.profile_color), G.profile_outfit, G.profile_hat)
+	return actor
+
+
+func _sync_lobby_profile() -> void:
+	if Net.online:
+		Net.set_local_profile()
+
+
+func _open_lobby_tutorial() -> void:
+	G.tutorial_return_to_lobby = true
+	get_tree().change_scene_to_file("res://scenes/tutorial.tscn")
 
 func _show(key: String) -> void:
 	title.visible = (key == "main")
