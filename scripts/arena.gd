@@ -620,7 +620,6 @@ func _update_views(dt: float) -> void:
 		if pv.is_empty():
 			pv = _make_pv(pd)
 			pviews[id] = pv
-		pv.ci = pd.c
 		var vel: Vector2 = pd.v
 		var tpos: Vector2 = pd.p + vel * snap_age
 		var line: Line2D = pv.line
