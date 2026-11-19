@@ -48,7 +48,11 @@ var help_lbl: Label
 var light_bar: ProgressBar
 var dash_bar: ProgressBar
 var over_rect: ColorRect
+var over_shape: Polygon2D
+var over_outline: Line2D
 var over_lbl: Label
+var over_restart_btn: Button
+var over_menu_btn: Button
 var wait_lbl: Label
 var objective_lbl: Label
 
@@ -243,20 +247,36 @@ func _build_hud() -> void:
 	wait_lbl.offset_bottom = 30
 	wait_lbl.visible = is_client
 	over_rect = ColorRect.new()
-	over_rect.color = Color(0, 0, 0, 0.72)
-	over_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	over_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	over_rect.color = Color(0.003, 0.004, 0.018, 0.84)
+	over_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	over_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 	over_rect.visible = false
 	cl.add_child(over_rect)
-	over_lbl = _label("", 44, Vector2.ZERO, Vector2(1280, 300), over_rect, true)
-	over_lbl.anchor_left = 0.5
-	over_lbl.anchor_right = 0.5
-	over_lbl.anchor_top = 0.5
-	over_lbl.anchor_bottom = 0.5
-	over_lbl.offset_left = -640
-	over_lbl.offset_right = 640
-	over_lbl.offset_top = -150
-	over_lbl.offset_bottom = 150
+	over_shape = Polygon2D.new()
+	over_shape.color = Color("#101a32", 0.98)
+	over_shape.visible = false
+	cl.add_child(over_shape)
+	over_outline = Line2D.new()
+	over_outline.width = 3.0
+	over_outline.default_color = Color("#43eaff")
+	over_outline.closed = true
+	over_outline.visible = false
+	cl.add_child(over_outline)
+	over_lbl = _label("", 38, Vector2.ZERO, Vector2(720, 150), cl, true)
+	over_lbl.add_theme_color_override("font_color", Color("#f0fbff"))
+	over_lbl.visible = false
+	over_restart_btn = Button.new()
+	over_restart_btn.text = "РЕВАНШ"
+	over_restart_btn.custom_minimum_size = Vector2(210, 48)
+	over_restart_btn.pressed.connect(_restart_match)
+	cl.add_child(over_restart_btn)
+	over_menu_btn = Button.new()
+	over_menu_btn.text = "В МЕНЮ"
+	over_menu_btn.custom_minimum_size = Vector2(210, 48)
+	over_menu_btn.pressed.connect(_to_menu)
+	cl.add_child(over_menu_btn)
+	over_restart_btn.visible = false
+	over_menu_btn.visible = false
 
 
 # -------------------------------------------------------------- рисование --
@@ -616,18 +636,57 @@ func _update_hud(dt: float) -> void:
 			help_lbl.text = "ТЫ — ТЕНЬ: подойди к живому игроку и нажми ПКМ / E, чтобы вселиться.\nВселение длится 2 секунды — используй их, чтобы вернуться в игру."
 	if over:
 		over_rect.visible = true
+		over_shape.visible = true
+		over_outline.visible = true
+		over_lbl.visible = true
+		over_restart_btn.visible = not is_client
+		over_menu_btn.visible = true
 		var wn := "никто"
 		for pd in view.get("pl", []):
 			if pd.i == view.get("wn", 0):
 				wn = pd.n
-		var tail := "ENTER — реванш   •   ESC — в меню" if not is_client else "Ждём реванш от хоста   •   ESC — в меню"
-		over_lbl.text = "ПОБЕДИЛ(А): %s\n\n%s" % [wn, tail]
-		over_lbl.modulate = Color(1.6, 1.6, 1.0)
+		over_lbl.text = "ПОБЕДИТЕЛЬ\n%s" % wn
+		over_lbl.modulate = Color(1.1, 1.35, 1.65)
+		_layout_game_over()
 	else:
 		over_rect.visible = false
+		over_shape.visible = false
+		over_outline.visible = false
+		over_lbl.visible = false
+		over_restart_btn.visible = false
+		over_menu_btn.visible = false
 
 
 # -------------------------------------------------------------- эффекты ---
+func _layout_game_over() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var panel_size := Vector2(minf(760.0, vp.x - 48.0), 330.0)
+	var pos := (vp - panel_size) * 0.5
+	var cut := 22.0
+	var points := PackedVector2Array([
+		Vector2(pos.x + cut, pos.y), Vector2(pos.x + panel_size.x - cut, pos.y),
+		Vector2(pos.x + panel_size.x, pos.y + cut), Vector2(pos.x + panel_size.x, pos.y + panel_size.y - cut),
+		Vector2(pos.x + panel_size.x - cut, pos.y + panel_size.y), Vector2(pos.x + cut, pos.y + panel_size.y),
+		Vector2(pos.x, pos.y + panel_size.y - cut), Vector2(pos.x, pos.y + cut)
+	])
+	over_shape.polygon = points
+	over_outline.points = points
+	over_lbl.position = Vector2(pos.x + 20.0, pos.y + 48.0)
+	over_lbl.size = Vector2(panel_size.x - 40.0, 145.0)
+	over_lbl.add_theme_font_size_override("font_size", 38)
+	var buttons_y := pos.y + panel_size.y - 82.0
+	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 222.0, buttons_y)
+	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 12.0, buttons_y)
+
+
+func _restart_match() -> void:
+	if sim == null:
+		return
+	sim.reset(G.cfg)
+	_clear_views()
+	view = sim.snapshot()
+
+
 func _handle_events(evs: Array) -> void:
 	for e in evs:
 		var pos := Vector2(e.get("x", 0.0), e.get("y", 0.0))
