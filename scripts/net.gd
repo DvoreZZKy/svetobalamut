@@ -133,6 +133,30 @@ func _start(cfg: Array) -> void:
 	match_started.emit()
 
 
+func set_local_profile() -> void:
+	if not online:
+		return
+	var p := _local_profile()
+	if is_host:
+		profiles[1] = p
+		_names.rpc(names, profiles)
+		lobby_changed.emit()
+	else:
+		_profile_update.rpc_id(1, p)
+
+
+@rpc("any_peer", "reliable")
+func _profile_update(p: Dictionary) -> void:
+	if not is_host:
+		return
+	var sender := multiplayer.get_remote_sender_id()
+	if not names.has(sender):
+		return
+	profiles[sender] = p
+	_names.rpc(names, profiles)
+	lobby_changed.emit()
+
+
 func send_input(d: Dictionary) -> void:
 	if online and not is_host:
 		_input_rpc.rpc_id(1, d)
