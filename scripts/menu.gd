@@ -324,15 +324,17 @@ func _refresh_profile() -> void:
 
 func _add_facet_panel(parent: Control, target: Control, fill: Color, edge: Color) -> void:
 	var shape := Polygon2D.new()
-	shape.z_index = -1
+	shape.z_index = 0
 	shape.color = fill
 	parent.add_child(shape)
+	parent.move_child(shape, 2 + lobby_frame_data.size() * 2)
 	var outline := Line2D.new()
-	outline.z_index = -1
+	outline.z_index = 0
 	outline.width = 2.0
 	outline.default_color = edge
 	outline.closed = true
 	parent.add_child(outline)
+	parent.move_child(outline, 3 + lobby_frame_data.size() * 2)
 	lobby_frame_data.append({"target": target, "shape": shape, "outline": outline})
 
 
