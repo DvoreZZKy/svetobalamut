@@ -93,7 +93,7 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	t += dt
-	title.modulate = G.hdr(Color.from_hsv(fmod(t * 0.08 + 0.5, 1.0), 0.6, 1.0), 2.3 + 0.5 * sin(t * 3.0))
+	title.modulate = G.hdr(Color.from_hsv(fmod(t * 0.08 + 0.5, 1.0), 0.6, 1.0), 1.45 + 0.22 * sin(t * 2.2))
 
 
 func _build_particles() -> void:
@@ -110,7 +110,7 @@ func _build_particles() -> void:
 	var p := CPUParticles2D.new()
 	p.position = Vector2(640, 760)
 	p.texture = tex
-	p.amount = 70
+	p.amount = 48
 	p.lifetime = 7.0
 	p.preprocess = 7.0
 	p.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
@@ -122,7 +122,7 @@ func _build_particles() -> void:
 	p.initial_velocity_max = 220.0
 	p.scale_amount_min = 0.1
 	p.scale_amount_max = 0.45
-	p.color = Color(0.5, 1.6, 2.4, 0.8)
+	p.color = Color(0.35, 0.85, 1.15, 0.62)
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(1, 1, 1, 1))
 	ramp.set_color(1, Color(1.0, 0.3, 1.0, 0))
