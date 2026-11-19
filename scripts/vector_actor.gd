@@ -19,11 +19,26 @@ func setup(p_kind: int, p_tint: Color, p_outfit: int, p_hat: int) -> void:
 
 func _poly(points: Array, color: Color, outline := true) -> void:
 	var p := PackedVector2Array(points)
-	draw_colored_polygon(p, color)
 	if outline:
+		# Полупрозрачная грань и яркий контур: персонаж выглядит как неоновый чертёж.
+		var fill := color
+		fill.a = 0.075
+		draw_colored_polygon(p, fill)
 		var closed := p.duplicate()
 		closed.append(p[0])
-		draw_polyline(closed, Color("#11182b"), 2.5, true)
+		var edge := color
+		edge.a = 0.96
+		draw_polyline(closed, edge, 2.2, true)
+	else:
+		draw_colored_polygon(p, color)
+
+func _hat(points: Array, color: Color) -> void:
+	var offsets := [Vector2(0, -5), Vector2.ZERO, Vector2(0, -2), Vector2.ZERO]
+	var scales := [0.78, 0.94, 0.9, 0.92]
+	var transformed: Array = []
+	for point in points:
+		transformed.append(Vector2(point.x * scales[kind], point.y * scales[kind]) + offsets[kind])
+	_poly(transformed, color)
 
 func _draw() -> void:
 	var dark := tint.darkened(0.58)
@@ -66,29 +81,28 @@ func _draw() -> void:
 			_poly([Vector2(0,0),Vector2(13,4),Vector2(0,18),Vector2(-2,3)], tint.darkened(0.12), false)
 			_poly([Vector2(0,-20),Vector2(-10,-10),Vector2(-13,4),Vector2(-2,3)], tint.lightened(0.25), false)
 			draw_line(Vector2(-7,-10),Vector2(0,-17),Color.WHITE,1.8,true)
-	# Geometric costume overlay.
+	# Одежда строится по силуэту конкретного класса, а не одной юбкой для всех.
 	if outfit > 0:
 		var cloth: Color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][outfit]
-		match outfit:
-			1:
-				_poly([Vector2(-13,-1),Vector2(13,-1),Vector2(11,14),Vector2(5,19),Vector2(-5,19),Vector2(-11,14)], cloth)
-				draw_line(Vector2(0,0),Vector2(0,16),Color.WHITE,2.0,true)
-			2:
-				_poly([Vector2(-15,0),Vector2(15,0),Vector2(11,17),Vector2(-11,17)], cloth)
-				for yy in [-8,0,8]:
-					draw_line(Vector2(-10,yy),Vector2(10,yy),Color("#26334f"),2.0,true)
-			3:
-				_poly([Vector2(-12,-3),Vector2(12,-3),Vector2(16,17),Vector2(0,12),Vector2(-16,17)], cloth)
-				draw_line(Vector2(-9,2),Vector2(9,2),Color.WHITE,2.0,true)
-			4:
-				_poly([Vector2(-10,-3),Vector2(10,-3),Vector2(17,22),Vector2(0,16),Vector2(-17,22)], cloth)
-	# Hats are separate angular silhouettes above the head.
+		match kind:
+			0: # Светляк — нагрудная обвязка, не закрывающая брюшко и крылья.
+				_poly([Vector2(-7,-8),Vector2(-4,-12),Vector2(4,-12),Vector2(7,-8),Vector2(5,3),Vector2(0,7),Vector2(-5,3)], cloth)
+				draw_line(Vector2(-5,-5), Vector2(5,4), Color.WHITE, 1.8, true)
+				draw_line(Vector2(5,-5), Vector2(-5,4), Color.WHITE, 1.8, true)
+			1: # Капсула — бронепластины по корпусу.
+				_poly([Vector2(-12,-8),Vector2(-8,-14),Vector2(8,-14),Vector2(12,-8),Vector2(10,12),Vector2(5,17),Vector2(-5,17),Vector2(-10,12)], cloth)
+				draw_line(Vector2(0,-12),Vector2(0,14),Color.WHITE,1.8,true)
+			2: # Призрак — короткий геометрический плащ, повторяющий волнистый низ.
+				_poly([Vector2(-12,-2),Vector2(12,-2),Vector2(15,10),Vector2(8,7),Vector2(2,14),Vector2(-5,8),Vector2(-12,14)], cloth)
+			3: # Кристалл — фасетированная грудная вставка.
+				_poly([Vector2(0,-12),Vector2(10,-5),Vector2(7,8),Vector2(0,14),Vector2(-7,8),Vector2(-10,-5)], cloth)
+	# Шапки привязаны к масштабу и высоте головы выбранного силуэта.
 	match hat:
 		1:
-			_poly([Vector2(-15,-21),Vector2(-11,-33),Vector2(-4,-27),Vector2(0,-39),Vector2(5,-27),Vector2(12,-33),Vector2(16,-21)], Color("#ffd65c"))
+			_hat([Vector2(-15,-21),Vector2(-11,-33),Vector2(-4,-27),Vector2(0,-39),Vector2(5,-27),Vector2(12,-33),Vector2(16,-21)], Color("#ffd65c"))
 		2:
-			_poly([Vector2(-17,-22),Vector2(17,-22),Vector2(12,-32),Vector2(-12,-32)], Color("#e85e7e"))
+			_hat([Vector2(-17,-22),Vector2(17,-22),Vector2(12,-32),Vector2(-12,-32)], Color("#e85e7e"))
 		3:
-			_poly([Vector2(-15,-21),Vector2(-25,-35),Vector2(-5,-27),Vector2(0,-21),Vector2(7,-27),Vector2(25,-35),Vector2(15,-21)], Color("#b88cff"))
+			_hat([Vector2(-15,-21),Vector2(-25,-35),Vector2(-5,-27),Vector2(0,-21),Vector2(7,-27),Vector2(25,-35),Vector2(15,-21)], Color("#b88cff"))
 		4:
-			_poly([Vector2(-16,-26),Vector2(-10,-39),Vector2(0,-44),Vector2(10,-39),Vector2(16,-26),Vector2(9,-30),Vector2(-9,-30)], Color("#9cefff"))
+			_hat([Vector2(-16,-26),Vector2(-10,-39),Vector2(0,-44),Vector2(10,-39),Vector2(16,-26),Vector2(9,-30),Vector2(-9,-30)], Color("#9cefff"))
