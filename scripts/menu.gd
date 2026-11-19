@@ -1,5 +1,5 @@
 extends Control
-## Главное меню: ровно 5 кнопок. Подэкраны (IP, настройки, лобби) — панели поверх.
+## Главное меню и подэкраны профиля, подключения, настроек и лобби.
 
 var t := 0.0
 var title: Label
@@ -9,7 +9,7 @@ var ip_edit: LineEdit
 var lobby_list: Label
 var lobby_info: Label
 var start_btn: Button
-var profile_preview: ColorRect
+var profile_preview: TextureRect
 var profile_info: Label
 var profile_color_btn: Button
 var profile_kind_btn: Button
@@ -56,9 +56,10 @@ func _ready() -> void:
 
 	var profile := _box("profile")
 	_title(profile, "ТВОЙ ПЕРСОНАЖ")
-	profile_preview = ColorRect.new()
+	profile_preview = TextureRect.new()
 	profile_preview.custom_minimum_size = Vector2(140, 92)
-	profile_preview.color = G.col(G.profile_color)
+	profile_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	profile_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	profile_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	profile.add_child(profile_preview)
 	profile_info = Label.new()
@@ -178,7 +179,8 @@ func _refresh_profile() -> void:
 	var kinds := ["Светляк", "Капсула", "Призрак", "Кристалл"]
 	var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
 	var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
-	profile_preview.color = G.col(G.profile_color)
+	profile_preview.texture = load("res://assets/sprites/player_%d.png" % G.profile_kind)
+	profile_preview.modulate = G.col(G.profile_color)
 	profile_color_btn.text = "Цвет: " + colors[G.profile_color]
 	profile_kind_btn.text = "Персонаж: " + kinds[G.profile_kind]
 	profile_outfit_btn.text = "Костюм: " + outfits[G.profile_outfit]
