@@ -185,7 +185,13 @@ func _refresh_profile() -> void:
 	profile_kind_btn.text = "Персонаж: " + kinds[G.profile_kind]
 	profile_outfit_btn.text = "Костюм: " + outfits[G.profile_outfit]
 	profile_hat_btn.text = "Шапка: " + hats[G.profile_hat]
-	profile_info.text = "%s • %s • %s" % [kinds[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
+	var class_notes := [
+		"Быстрый • очередь из 3 зарядов • Q: ускорение и скорострельность",
+		"Танк • много здоровья • Q: щит, снижающий урон",
+		"Ловкий • быстрые лёгкие выстрелы • Q: рывок сквозь пространство",
+		"Тяжёлый • медленные мощные снаряды • Q: круговой залп"
+	]
+	profile_info.text = "%s\n%s\n%s • %s" % [kinds[G.profile_kind], class_notes[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
 
 
 func _show(key: String) -> void:
