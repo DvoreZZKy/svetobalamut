@@ -332,13 +332,29 @@ func _show_shadow_explanation() -> void:
 		_show_completion()
 		return
 	arena.sim._make_shadow(me, 0, true)
+	# Prepare one stationary, living training target so the possession lesson is always completable.
+	me.pos = Vector2(800, 450)
+	me.vel = Vector2.ZERO
+	for candidate in arena.sim.players.values():
+		if candidate.id == arena.local_id:
+			continue
+		candidate.shadow = false
+		candidate.decoy = false
+		candidate.light = candidate.max_light
+		candidate.derp_t = 0.0
+		candidate.derp_by = 0
+		candidate.poss_target = 0
+		candidate.pos = Vector2(900, 450)
+		candidate.vel = Vector2.ZERO
+		candidate.human = true
+		break
 	arena.view = arena.sim.snapshot()
 	stage = "ui"
 	shadow_explanation = true
 	Engine.time_scale = 0.0
 	pointer_target = "help"
 	title_label.text = "ТЫ СТАЛ ТЕНЬЮ"
-	body_label.text = "Когда запас света заканчивается, ты превращаешься в Тень. Ты быстрее Светляков, можешь проходить сквозь арену и вселяться в живых игроков. Ищи ближайшего соперника — вернись в бой!"
+	body_label.text = "Когда запас света заканчивается, ты превращаешься в Тень. Светящиеся игроки не видят Теней, а Тени видят друг друга. Ты быстрее Светляков и можешь вселиться в живого игрока, чтобы вернуться в бой."
 	_set_keys([])
 	next_button.visible = true
 	next_button.text = "ПОПРОБОВАТЬ ВСЕЛЕНИЕ"
