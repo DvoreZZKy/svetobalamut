@@ -6,9 +6,9 @@ extends RefCounted
 const A := Vector2(1600, 900)
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
-	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.075, "ability": "Перегрузка"},
+	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.18, "ability": "Перегрузка"},
 	{"name": "Капсула", "hp": 155.0, "def": 0.72, "atk": 1.45, "speed": 0.78, "rate": 0.62, "ability": "Энергощит"},
-	{"name": "Призрак", "hp": 100.0, "def": 1.12, "atk": 0.68, "speed": 1.38, "rate": 0.105, "ability": "Фазовый скачок"},
+	{"name": "Призрак", "hp": 100.0, "def": 1.12, "atk": 0.68, "speed": 1.38, "rate": 0.18, "ability": "Фазовый скачок"},
 	{"name": "Кристалл", "hp": 112.0, "def": 0.92, "atk": 1.9, "speed": 0.88, "rate": 0.82, "ability": "Звёздный залп"}
 ]
 const SPEED := 470.0
@@ -537,7 +537,7 @@ func trigger(name: String) -> void:
 				lit.shuffle()
 				var a: Dictionary = lit[0]
 				var b: Dictionary = lit[1]
-				var amt: float = minf(b.light * 0.4, MAX_LIGHT - a.light)
+				var amt: float = minf(b.light * 0.4, a.max_light - a.light)
 				a.light += amt
 				b.light = maxf(1.0, b.light - amt)
 				var tk: int = a.kind
