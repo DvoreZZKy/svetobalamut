@@ -367,6 +367,8 @@ func _update_panel_near_focus() -> void:
 		pos.y = minf(vp.y - size.y - 18, focus_rect.end.y + 16)
 	elif focus_rect.end.y > vp.y * 0.68:
 		pos.y = maxf(58.0, focus_rect.position.y - size.y - 16)
+	elif pointer_target == "arena":
+		pos = Vector2((vp.x - size.x) * 0.5, 58.0)
 	elif focus_rect.position.x < vp.x * 0.35:
 		pos = Vector2(minf(vp.x - size.x - 14, focus_rect.end.x + 14), (vp.y - size.y) * 0.5)
 	else:
@@ -393,7 +395,9 @@ func _update_pointer() -> void:
 	if stage == "ui" or stage == "ui_fade":
 		var start := panel.position + Vector2(panel.size.x * 0.5, panel.size.y * 0.5)
 		var direction := (target - start).normalized()
-		var edge_start := start + direction * 108.0
+		var half_size := panel.size * 0.5
+		var edge_distance := minf(half_size.x / maxf(absf(direction.x), 0.001), half_size.y / maxf(absf(direction.y), 0.001))
+		var edge_start := start + direction * (edge_distance + 7.0)
 		var tip := target - direction * 13.0
 		pointer.points = PackedVector2Array([edge_start, tip])
 		var side := Vector2(-direction.y, direction.x)
@@ -472,8 +476,11 @@ func _restart_tutorial() -> void:
 		return
 	finished = true
 	var back_to_lobby := G.tutorial_return_to_lobby
+	var previous_mode := G.tutorial_previous_mode
 	Engine.time_scale = NORMAL_SPEED
 	G.tutorial_active = false
+	if back_to_lobby:
+		G.mode = previous_mode
 	G.start_tutorial_game(back_to_lobby)
 
 
