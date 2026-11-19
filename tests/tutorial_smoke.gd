@@ -1,4 +1,5 @@
 extends SceneTree
+## Headless integration check: verifies that the arena actually mounts the guided tutorial.
 
 const TUTORIAL_SCRIPT := preload("res://scripts/arena_tutorial.gd")
 
