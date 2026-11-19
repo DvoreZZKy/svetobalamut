@@ -249,6 +249,20 @@ func _on_next() -> void:
 			Engine.time_scale = SLOW_SPEED
 			next_button.visible = false
 			body_label.text = "Нажми Q, чтобы применить способность."
+		"force_shadow":
+			var me: Dictionary = arena.sim.players.get(arena.local_id, {})
+			if not me.is_empty() and not me.get("shadow", false):
+				arena.sim._make_shadow(me, 0, true)
+				arena.view = arena.sim.snapshot()
+			stage = "wait_shadow"
+			Engine.time_scale = SLOW_SPEED
+			next_button.visible = false
+			body_label.text = "Твоя световая форма исчезает… сейчас появится объяснение механики Тени."
+		"shadow_intro":
+			stage = "wait_possess"
+			Engine.time_scale = SLOW_SPEED
+			next_button.visible = false
+			body_label.text = "Подойди к живому игроку и нажми ПКМ или E, чтобы попробовать вселиться."
 		"step":
 			if step_index < STEPS.size():
 				var item: Dictionary = STEPS[step_index]
@@ -311,8 +325,8 @@ func _update_pointer() -> void:
 	pointer.default_color = Color("#68efff", 0.75 + 0.25 * sin(pulse * 4.0))
 
 
-func _on_shadow_next() -> void:
-	pass
+func _exit_tree() -> void:
+	Engine.time_scale = NORMAL_SPEED
 
 
 func _finish_tutorial() -> void:
