@@ -527,7 +527,7 @@ func _process(dt: float) -> void:
 		_update_views(dt)
 		_update_fx(dt)
 		_update_hud(dt)
-	var bullet_count := view.get("bl", []).size()
+	var bullet_count: int = view.get("bl", []).size()
 	if bullet_count > 0 or bullet_count != last_bullet_count:
 		bullet_layer.queue_redraw()
 	last_bullet_count = bullet_count
