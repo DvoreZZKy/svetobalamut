@@ -83,12 +83,6 @@ func _ready() -> void:
 	is_client = G.mode == "client"
 	local_id = multiplayer.get_unique_id() if G.mode != "single" else 1
 	var arena_env := G.make_env()
-	arena_env.environment.glow_enabled = true
-	arena_env.environment.glow_intensity = 0.62
-	arena_env.environment.glow_strength = 0.72
-	arena_env.environment.glow_bloom = 0.08
-	for glow_level in range(1, 7):
-		arena_env.environment.set_glow_level(glow_level, 0.10 if glow_level <= 3 else 0.0)
 	add_child(arena_env)
 	cam = Camera2D.new()
 	cam.position = ARENA / 2.0
@@ -399,7 +393,8 @@ func _draw() -> void:
 func _seed_ambient() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	for i in 22:
+	var mote_count := [22, 12, 5, 0][G.graphics_quality]
+	for i in mote_count:
 		ambient_motes.append({
 			"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
 			"v": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(7.0, 20.0),
@@ -412,7 +407,9 @@ func _seed_ambient() -> void:
 func _update_ambient(dt: float) -> void:
 	if dt <= 0.0:
 		return
-	for mote in ambient_motes:
+	var mote_count := [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
+	for i in mote_count:
+		var mote: Dictionary = ambient_motes[i]
 		mote.p += mote.v * dt
 		if mote.p.x < 20.0 or mote.p.x > ARENA.x - 20.0:
 			mote.v.x *= -1.0
@@ -431,7 +428,9 @@ var ambient_palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
 
 
 func _draw_ambient() -> void:
-	for mote in ambient_motes:
+	var mote_count := [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
+	for i in mote_count:
+		var mote: Dictionary = ambient_motes[i]
 		var r: float = mote.r
 		var pulse := 0.45 + 0.35 * sin(t * 1.7 + float(mote.phase))
 		var color: Color = ambient_palette[int(mote.tone)]
@@ -1059,13 +1058,15 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, imp
 	for child in fx_layer.get_children():
 		if child is CPUParticles2D:
 			active_bursts += 1
-	if active_bursts >= (16 if important else 8):
+	var burst_limit := [16, 10, 5, 2][G.graphics_quality] if important else [8, 5, 2, 1][G.graphics_quality]
+	if active_bursts >= burst_limit:
 		return
 	var p := CPUParticles2D.new()
 	p.position = pos
 	p.texture = halo_tex
 	p.material = add_mat
-	p.amount = mini(amount, 30)
+	var particle_cap := [30, 20, 10, 4][G.graphics_quality]
+	p.amount = mini(amount, particle_cap)
 	p.lifetime = minf(life, 0.65)
 	p.one_shot = true
 	p.explosiveness = 1.0
