@@ -17,9 +17,9 @@ var net_ev: Array = []
 var snap_timer := 0.0
 var snap_age := 0.0
 var last_seq := 0
-var hitstop := 0.0
 var shake := 0.0
 var t := 0.0
+var last_bullet_count := -1
 
 var pviews := {}
 var eviews := {}
@@ -76,7 +76,12 @@ func _ready() -> void:
 	is_client = G.mode == "client"
 	local_id = multiplayer.get_unique_id() if G.mode != "single" else 1
 	var arena_env := G.make_env()
-	arena_env.environment.glow_enabled = false
+	arena_env.environment.glow_enabled = true
+	arena_env.environment.glow_intensity = 0.62
+	arena_env.environment.glow_strength = 0.72
+	arena_env.environment.glow_bloom = 0.08
+	for glow_level in range(1, 7):
+		arena_env.environment.set_glow_level(glow_level, 0.10 if glow_level <= 3 else 0.0)
 	add_child(arena_env)
 	cam = Camera2D.new()
 	cam.position = ARENA / 2.0
@@ -433,15 +438,8 @@ func _process(dt: float) -> void:
 		if not G.tutorial_active:
 			for pid in Net.inputs:
 				sim.inputs[pid] = Net.inputs[pid]
-		if G.tutorial_active and Engine.time_scale <= 0.001:
-			pass
-		elif hitstop > 0.0:
-			hitstop -= dt
-		else:
+		if not (G.tutorial_active and Engine.time_scale <= 0.001):
 			sim.step(minf(dt, 0.05))
-			if sim.hitstop_req > 0.0:
-				hitstop = sim.hitstop_req
-				sim.hitstop_req = 0.0
 		sim.shake_req = 0.0
 		view = sim.snapshot()
 		var ev: Array = sim.events
@@ -473,14 +471,21 @@ func _process(dt: float) -> void:
 		_update_views(dt)
 		_update_fx(dt)
 		_update_hud(dt)
-	bullet_layer.queue_redraw()
+	var bullet_count := view.get("bl", []).size()
+	if bullet_count > 0 or bullet_count != last_bullet_count:
+		bullet_layer.queue_redraw()
+	last_bullet_count = bullet_count
 	if is_instance_valid(cursor_canvas):
 		cursor_canvas.position = get_viewport().get_mouse_position() - cursor_canvas.size * 0.5
 		cursor_canvas.queue_redraw()
 	shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
 	var s: float = shake if G.shake_on else 0.0
-	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * s
-	cam.rotation = randf_range(-1, 1) * s * 0.0006
+	if s > 0.05:
+		cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * s
+		cam.rotation = randf_range(-1, 1) * s * 0.0006
+	else:
+		cam.offset = Vector2.ZERO
+		cam.rotation = 0.0
 
 
 
@@ -693,8 +698,10 @@ func _update_views(dt: float) -> void:
 		# трейл
 		var moving: bool = vel.length() > 60.0 or pd.dt
 		if moving:
-			line.add_point(pv.pos)
-			var maxp := 40 if pd.dt else 26
+			var point_count := line.get_point_count()
+			if point_count == 0 or line.get_point_position(point_count - 1).distance_squared_to(pv.pos) >= 81.0 or pd.dt:
+				line.add_point(pv.pos)
+			var maxp := 30 if pd.dt else 20
 			while line.get_point_count() > maxp:
 				line.remove_point(0)
 		elif line.get_point_count() > 0:
