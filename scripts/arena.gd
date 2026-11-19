@@ -80,6 +80,10 @@ func _ready() -> void:
 		sim.reset(G.cfg)
 		Net.peer_left.connect(_on_peer_left)
 		view = sim.snapshot()
+	if G.tutorial_active:
+		var tutorial_controller := Node.new()
+		tutorial_controller.set_script(load("res://scripts/arena_tutorial.gd"))
+		add_child(tutorial_controller)
 	Sfx.play_music()
 
 
@@ -315,8 +319,9 @@ func _process(dt: float) -> void:
 	var inp := _read_input()
 	if not is_client:
 		sim.inputs[local_id] = inp
-		for pid in Net.inputs:
-			sim.inputs[pid] = Net.inputs[pid]
+		if not G.tutorial_active:
+			for pid in Net.inputs:
+				sim.inputs[pid] = Net.inputs[pid]
 		if hitstop > 0.0:
 			hitstop -= dt
 		else:
@@ -331,7 +336,7 @@ func _process(dt: float) -> void:
 		_handle_events(ev)
 		net_ev.append_array(ev)
 		snap_timer -= dt
-		if Net.online and snap_timer <= 0.0:
+		if Net.online and not G.tutorial_active and snap_timer <= 0.0:
 			snap_timer = 0.05
 			view["ev"] = net_ev
 			net_ev = []
