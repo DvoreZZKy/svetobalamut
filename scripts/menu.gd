@@ -122,12 +122,11 @@ func _ready() -> void:
 
 	var lobby := _box("lobby")
 	_title(lobby, "КОМНАТА")
-	_add_facet_panel(lobby, Vector2(0, 105), Vector2(535, 455), Color("#10283a"), Color("#287e91"))
-	_add_facet_panel(lobby, Vector2(565, 105), Vector2(610, 455), Color("#1b1b3b"), Color("#51458c"))
+	_add_facet_panel(lobby, Vector2(0, 82), Vector2(520, 475), Color("#10283a"), Color("#287e91"))
+	_add_facet_panel(lobby, Vector2(545, 82), Vector2(635, 475), Color("#1b1b3b"), Color("#51458c"))
 	lobby_info = Label.new()
 	lobby_info.add_theme_font_size_override("font_size", 17)
 	lobby_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lobby.add_child(lobby_info)
 	var lobby_columns := HBoxContainer.new()
 	lobby_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	lobby_columns.add_theme_constant_override("separation", 22)
@@ -163,7 +162,7 @@ func _ready() -> void:
 	lobby_hat_btn = _btn("Шапка", editor_panel, func(): G.profile_hat = (G.profile_hat + 1) % 5; _refresh_profile(); _sync_lobby_profile())
 	for child in editor_panel.get_children():
 		if child is Button:
-			child.custom_minimum_size = Vector2(520, 38)
+			child.custom_minimum_size = Vector2(570, 38)
 			child.add_theme_font_size_override("font_size", 17)
 	_refresh_profile()
 	var lobby_actions := HBoxContainer.new()
