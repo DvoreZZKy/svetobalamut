@@ -2,6 +2,20 @@ extends Node2D
 ## TRIBE: отдельная пещерная сессия. Вся экономика и прогресс существуют только в памяти матча.
 
 const ACTOR = preload("res://scripts/vector_actor.gd")
+
+class TribeMap extends Control:
+	var explored_cells := {}
+	var player_pos := Vector2.ZERO
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2.ZERO,size),Color("#040a13",0.94),true)
+		draw_rect(Rect2(Vector2.ZERO,size),Color("#4edff4"),false,2.0)
+		for key in explored_cells:
+			var pos := Vector2((float(key.x)+0.5)/29.0*size.x,(float(key.y)+0.5)/19.0*size.y)
+			draw_rect(Rect2(pos-Vector2(3,3),Vector2(6,6)),Color("#3a7586",0.8),true)
+		draw_circle(Vector2(0.16,0.25)*size,5,Color("#51eaff"))
+		draw_circle(Vector2(0.50,0.50)*size,5,Color("#ff7655"))
+		draw_circle(Vector2(0.84,0.76)*size,5,Color("#bc7aff"))
+		draw_circle(player_pos/WORLD*size,4,Color.WHITE)
 const WORLD := Vector2(2600.0, 1640.0)
 const ORE_DATA := {
 	"neon": {"name":"НЕОНОВЫЙ КРИСТАЛЛ","color":Color("#42eaff"),"xp":18,"money":8,"age":1,"time":1.0},
@@ -151,11 +165,10 @@ func _build_hud() -> void:
 	hint_label.anchor_bottom = 1
 	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hud_layer.add_child(hint_label)
-	map_widget = Control.new()
+	map_widget = TribeMap.new()
 	map_widget.position = Vector2(1040,18)
 	map_widget.size = Vector2(220,150)
 	map_widget.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	map_widget.draw.connect(_draw_minimap)
 	hud_layer.add_child(map_widget)
 
 
@@ -220,7 +233,9 @@ func _simulate(dt: float) -> void:
 			continue
 		var input_data: Dictionary = p.get("input",{})
 		var move: Vector2 = input_data.get("move",Vector2.ZERO)
-		p.pos += move * 300.0 * dt
+		if not bool(p.human):
+			move = _bot_move(p)
+		p.pos += move * (300.0 if float(p.slow) <= 0.0 else 185.0) * dt
 		p.pos.x = clampf(p.pos.x,90,WORLD.x-90)
 		p.pos.y = clampf(p.pos.y,90,WORLD.y-90)
 		p.attack_cd = maxf(0.0,float(p.attack_cd)-dt)
@@ -243,6 +258,19 @@ func _simulate(dt: float) -> void:
 			_respawn(p)
 			if G.mode == "host":
 				Net.tribe_inputs.erase(p.id)
+
+
+func _bot_move(p: Dictionary) -> Vector2:
+	var nearest := Vector2(300,360)
+	var best := 1e20
+	for ore in ores:
+		if int(p.age) < int(ORE_DATA[ore.kind].age):
+			continue
+		var d: float = p.pos.distance_squared_to(ore.pos)
+		if d < best:
+			best = d
+			nearest = ore.pos
+	return p.pos.direction_to(nearest) if best < 1e20 else Vector2.ZERO
 
 
 func _mine_nearest(p: Dictionary, dt: float) -> void:
@@ -481,16 +509,12 @@ func _draw_devourers() -> void:
 
 
 func _draw_minimap() -> void:
-	map_widget.draw_rect(Rect2(Vector2.ZERO,map_widget.size),Color("#040a13",0.94),true)
-	map_widget.draw_rect(Rect2(Vector2.ZERO,map_widget.size),Color("#4edff4"),false,2.0)
-	for key in explored:
-		var pos := Vector2((float(key.x)+0.5)/29.0*map_widget.size.x,(float(key.y)+0.5)/19.0*map_widget.size.y)
-		map_widget.draw_rect(Rect2(pos-Vector2(3,3),Vector2(6,6)),Color("#3a7586",0.8),true)
-	for zone in ZONES:
-		var pos: Vector2 = zone.center/WORLD*map_widget.size
-		map_widget.draw_circle(pos,5,[Color("#51eaff"),Color("#ff7655"),Color("#bc7aff")][zone.depth])
+	if not is_instance_valid(map_widget):
+		return
+	map_widget.explored_cells = explored.duplicate()
 	if players.has(local_id):
-		map_widget.draw_circle(players[local_id].pos/WORLD*map_widget.size,4,Color.WHITE)
+		map_widget.player_pos = players[local_id].pos
+	map_widget.queue_redraw()
 
 
 func _exit_tree() -> void:
