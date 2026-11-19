@@ -13,9 +13,7 @@ class TribeMap extends Control:
 		for key in explored_cells:
 			var pos := Vector2((float(key.x)+0.5)/29.0*size.x,(float(key.y)+0.5)/19.0*size.y)
 			draw_rect(Rect2(pos-Vector2(3,3),Vector2(6,6)),Color("#3a7586",0.8),true)
-		draw_circle(Vector2(0.16,0.25)*size,5,Color("#51eaff"))
-		draw_circle(Vector2(0.50,0.50)*size,5,Color("#ff7655"))
-		draw_circle(Vector2(0.84,0.76)*size,5,Color("#bc7aff"))
+		
 		draw_circle(player_pos/MAP_WORLD*size,4,Color.WHITE)
 const WORLD := Vector2(2600.0, 1640.0)
 const GOLD_RESPAWN_SECONDS := 180.0
@@ -220,13 +218,13 @@ func _process(dt: float) -> void:
 func _read_input() -> Dictionary:
 	var move := Vector2(Input.get_axis("left","right"),Input.get_axis("up","down")).normalized()
 	var aim := (get_global_mouse_position() - (players[local_id].pos if players.has(local_id) else Vector2(300,360))).normalized()
-	return {"move":move,"aim":aim,"mine":Input.is_action_pressed("interact"),"attack":Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),"eat":Input.is_action_just_pressed("ui_accept") or Input.is_key_pressed(KEY_F)}
+	return {"move":move,"aim":aim,"mine":Input.is_action_pressed("interact"),"attack":Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),"eat":Input.is_action_just_pressed("eat")}
 
 
 func _simulate(dt: float) -> void:
 	elapsed += dt
 	gold_timer += dt
-	if gold_timer >= 180.0:
+	if gold_timer >= GOLD_RESPAWN_SECONDS:
 		gold_timer = 0.0
 		var gold := {"kind":"gold","pos":Vector2(rng.randf_range(1650,2380),rng.randf_range(950,1450)),"hp":4.0,"max_hp":4.0}
 		 ores.append(gold)
