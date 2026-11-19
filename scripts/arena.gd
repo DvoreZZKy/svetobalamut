@@ -174,7 +174,7 @@ func _build_hud() -> void:
 	var cl := CanvasLayer.new()
 	cl.layer = 10
 	add_child(cl)
-	timer_lbl = _label("2:30", 46, Vector2(540, 10), Vector2(200, 56), cl, true)
+	timer_lbl = _label("4:00", 46, Vector2(540, 10), Vector2(200, 56), cl, true)
 	timer_lbl.modulate = Color(0.6, 1.8, 2.2)
 	banner = _label("", 70, Vector2(0, 190), Vector2(1280, 100), cl, true)
 	banner.pivot_offset = Vector2(640, 50)
@@ -323,7 +323,14 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	spr.texture = player_tex[pd.k % 4]
 	root.add_child(spr)
 	var outfit := Polygon2D.new()
-	outfit.polygon = PackedVector2Array([Vector2(-13, -5), Vector2(13, -5), Vector2(10, 12), Vector2(-10, 12)])
+	var outfit_shapes := [
+		PackedVector2Array(),
+		PackedVector2Array([Vector2(-13, -5), Vector2(13, -5), Vector2(10, 12), Vector2(-10, 12)]),
+		PackedVector2Array([Vector2(-16, -7), Vector2(16, -7), Vector2(8, 5), Vector2(12, 14), Vector2(-12, 14), Vector2(-8, 5)]),
+		PackedVector2Array([Vector2(-13, -7), Vector2(13, -7), Vector2(7, 13), Vector2(-7, 13)]),
+		PackedVector2Array([Vector2(-11, -5), Vector2(11, -5), Vector2(17, 17), Vector2(-17, 17)])
+	]
+	outfit.polygon = outfit_shapes[int(pd.get("outfit", 0)) % outfit_shapes.size()]
 	outfit.color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][int(pd.get("outfit", 0)) % 5]
 	root.add_child(outfit)
 	var hat := Polygon2D.new()
