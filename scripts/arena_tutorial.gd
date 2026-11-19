@@ -42,7 +42,7 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	if finished:
 		return
-	pulse += dt
+	pulse = float(Time.get_ticks_msec()) / 1000.0
 	if pointer_target != "":
 		_update_pointer()
 	if stage == "wait_move":
@@ -354,7 +354,8 @@ func _update_pointer() -> void:
 		"arena": target = vp * 0.5
 	var origin := Vector2(vp.x * 0.5, vp.y * 0.5 + 165)
 	pointer.points = PackedVector2Array([origin, origin + Vector2(0, -35), target])
-	pointer_dot.position = target
+	pointer_dot.position = target + Vector2(sin(pulse * 3.0) * 4.0, cos(pulse * 3.0) * 4.0)
+	pointer.width = 2.5 + 0.8 * (0.5 + 0.5 * sin(pulse * 4.0))
 	pointer_dot.rotation = (origin - target).angle()
 	pointer.default_color = Color("#68efff", 0.75 + 0.25 * sin(pulse * 4.0))
 
