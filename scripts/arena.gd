@@ -393,7 +393,7 @@ func _draw() -> void:
 func _seed_ambient() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	var mote_count: int := [22, 12, 5, 0][G.graphics_quality]
+	var mote_count: int = [22, 12, 5, 0][G.graphics_quality]
 	for i in mote_count:
 		ambient_motes.append({
 			"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
@@ -407,7 +407,7 @@ func _seed_ambient() -> void:
 func _update_ambient(dt: float) -> void:
 	if dt <= 0.0:
 		return
-	var mote_count: int := [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
+	var mote_count: int = [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
 	for i in mote_count:
 		var mote: Dictionary = ambient_motes[i]
 		mote.p += mote.v * dt
@@ -428,7 +428,7 @@ var ambient_palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
 
 
 func _draw_ambient() -> void:
-	var mote_count: int := [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
+	var mote_count: int = [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
 	for i in mote_count:
 		var mote: Dictionary = ambient_motes[i]
 		var r: float = mote.r
@@ -1058,14 +1058,14 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, imp
 	for child in fx_layer.get_children():
 		if child is CPUParticles2D:
 			active_bursts += 1
-	var burst_limit: int := [16, 10, 5, 2][G.graphics_quality] if important else [8, 5, 2, 1][G.graphics_quality]
+	var burst_limit: int = [16, 10, 5, 2][G.graphics_quality] if important else [8, 5, 2, 1][G.graphics_quality]
 	if active_bursts >= burst_limit:
 		return
 	var p := CPUParticles2D.new()
 	p.position = pos
 	p.texture = halo_tex
 	p.material = add_mat
-	var particle_cap: int := [30, 20, 10, 4][G.graphics_quality]
+	var particle_cap: int = [30, 20, 10, 4][G.graphics_quality]
 	p.amount = mini(amount, particle_cap)
 	p.lifetime = minf(life, 0.65)
 	p.one_shot = true
