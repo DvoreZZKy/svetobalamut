@@ -26,6 +26,8 @@ var eviews := {}
 var cis := {}
 
 var cam: Camera2D
+var ambient_layer: Node2D
+var ambient_motes: Array[Dictionary] = []
 var trail_layer: Node2D
 var ent_layer: Node2D
 var bullet_layer: Node2D
@@ -87,6 +89,11 @@ func _ready() -> void:
 	cam.position = ARENA / 2.0
 	cam.zoom = Vector2(0.78, 0.78)
 	add_child(cam)
+	ambient_layer = Node2D.new()
+	ambient_layer.z_index = 0
+	ambient_layer.draw.connect(_draw_ambient)
+	add_child(ambient_layer)
+	_seed_ambient()
 	trail_layer = Node2D.new()
 	ent_layer = Node2D.new()
 	bullet_layer = Node2D.new()
@@ -349,12 +356,20 @@ func _draw() -> void:
 	for z in Sim.ZONES:
 		var c := Vector2(z.x, z.y)
 		var zone_poly := PackedVector2Array()
-		for i in 12:
-			zone_poly.append(c + Vector2.from_angle(TAU * float(i) / 12.0) * z.z)
+		var inner_ring := PackedVector2Array()
+		for i in 24:
+			var direction := Vector2.from_angle(TAU * float(i) / 24.0)
+			zone_poly.append(c + direction * z.z)
+			inner_ring.append(c + direction * z.z * 0.72)
 		draw_colored_polygon(zone_poly, Color(0.015, 0.01, 0.035, 0.55))
 		var zone_outline := zone_poly.duplicate()
 		zone_outline.append(zone_poly[0])
-		draw_polyline(zone_outline, Color(0.28, 0.16, 0.52, 0.42), 3.0, true)
+		draw_polyline(zone_outline, Color(0.36, 0.22, 0.72, 0.55), 2.2, true)
+		inner_ring.append(inner_ring[0])
+		draw_polyline(inner_ring, Color(0.24, 0.62, 0.92, 0.16), 1.2, true)
+		for tick in 4:
+			var axis := Vector2.from_angle(TAU * float(tick) / 4.0)
+			draw_line(c + axis * z.z * 0.82, c + axis * z.z * 0.94, Color(0.52, 0.34, 0.92, 0.38), 2.0, true)
 	var border := PackedVector2Array([
 		Vector2(24,0), Vector2(ARENA.x-24,0), Vector2(ARENA.x,24),
 		Vector2(ARENA.x,ARENA.y-24), Vector2(ARENA.x-24,ARENA.y),
@@ -362,6 +377,45 @@ func _draw() -> void:
 	])
 	border.append(border[0])
 	draw_polyline(border, Color(0.48, 0.2, 0.72), 3.0, true)
+
+
+func _seed_ambient() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	for i in 22:
+		ambient_motes.append({
+			"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
+			"v": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(7.0, 20.0),
+			"r": rng.randf_range(2.0, 4.5),
+			"phase": rng.randf_range(0.0, TAU),
+			"tone": i % 3
+		})
+
+
+func _update_ambient(dt: float) -> void:
+	for mote in ambient_motes:
+		mote.p += mote.v * dt
+		if mote.p.x < 20.0 or mote.p.x > ARENA.x - 20.0:
+			mote.v.x *= -1.0
+		if mote.p.y < 20.0 or mote.p.y > ARENA.y - 20.0:
+			mote.v.y *= -1.0
+	ambient_layer.queue_redraw()
+
+
+func _draw_ambient() -> void:
+	var palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
+	for mote in ambient_motes:
+		var p: Vector2 = mote.p
+		var r: float = mote.r
+		var pulse := 0.45 + 0.35 * sin(t * 1.7 + float(mote.phase))
+		var color: Color = palette[int(mote.tone)]
+		var points := PackedVector2Array([
+			p + Vector2(0, -r * 2.0), p + Vector2(r, 0),
+			p + Vector2(0, r * 2.0), p + Vector2(-r, 0)
+		])
+		ambient_layer.draw_colored_polygon(points, Color(color, pulse * 0.32))
+		ambient_layer.draw_line(p + Vector2(-r * 3.0, 0), p + Vector2(r * 3.0, 0), Color(color, pulse * 0.22), 1.0, true)
+		ambient_layer.draw_line(p + Vector2(0, -r * 3.0), p + Vector2(0, r * 3.0), Color(color, pulse * 0.22), 1.0, true)
 
 
 func _draw_bullets() -> void:
@@ -428,6 +482,7 @@ func _process(dt: float) -> void:
 		# The scene and UI keep processing, but the offline match does not advance.
 		return
 	t += dt
+	_update_ambient(dt)
 	var inp := _read_input()
 	if pause_open:
 		inp = {"mv": Vector2.ZERO, "aim": get_global_mouse_position(),
