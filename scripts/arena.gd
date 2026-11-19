@@ -438,7 +438,7 @@ func _update_views(dt: float) -> void:
 		spr.rotation = pv.rot
 		pv.kick = maxf(0.0, pv.kick - dt * 7.0)
 		var pulse := 1.0 + 0.07 * sin(t * 11.0 + id)
-		spr.scale = Vector2.ONE * (0.42 + 0.32 * lf) * pulse * (1.0 + pv.kick * 0.35)
+		spr.scale = Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
 		halo.scale = Vector2.ONE * (0.9 + 1.8 * lf)
 		if shadow:
 			spr.modulate = Color(0.6, 0.25, 1.3, 0.7)
