@@ -233,7 +233,7 @@ func _draw_bullets() -> void:
 		var radius: float = float(b[6]) if b.size() > 6 else 6.0
 		var width := 8.0 + radius * 0.8
 		bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
-		bullet_layer.draw_line(tail, pos, G.hdr(col, 3.5), width * 0.45, true)
+		bullet_layer.draw_line(tail, pos, G.hdr(col, 2.0), width * 0.4, true)
 		bullet_layer.draw_circle(pos, 6.0, Color(4, 4, 4))
 
 
@@ -325,23 +325,12 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	var actor := VectorActor.new()
 	actor.setup(int(pd.k), G.col(int(pd.c)), int(pd.get("outfit", 0)), int(pd.get("hat", 0)))
 	root.add_child(actor)
-	var outfit := Polygon2D.new()
-	outfit.z_index = 2
-	var outfit_shapes := [
-		PackedVector2Array(),
-		PackedVector2Array([Vector2(-13, -5), Vector2(13, -5), Vector2(10, 12), Vector2(-10, 12)]),
-		PackedVector2Array([Vector2(-16, -7), Vector2(16, -7), Vector2(8, 5), Vector2(12, 14), Vector2(-12, 14), Vector2(-8, 5)]),
-		PackedVector2Array([Vector2(-13, -7), Vector2(13, -7), Vector2(7, 13), Vector2(-7, 13)]),
-		PackedVector2Array([Vector2(-11, -5), Vector2(11, -5), Vector2(17, 17), Vector2(-17, 17)])
-	]
-	
-	
 	var local_ring := Line2D.new()
 	local_ring.width = 5.0
 	local_ring.default_color = Color(0.25, 0.95, 1.0, 0.95)
 	local_ring.closed = true
-	for i in 32:
-		local_ring.add_point(Vector2.from_angle(TAU * float(i) / 32.0) * 49.0)
+	for i in 12:
+		local_ring.add_point(Vector2.from_angle(TAU * float(i) / 12.0) * 49.0)
 	local_ring.visible = false
 	local_ring.z_index = 5
 	root.add_child(local_ring)
@@ -355,8 +344,8 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	line.width = 28.0
 	line.width_curve = trail_curve
 	line.gradient = trail_grad
-	line.joint_mode = Line2D.LINE_JOINT_ROUND
-	line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	line.joint_mode = Line2D.LINE_JOINT_BEVEL
+	line.begin_cap_mode = Line2D.LINE_CAP_NONE
 	var sm := ShaderMaterial.new()
 	sm.shader = trail_shader
 	line.material = sm
@@ -418,13 +407,13 @@ func _update_views(dt: float) -> void:
 		pv.kick = maxf(0.0, pv.kick - dt * 7.0)
 		var pulse := 1.0 + 0.07 * sin(t * 11.0 + id)
 		actor.scale = Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
-		halo.scale = Vector2.ONE * (0.9 + 1.8 * lf)
+		halo.scale = Vector2.ONE * (0.55 + 0.75 * lf)
 		if shadow:
 			actor.modulate = Color(0.65, 0.45, 0.95, 0.9)
 			halo.modulate = Color(0.5, 0.15, 1.2, 0.5)
 			actor.scale = Vector2.ONE * 0.5
 		else:
-			var c := G.hdr(col, 0.9 + 1.5 * lf)
+			var c := G.hdr(col, 0.78 + 0.42 * lf)
 			if pd.h > 0.0:
 				c = Color(3.2, 3.2, 3.2)
 			if pd.iv > 0.0:
@@ -435,8 +424,8 @@ func _update_views(dt: float) -> void:
 				c = Color(2.4, 0.4, 2.8) if int(t * 14.0) % 2 == 0 else Color(0.6, 2.0, 2.4)
 				root.position += Vector2(randf_range(-6, 6), randf_range(-6, 6))
 			actor.modulate = c
-			var hc := G.hdr(col, 0.3 + 1.3 * lf)
-			hc.a = 0.25 + 0.65 * lf
+			var hc := G.hdr(col, 0.12 + 0.28 * lf)
+			hc.a = 0.12 + 0.22 * lf
 			halo.modulate = hc
 		lbl.visible = vis and not shadow
 		var nm: String = pd.n
