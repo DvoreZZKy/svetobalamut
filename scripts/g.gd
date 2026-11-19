@@ -18,6 +18,7 @@ var vol_sfx := 0.9
 var shake_on := true
 var fullscreen := false
 var tutorial_done := false
+var tutorial_active := false
 var tutorial_return_to_lobby := false
 
 var mode := "single"        # single | host | client
