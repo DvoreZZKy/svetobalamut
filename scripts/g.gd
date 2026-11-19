@@ -5,6 +5,14 @@ const SAVE_PATH := "user://settings.cfg"
 const BOT_NAMES := ["Искра", "Вспышка", "Мерцай", "Блик", "Зарница", "Фотончик", "Луч", "Нимб", "Сияй"]
 
 var player_name := "Светляк"
+var profile_color := 0
+var profile_kind := 0
+var profile_outfit := 0
+var profile_hat := 0
+const PROFILE_COLORS := [
+	Color("#54eaff"), Color("#ff5c87"), Color("#ffd45c"), Color("#a77bff"),
+	Color("#67f59a"), Color("#ff914d"), Color("#f4f4ff"), Color("#ff6df0")
+]
 var vol_music := 0.7
 var vol_sfx := 0.9
 var shake_on := true
@@ -46,7 +54,7 @@ func _setup_input() -> void:
 
 
 func col(ci: int) -> Color:
-	return Color.from_hsv(fmod(ci * 0.1 + 0.52, 1.0), 0.85, 1.0)
+	return PROFILE_COLORS[posmod(ci, PROFILE_COLORS.size())]
 
 
 func hdr(c: Color, k: float) -> Color:
@@ -79,7 +87,8 @@ func local_ips() -> Array:
 
 func start_single() -> void:
 	mode = "single"
-	cfg = [{"id": 1, "name": player_name, "human": true}]
+	cfg = [{"id": 1, "name": player_name, "human": true, "color": profile_color,
+		"kind": profile_kind, "outfit": profile_outfit, "hat": profile_hat}]
 	for i in 5:
 		cfg.append({"id": -(i + 1), "name": BOT_NAMES[i], "human": false})
 	get_tree().change_scene_to_file("res://scenes/arena.tscn")
@@ -88,6 +97,10 @@ func start_single() -> void:
 func save_settings() -> void:
 	var c := ConfigFile.new()
 	c.set_value("s", "name", player_name)
+	c.set_value("s", "profile_color", profile_color)
+	c.set_value("s", "profile_kind", profile_kind)
+	c.set_value("s", "profile_outfit", profile_outfit)
+	c.set_value("s", "profile_hat", profile_hat)
 	c.set_value("s", "music", vol_music)
 	c.set_value("s", "sfx", vol_sfx)
 	c.set_value("s", "shake", shake_on)
@@ -100,6 +113,10 @@ func load_settings() -> void:
 	if c.load(SAVE_PATH) != OK:
 		return
 	player_name = c.get_value("s", "name", player_name)
+	profile_color = c.get_value("s", "profile_color", profile_color)
+	profile_kind = c.get_value("s", "profile_kind", profile_kind)
+	profile_outfit = c.get_value("s", "profile_outfit", profile_outfit)
+	profile_hat = c.get_value("s", "profile_hat", profile_hat)
 	vol_music = c.get_value("s", "music", vol_music)
 	vol_sfx = c.get_value("s", "sfx", vol_sfx)
 	shake_on = c.get_value("s", "shake", shake_on)
