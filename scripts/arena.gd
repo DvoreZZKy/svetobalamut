@@ -33,7 +33,6 @@ var cis := {}
 var cam: Camera2D
 var ambient_layer: Node2D
 var ambient_motes: Array[Dictionary] = []
-var ambient_redraw_timer := 0.0
 var trail_layer: Node2D
 var ent_layer: Node2D
 var bullet_layer: Node2D
@@ -45,7 +44,6 @@ var trail_grad: Gradient
 var fade_grad: Gradient
 var trail_shader: Shader
 var fx_mat: ShaderMaterial
-var fx_overlay: ColorRect
 const VectorActor = preload("res://scripts/vector_actor.gd")
 const FacetButton = preload("res://scripts/facet_button.gd")
 const ArenaTutorial = preload("res://scripts/arena_tutorial.gd")
@@ -85,12 +83,12 @@ func _ready() -> void:
 	is_client = G.mode == "client"
 	local_id = multiplayer.get_unique_id() if G.mode != "single" else 1
 	var arena_env := G.make_env()
-	arena_env.environment.glow_enabled = false
-	arena_env.environment.glow_intensity = 0.0
-	arena_env.environment.glow_strength = 0.0
-	arena_env.environment.glow_bloom = 0.0
+	arena_env.environment.glow_enabled = true
+	arena_env.environment.glow_intensity = 0.62
+	arena_env.environment.glow_strength = 0.72
+	arena_env.environment.glow_bloom = 0.08
 	for glow_level in range(1, 7):
-		arena_env.environment.set_glow_level(glow_level, 0.0)
+		arena_env.environment.set_glow_level(glow_level, 0.10 if glow_level <= 3 else 0.0)
 	add_child(arena_env)
 	cam = Camera2D.new()
 	cam.position = ARENA / 2.0
@@ -195,14 +193,12 @@ func _build_fx_overlay() -> void:
 	var cl := CanvasLayer.new()
 	cl.layer = 5
 	add_child(cl)
-	fx_overlay = ColorRect.new()
-	var r: ColorRect = fx_overlay
+	var r := ColorRect.new()
 	r.set_anchors_preset(Control.PRESET_FULL_RECT)
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fx_mat = ShaderMaterial.new()
 	fx_mat.shader = load("res://shaders/screen_fx.gdshader")
 	r.material = fx_mat
-	r.visible = false
 	cl.add_child(r)
 
 
@@ -413,7 +409,7 @@ func _draw() -> void:
 func _seed_ambient() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	for i in 8:
+	for i in 22:
 		ambient_motes.append({
 			"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
 			"v": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(7.0, 20.0),
@@ -426,12 +422,8 @@ func _seed_ambient() -> void:
 func _update_ambient(dt: float) -> void:
 	if dt <= 0.0:
 		return
-	ambient_redraw_timer -= dt
-	if ambient_redraw_timer > 0.0:
-		return
-	ambient_redraw_timer = 0.06
 	for mote in ambient_motes:
-		mote.p += mote.v * 0.06
+		mote.p += mote.v * dt
 		if mote.p.x < 20.0 or mote.p.x > ARENA.x - 20.0:
 			mote.v.x *= -1.0
 		if mote.p.y < 20.0 or mote.p.y > ARENA.y - 20.0:
@@ -706,7 +698,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	lbl.add_theme_font_size_override("font_size", 14)
 	root.add_child(lbl)
 	var line := Line2D.new()
-	line.width = 18.0
+	line.width = 28.0
 	line.width_curve = trail_curve
 	line.gradient = trail_grad
 	line.joint_mode = Line2D.LINE_JOINT_BEVEL
@@ -822,7 +814,7 @@ func _update_views(dt: float) -> void:
 			var point_count := line.get_point_count()
 			if point_count == 0 or line.get_point_position(point_count - 1).distance_squared_to(pv.pos) >= 81.0 or pd.dt:
 				line.add_point(pv.pos)
-			var maxp := 12 if pd.dt else 8
+			var maxp := 30 if pd.dt else 20
 			while line.get_point_count() > maxp:
 				line.remove_point(0)
 		elif line.get_point_count() > 0:
@@ -889,12 +881,6 @@ func _update_fx(dt: float) -> void:
 	var fx: Dictionary = view.get("fx", {})
 	invert_cur = move_toward(invert_cur, 1.0 if fx.has("invert") else 0.0, dt * 5.0)
 	blind_cur = move_toward(blind_cur, 1.0 if fx.has("blind") else 0.0, dt * 4.0)
-	var needs_post_fx: bool = invert_cur > 0.01 or blind_cur > 0.01
-	# Avoid a full-screen screen-texture shader pass during normal gameplay.
-	if fx_overlay.visible != needs_post_fx:
-		fx_overlay.visible = needs_post_fx
-	if not needs_post_fx:
-		return
 	fx_mat.set_shader_parameter("invert", invert_cur)
 	fx_mat.set_shader_parameter("blind", blind_cur)
 	var ws := Vector2(get_window().size)
@@ -1060,7 +1046,8 @@ func _handle_events(evs: Array) -> void:
 				shake = maxf(shake, 26.0)
 				timer_glitch_until = Time.get_ticks_msec() + 1800
 				_show_banner(CHAOS_RU.get(e.n, str(e.n)).to_upper())
-				# Chromatic aberration omitted: it forced an expensive full-screen shader pass.
+				var tw := create_tween()
+				tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
 			"ability":
 				Sfx.play("dash", 1.0, -2.0)
 				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
@@ -1077,14 +1064,14 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, imp
 	for child in fx_layer.get_children():
 		if child is CPUParticles2D:
 			active_bursts += 1
-	if active_bursts >= (6 if important else 3):
+	if active_bursts >= (16 if important else 8):
 		return
 	var p := CPUParticles2D.new()
 	p.position = pos
 	p.texture = halo_tex
 	p.material = add_mat
-	p.amount = mini(amount, 14)
-	p.lifetime = minf(life, 0.42)
+	p.amount = mini(amount, 30)
+	p.lifetime = minf(life, 0.65)
 	p.one_shot = true
 	p.explosiveness = 1.0
 	p.direction = Vector2.RIGHT
@@ -1100,7 +1087,7 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, imp
 	p.color_ramp = fade_grad
 	fx_layer.add_child(p)
 	p.emitting = true
-	get_tree().create_timer(minf(life, 0.42) + 0.2).timeout.connect(p.queue_free)
+	get_tree().create_timer(minf(life, 0.65) + 0.3).timeout.connect(p.queue_free)
 
 
 func flash(pos: Vector2, radius: float, col: Color, dur := 0.4) -> void:
