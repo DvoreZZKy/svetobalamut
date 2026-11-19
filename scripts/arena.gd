@@ -600,7 +600,6 @@ func _handle_events(evs: Array) -> void:
 				Sfx.play("chaos")
 				shake = maxf(shake, 26.0)
 				_show_banner(CHAOS_RU.get(e.n, str(e.n)).to_upper())
-				fake_t = float(view.get("tl", 100.0)) * randf_range(0.5, 1.7)
 				var tw := create_tween()
 				tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
 			"win":
