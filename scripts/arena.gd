@@ -268,11 +268,13 @@ func _build_hud() -> void:
 	over_restart_btn = Button.new()
 	over_restart_btn.text = "РЕВАНШ"
 	over_restart_btn.custom_minimum_size = Vector2(210, 48)
+	_style_result_button(over_restart_btn, Color("#42eaff"))
 	over_restart_btn.pressed.connect(_restart_match)
 	cl.add_child(over_restart_btn)
 	over_menu_btn = Button.new()
 	over_menu_btn.text = "В МЕНЮ"
 	over_menu_btn.custom_minimum_size = Vector2(210, 48)
+	_style_result_button(over_menu_btn, Color("#b58aff"))
 	over_menu_btn.pressed.connect(_to_menu)
 	cl.add_child(over_menu_btn)
 	over_restart_btn.visible = false
@@ -658,6 +660,23 @@ func _update_hud(dt: float) -> void:
 
 
 # -------------------------------------------------------------- эффекты ---
+func _style_result_button(button: Button, accent: Color) -> void:
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("#14243b", 0.96) if state != "pressed" else Color("#203b56", 0.98)
+		style.border_color = accent.lightened(0.22) if state == "hover" else accent
+		style.set_border_width_all(2)
+		style.set_corner_radius_all(0)
+		style.content_margin_left = 14
+		style.content_margin_right = 14
+		style.content_margin_top = 8
+		style.content_margin_bottom = 8
+		button.add_theme_stylebox_override(state, style)
+	button.add_theme_color_override("font_color", Color("#eafaff"))
+	button.add_theme_color_override("font_hover_color", Color.WHITE)
+	button.add_theme_font_size_override("font_size", 18)
+
+
 func _layout_game_over() -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var panel_size := Vector2(minf(760.0, vp.x - 48.0), 330.0)
