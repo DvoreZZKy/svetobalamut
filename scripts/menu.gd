@@ -27,10 +27,10 @@ func _ready() -> void:
 	_build_particles()
 	title = Label.new()
 	title.text = "СВЕТОБАЛАМУТ"
-	title.add_theme_font_size_override("font_size", 112)
+	title.add_theme_font_size_override("font_size", 96)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.position = Vector2(0, 40)
-	title.size = Vector2(1280, 140)
+	title.position = Vector2(0, 20)
+	title.size = Vector2(1280, 120)
 	add_child(title)
 
 	var main := _box("main")
