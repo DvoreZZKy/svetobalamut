@@ -1,21 +1,27 @@
 extends Node
-## Интерактивный обучающий сценарий, работающий поверх настоящей симуляции арены.
+## Обучение с живой симуляцией: сначала интерфейс, затем практические действия.
 
 const NORMAL_SPEED := 1.0
 const SLOW_SPEED := 0.10
-const STEPS := [
-	{"title":"ЗДОРОВЬЕ И СВЕТ","body":"Полоса внизу показывает запас света. Получая попадания, ты теряешь свет. Движение и выстрелы тоже расходуют его, поэтому следи за запасом."},
-	{"title":"ТВОЯ АТАКА","body":"Наведи мышь на противника и зажми левую кнопку мыши (ЛКМ), чтобы стрелять. Попадания отнимают свет у соперника."},
-	{"title":"ТАЙМЕР","body":"В верхней части экрана находится таймер раунда. Если время закончится, победитель определяется по очкам хаоса."},
-	{"title":"ТАБЛИЦА ИГРОКОВ","body":"Слева показаны участники, их текущий свет или состояние Тени, а также очки хаоса. Строка с отметкой > — это ты."},
-	{"title":"ПОДСКАЗКИ И СПОСОБНОСТЬ","body":"Справа отображаются твой класс, способность и её перезарядка. Нажми Q, чтобы применить особую способность своего персонажа."},
-	{"title":"РЫВОК","body":"Под полосой света находится перезарядка рывка. Пробел даёт короткое ускорение и неуязвимость на мгновение. Рывок расходует свет."},
-	{"title":"ТЁМНЫЕ ЗОНЫ","body":"Фиолетовые круги на арене восстанавливают свет. Если стоять неподвижно, свет тоже понемногу возвращается. Используй это, чтобы продержаться дольше."}
+const TRANSITION_MS := 1750
+const UI_STEPS := [
+	{"title":"ТАЙМЕР РАУНДА","body":"Здесь отображается оставшееся время матча. Следи за ним: когда время закончится, победитель определяется по очкам хаоса.","target":"timer"},
+	{"title":"ТАБЛИЦА ИГРОКОВ","body":"Слева находятся участники матча. Здесь видны их запас света или состояние Тени, а также очки хаоса. Стрелка отмечает тебя.","target":"score"},
+	{"title":"ПОДСКАЗКИ И СПОСОБНОСТЬ","body":"В правом верхнем углу показаны особенности твоего класса и описание особой способности. Она активируется клавишей Q.","target":"help"},
+	{"title":"ЗАПАС СВЕТА","body":"Полоса внизу — твой запас света и здоровье. Попадания, движение и выстрелы расходуют его. Восстанавливай свет в тёмных зонах.","target":"light"},
+	{"title":"ПЕРЕЗАРЯДКА РЫВКА","body":"Эта тонкая полоса показывает, когда рывок снова готов. Рывок расходует свет, поэтому не трать его без необходимости.","target":"dash"},
+	{"title":"ТЁМНЫЕ ЗОНЫ","body":"Фиолетовые области на арене помогают восстановить свет. Можно также немного восстановить его, если некоторое время стоять спокойно.","target":"arena"}
+]
+const CONTROL_STEPS := [
+	{"title":"ПЕРЕДВИЖЕНИЕ","body":"Используй WASD, чтобы двигаться по арене. Попробуй переместиться — обучение продолжится автоматически.","kind":"move"},
+	{"title":"РЫВОК","body":"Рывок резко ускоряет персонажа и на короткое время помогает избежать попаданий. Нажми ПРОБЕЛ.","kind":"dash"},
+	{"title":"ОСОБАЯ СПОСОБНОСТЬ","body":"У каждого класса своя способность. Нажми Q, чтобы применить способность своего персонажа.","kind":"ability"},
+	{"title":"АТАКА","body":"Наведи указатель на соперника и нажми левую кнопку мыши. Попробуй выстрелить.","kind":"fire"}
 ]
 
 var arena: Node2D
 var layer: CanvasLayer
-var shade: ColorRect
+var shade_parts: Array[ColorRect] = []
 var panel: PanelContainer
 var title_label: Label
 var body_label: Label
@@ -23,52 +29,45 @@ var next_button: Button
 var skip_button: Button
 var key_row: HBoxContainer
 var pointer: Line2D
-var pointer_dot: Polygon2D
-var stage := "move_intro"
-var step_index := 0
-var bot_shot_seen := false
+var pointer_head: Polygon2D
+var stage := "ui"
+var ui_index := 0
+var control_index := 0
+var transition_target := ""
+var transition_deadline := 0
 var pointer_target := ""
+var focus_rect := Rect2()
 var pulse := 0.0
 var finished := false
+var completion_return_to_lobby := false
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	arena = get_parent()
 	_build_overlay()
-	_show_movement_intro()
+	_show_ui_step(0)
 
 
-func _process(dt: float) -> void:
+func _process(_dt: float) -> void:
 	if finished:
 		return
 	pulse = float(Time.get_ticks_msec()) / 1000.0
-	if pointer_target != "":
+	if stage == "transition":
+		if Time.get_ticks_msec() >= transition_deadline:
+			if transition_target == "ui":
+				_show_ui_step(ui_index)
+			elif transition_target == "control":
+				_show_control_step(control_index)
+		return
+	if stage == "ui":
+		_update_focus()
+	elif stage == "control":
 		_update_pointer()
-	if stage == "wait_move":
-		var inp: Dictionary = arena._read_input()
-		if (inp.get("mv", Vector2.ZERO) as Vector2).length() > 0.15:
-			_show_dash_intro()
-	elif stage == "wait_dash" and Input.is_action_just_pressed("dash"):
-		_show_ability_intro()
-	elif stage == "wait_ability" and Input.is_action_just_pressed("ability"):
-		_wait_for_bot_shot()
-	elif stage == "wait_bot_shot":
-		for bullet in arena.view.get("bl", []):
-			if int(bullet[3]) != arena.local_id:
-				bot_shot_seen = true
-				break
-		if bot_shot_seen:
-			_show_step("ПОПАДАНИЕ И СВЕТ", "Бот уже открыл огонь. Попадание уменьшает твой запас света — полоса также является твоим здоровьем. Когда свет закончится, ты превратишься в Тень.", "light")
-			step_index = 1
-	elif stage == "wait_shadow":
-		var me := _local_player()
-		if not me.is_empty() and bool(me.get("s", false)):
-			_show_shadow_intro()
-	elif stage == "wait_possess":
-		var shadow_state: Dictionary = arena.sim.players.get(arena.local_id, {})
-		if int(shadow_state.get("poss_target", 0)) != 0:
-			_finish_tutorial()
+		if _current_control_done():
+			_begin_transition("control", control_index + 1)
+	elif stage == "completion":
+		_update_completion_pulse()
 
 
 func _build_overlay() -> void:
@@ -76,33 +75,23 @@ func _build_overlay() -> void:
 	layer.layer = 30
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	arena.add_child(layer)
-	shade = ColorRect.new()
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color(0.005, 0.008, 0.025, 0.28)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(shade)
-	pointer = Line2D.new()
-	pointer.width = 3.0
-	pointer.default_color = Color("#68efff")
-	pointer.z_index = 20
-	layer.add_child(pointer)
-	pointer_dot = Polygon2D.new()
-	pointer_dot.polygon = PackedVector2Array([Vector2(0,-7), Vector2(13,0), Vector2(0,7)])
-	pointer_dot.color = Color("#b8fbff")
-	pointer_dot.z_index = 21
-	layer.add_child(pointer_dot)
+	for i in 4:
+		var part := ColorRect.new()
+		part.color = Color(0.004, 0.006, 0.018, 0.82)
+		part.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		layer.add_child(part)
+		shade_parts.append(part)
 	panel = PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-390, -150)
-	panel.size = Vector2(780, 300)
+	panel.size = Vector2(650, 190)
+	panel.modulate.a = 0.0
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	layer.add_child(panel)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 8)
+	column.add_theme_constant_override("separation", 7)
 	panel.add_child(column)
 	title_label = Label.new()
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 25)
+	title_label.add_theme_font_size_override("font_size", 24)
 	title_label.add_theme_color_override("font_color", Color("#7feaff"))
 	column.add_child(title_label)
 	body_label = Label.new()
@@ -111,50 +100,59 @@ func _build_overlay() -> void:
 	body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body_label.add_theme_font_size_override("font_size", 17)
 	body_label.add_theme_color_override("font_color", Color("#e0edff"))
-	body_label.custom_minimum_size.y = 58
+	body_label.custom_minimum_size = Vector2(0, 62)
 	column.add_child(body_label)
 	key_row = HBoxContainer.new()
 	key_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	key_row.add_theme_constant_override("separation", 8)
+	key_row.add_theme_constant_override("separation", 7)
 	column.add_child(key_row)
 	next_button = Button.new()
 	next_button.text = "ДАЛЕЕ"
-	next_button.custom_minimum_size = Vector2(190, 42)
-	next_button.add_theme_font_size_override("font_size", 18)
+	next_button.custom_minimum_size = Vector2(170, 38)
 	next_button.pressed.connect(_on_next)
 	column.add_child(next_button)
+	pointer = Line2D.new()
+	pointer.width = 2.6
+	pointer.default_color = Color("#68efff")
+	pointer.z_index = 15
+	layer.add_child(pointer)
+	pointer_head = Polygon2D.new()
+	pointer_head.color = Color("#b8fbff")
+	pointer_head.z_index = 16
+	layer.add_child(pointer_head)
 	skip_button = Button.new()
-	skip_button.text = "ПРОПУСТИТЬ ТУТОРИАЛ"
+	skip_button.text = "ПРОПУСТИТЬ ОБУЧЕНИЕ"
 	skip_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	skip_button.offset_left = -210
+	skip_button.offset_left = -225
 	skip_button.offset_top = 12
 	skip_button.offset_right = -12
-	skip_button.offset_bottom = 44
+	skip_button.offset_bottom = 46
 	skip_button.add_theme_font_size_override("font_size", 13)
-	skip_button.pressed.connect(_finish_tutorial)
+	skip_button.pressed.connect(_show_completion)
 	layer.add_child(skip_button)
+	_hide_shade()
 
 
 func _panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("#0b1428", 0.97)
+	style.bg_color = Color("#0b1428", 0.96)
 	style.border_color = Color("#36cce8")
 	style.set_border_width_all(2)
-	style.set_corner_radius_all(8)
-	style.content_margin_left = 22
-	style.content_margin_right = 22
-	style.content_margin_top = 12
-	style.content_margin_bottom = 12
+	style.set_corner_radius_all(9)
+	style.content_margin_left = 20
+	style.content_margin_right = 20
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
 	return style
 
 
 func _keycap(letter: String) -> Control:
 	var box := Control.new()
-	box.custom_minimum_size = Vector2(48, 48)
+	box.custom_minimum_size = Vector2(46, 46)
 	var frame := Panel.new()
-	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
+	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0, 0, 0, 0)
+	style.bg_color = Color("#101d32")
 	style.border_color = Color("#75eaff")
 	style.set_border_width_all(2)
 	style.set_corner_radius_all(5)
@@ -162,28 +160,108 @@ func _keycap(letter: String) -> Control:
 	box.add_child(frame)
 	var label := Label.new()
 	label.text = letter
-	label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 23)
+	label.add_theme_font_size_override("font_size", 22)
 	label.add_theme_color_override("font_color", Color("#e8fbff"))
 	box.add_child(label)
 	return box
+
+
+func _mouse_icon() -> Control:
+	var root := Control.new()
+	root.custom_minimum_size = Vector2(42, 56)
+	var body := Panel.new()
+	body.position = Vector2(5, 1)
+	body.size = Vector2(32, 52)
+	var body_style := StyleBoxFlat.new()
+	body_style.bg_color = Color("#15243b")
+	body_style.border_color = Color("#8ceeff")
+	body_style.set_border_width_all(2)
+	body_style.set_corner_radius_all(12)
+	body.add_theme_stylebox_override("panel", body_style)
+	root.add_child(body)
+	var left := Panel.new()
+	left.position = Vector2(7, 3)
+	left.size = Vector2(13, 18)
+	var left_style := StyleBoxFlat.new()
+	left_style.bg_color = Color("#6beaff")
+	left_style.set_corner_radius_all(5)
+	left.add_theme_stylebox_override("panel", left_style)
+	body.add_child(left)
+	var split := ColorRect.new()
+	split.position = Vector2(14, 3)
+	split.size = Vector2(2, 18)
+	split.color = Color("#8ceeff")
+	body.add_child(split)
+	return root
 
 
 func _set_keys(keys: Array[String]) -> void:
 	for child in key_row.get_children():
 		child.queue_free()
 	for key in keys:
-		key_row.add_child(_keycap(key))
+		if key == "ЛКМ":
+			key_row.add_child(_mouse_icon())
+		else:
+			key_row.add_child(_keycap(key))
 	key_row.visible = not keys.is_empty()
+
+
+func _hide_shade() -> void:
+	for part in shade_parts:
+		part.visible = false
+	pointer.clear_points()
+	pointer_head.visible = false
+
+
+func _show_ui_step(index: int) -> void:
+	if index >= UI_STEPS.size():
+		_begin_transition("control", 0)
+		return
+	stage = "ui"
+	Engine.time_scale = 0.0
+	var item: Dictionary = UI_STEPS[index]
+	title_label.text = str(item.title)
+	body_label.text = str(item.body)
+	_set_keys([])
+	next_button.visible = true
+	next_button.text = "ДАЛЕЕ"
+	panel.visible = true
+	panel.modulate.a = 1.0
+	pointer_target = str(item.target)
+	_update_focus()
+
+
+func _show_control_step(index: int) -> void:
+	if index >= CONTROL_STEPS.size():
+		_show_completion()
+		return
+	stage = "control"
+	Engine.time_scale = SLOW_SPEED
+	_hide_shade()
+	var item: Dictionary = CONTROL_STEPS[index]
+	title_label.text = str(item.title)
+	body_label.text = str(item.body)
+	match str(item.kind):
+		"move": _set_wasd_keys()
+		"dash": _set_keys(["ПРОБЕЛ"])
+		"ability": _set_keys(["Q"])
+		"fire": _set_keys(["ЛКМ"])
+	next_button.visible = false
+	panel.visible = true
+	panel.modulate.a = 1.0
+	pointer_target = "player"
+	_position_control_panel()
+	_update_pointer()
 
 
 func _set_wasd_keys() -> void:
 	for child in key_row.get_children():
 		child.queue_free()
 	var layout := VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 4)
+	layout.add_theme_constant_override("separation", 3)
 	layout.alignment = BoxContainer.ALIGNMENT_CENTER
 	var top := HBoxContainer.new()
 	top.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -191,7 +269,7 @@ func _set_wasd_keys() -> void:
 	layout.add_child(top)
 	var bottom := HBoxContainer.new()
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 6)
+	bottom.add_theme_constant_override("separation", 5)
 	for letter in ["A", "S", "D"]:
 		bottom.add_child(_keycap(letter))
 	layout.add_child(bottom)
@@ -199,122 +277,117 @@ func _set_wasd_keys() -> void:
 	key_row.visible = true
 
 
-func _show_movement_intro() -> void:
-	stage = "move_intro"
-	Engine.time_scale = 0.0
-	_set_wasd_keys()
-	title_label.text = "ПЕРЕДВИЖЕНИЕ"
-	body_label.text = "Для перемещения используй клавиши WASD. Нажми «Далее», затем попробуй пройтись по арене."
-	next_button.visible = true
-	pointer_target = "player"
+func _current_control_done() -> bool:
+	match str(CONTROL_STEPS[control_index].kind):
+		"move":
+			var input_state: Dictionary = arena._read_input()
+			return (input_state.get("mv", Vector2.ZERO) as Vector2).length() > 0.15
+		"dash": return Input.is_action_just_pressed("dash")
+		"ability": return Input.is_action_just_pressed("ability")
+		"fire": return Input.is_action_just_pressed("fire")
+	return false
 
 
-func _show_dash_intro() -> void:
-	stage = "dash_intro"
-	Engine.time_scale = 0.0
-	_set_keys(["ПРОБЕЛ"])
-	title_label.text = "РЫВОК"
-	body_label.text = "Пробел позволяет резко ускориться. Нажми «Далее», а затем используй рывок."
-	next_button.visible = true
-	pointer_target = "player"
-
-
-func _show_ability_intro() -> void:
-	stage = "ability_intro"
-	Engine.time_scale = 0.0
-	_set_keys(["Q"])
-	title_label.text = "ОСОБАЯ СПОСОБНОСТЬ"
-	body_label.text = "У каждого класса есть собственная способность. Нажми «Далее» и попробуй применить её клавишей Q."
-	next_button.visible = true
-	pointer_target = "help"
-
-
-func _wait_for_bot_shot() -> void:
-	stage = "wait_bot_shot"
-	Engine.time_scale = SLOW_SPEED
-	title_label.text = "СМОТРИ НА СОПЕРНИКОВ"
-	body_label.text = "Боты сражаются самостоятельно. Подожди, пока один из них выстрелит — мы остановим бой и разберём интерфейс."
-	_set_keys([])
-	next_button.visible = false
-	pointer_target = "player"
-
-
-func _show_step(step_title: String, description: String, target: String) -> void:
-	stage = "step"
-	Engine.time_scale = 0.0
-	title_label.text = step_title
-	body_label.text = description
-	if step_title == "ТВОЯ АТАКА":
-		_set_keys(["ЛКМ"])
+func _begin_transition(next_stage: String, next_index: int) -> void:
+	stage = "transition"
+	transition_target = next_stage
+	if next_stage == "control":
+		control_index = next_index
 	else:
-		_set_keys([])
-	next_button.visible = true
-	pointer_target = target
+		ui_index = next_index
+	Engine.time_scale = NORMAL_SPEED
+	_hide_shade()
+	panel.modulate.a = 0.0
+	transition_deadline = Time.get_ticks_msec() + TRANSITION_MS
 
 
 func _on_next() -> void:
-	match stage:
-		"move_intro":
-			stage = "wait_move"
-			Engine.time_scale = SLOW_SPEED
-			next_button.visible = false
-			body_label.text = "Теперь подвигайся с помощью WASD."
-		"dash_intro":
-			stage = "wait_dash"
-			Engine.time_scale = SLOW_SPEED
-			next_button.visible = false
-			body_label.text = "Попробуй сделать рывок клавишей ПРОБЕЛ."
-		"ability_intro":
-			stage = "wait_ability"
-			Engine.time_scale = SLOW_SPEED
-			next_button.visible = false
-			body_label.text = "Нажми Q, чтобы применить способность."
-		"force_shadow":
-			var me: Dictionary = arena.sim.players.get(arena.local_id, {})
-			if not me.is_empty() and not me.get("shadow", false):
-				arena.sim._make_shadow(me, 0, true)
-				arena.view = arena.sim.snapshot()
-			stage = "wait_shadow"
-			Engine.time_scale = SLOW_SPEED
-			next_button.visible = false
-			body_label.text = "Твоя световая форма исчезает… сейчас появится объяснение механики Тени."
-		"shadow_intro":
-			stage = "wait_possess"
-			Engine.time_scale = SLOW_SPEED
-			next_button.visible = false
-			body_label.text = "Подойди к живому игроку и нажми ПКМ или E, чтобы попробовать вселиться."
-		"step":
-			if step_index < STEPS.size():
-				var item: Dictionary = STEPS[step_index]
-				step_index += 1
-				_show_step(str(item.title), str(item.body), _step_target(step_index))
-			else:
-				_force_shadow()
+	if stage != "ui":
+		return
+	ui_index += 1
+	_begin_transition("ui", ui_index)
 
 
-func _step_target(index: int) -> String:
-	return ["player", "timer", "score", "help", "dash", "arena"][mini(index - 1, 5)]
+func _target_rect() -> Rect2:
+	var vp := get_viewport().get_visible_rect().size
+	match pointer_target:
+		"timer": return Rect2(Vector2(vp.x * 0.5 - 115, 0), Vector2(230, 78))
+		"score": return Rect2(Vector2(0, 0), Vector2(355, 355))
+		"help": return Rect2(Vector2(vp.x - 525, 0), Vector2(525, 145))
+		"light": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 62), Vector2(440, 40))
+		"dash": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 34), Vector2(440, 30))
+		"arena": return Rect2(vp * 0.5 - Vector2(240, 180), Vector2(480, 360))
+	return Rect2(vp * 0.5 - Vector2(80, 50), Vector2(160, 100))
 
 
-func _force_shadow() -> void:
-	stage = "force_shadow"
-	Engine.time_scale = 0.0
-	title_label.text = "ТЕПЕРЬ ТЫ — ТЕНЬ"
-	body_label.text = "Чтобы показать механику Тени, мы завершим твою световую форму в рамках обучения. Нажми «Далее»."
-	_set_keys([])
-	next_button.visible = true
-	pointer_target = "player"
-	step_index = STEPS.size() + 1
+func _update_focus() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	focus_rect = _target_rect()
+	var left := focus_rect.position.x
+	var top := focus_rect.position.y
+	var right := left + focus_rect.size.x
+	var bottom := top + focus_rect.size.y
+	var rects := [
+		Rect2(Vector2.ZERO, Vector2(vp.x, maxf(0.0, top))),
+		Rect2(Vector2(0, bottom), Vector2(vp.x, maxf(0.0, vp.y - bottom))),
+		Rect2(Vector2(0, top), Vector2(maxf(0.0, left), focus_rect.size.y)),
+		Rect2(Vector2(right, top), Vector2(maxf(0.0, vp.x - right), focus_rect.size.y))
+	]
+	for i in 4:
+		var part := shade_parts[i]
+		part.visible = true
+		part.position = rects[i].position
+		part.size = rects[i].size
+	_update_panel_near_focus()
+	_update_pointer()
 
 
-func _show_shadow_intro() -> void:
-	stage = "shadow_intro"
-	Engine.time_scale = 0.0
-	title_label.text = "СПОСОБНОСТИ ТЕНИ"
-	body_label.text = "Тень быстрее обычного игрока и невидима для светящихся соперников. Подойди к живому игроку и нажми ПКМ или E: ты вселишься в него на 2 секунды и сможешь управлять им."
-	_set_keys(["ПКМ", "E"])
-	next_button.visible = true
-	pointer_target = "opponent"
+func _update_panel_near_focus() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var size := Vector2(650, 190)
+	var pos := Vector2((vp.x - size.x) * 0.5, (vp.y - size.y) * 0.5)
+	if focus_rect.position.y < vp.y * 0.32:
+		pos.y = minf(vp.y - size.y - 18, focus_rect.end.y + 16)
+	elif focus_rect.end.y > vp.y * 0.68:
+		pos.y = maxf(58.0, focus_rect.position.y - size.y - 16)
+	elif focus_rect.position.x < vp.x * 0.35:
+		pos = Vector2(minf(vp.x - size.x - 14, focus_rect.end.x + 14), (vp.y - size.y) * 0.5)
+	else:
+		pos = Vector2(maxf(12.0, focus_rect.position.x - size.x - 14), (vp.y - size.y) * 0.5)
+	pos.x = clampf(pos.x, 12.0, vp.x - size.x - 12.0)
+	pos.y = clampf(pos.y, 54.0, vp.y - size.y - 12.0)
+	panel.position = pos
+	panel.size = size
+
+
+func _position_control_panel() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	panel.position = Vector2((vp.x - 650) * 0.5, vp.y - 225)
+	panel.size = Vector2(650, 190)
+
+
+func _update_pointer() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var target := focus_rect.get_center() if stage == "ui" else Vector2(vp.x * 0.5, vp.y * 0.5)
+	if stage == "control" and pointer_target == "player":
+		var me := _local_player()
+		if not me.is_empty():
+			target = vp * 0.5 + (me.p - Vector2(800, 450)) * 0.78
+	if stage == "ui":
+		var start := panel.position + Vector2(panel.size.x * 0.5, panel.size.y * 0.5)
+		var direction := (target - start).normalized()
+		var edge_start := start + direction * 108.0
+		var tip := target - direction * 13.0
+		pointer.points = PackedVector2Array([edge_start, tip])
+		var side := Vector2(-direction.y, direction.x)
+		pointer_head.polygon = PackedVector2Array([target, target - direction * 15.0 + side * 7.0, target - direction * 15.0 - side * 7.0])
+		pointer_head.position = Vector2.ZERO
+		pointer_head.visible = true
+		pointer.default_color = Color("#68efff", 0.72 + 0.25 * sin(pulse * 3.2))
+		pointer.width = 2.4 + 0.5 * (0.5 + 0.5 * sin(pulse * 3.2))
+	else:
+		pointer.clear_points()
+		pointer_head.visible = false
 
 
 func _local_player() -> Dictionary:
@@ -324,40 +397,67 @@ func _local_player() -> Dictionary:
 	return {}
 
 
-func _update_pointer() -> void:
-	var vp := get_viewport().get_visible_rect().size
-	var target := vp * 0.5
-	match pointer_target:
-		"player":
-			var me := _local_player()
-			if not me.is_empty():
-				target = vp * 0.5 + (me.p - Vector2(800, 450)) * 0.78
-		"opponent":
-			var me := _local_player()
-			var nearest_pos := Vector2.ZERO
-			var nearest_distance := INF
-			if not me.is_empty():
-				for pd in arena.view.get("pl", []):
-					if int(pd.i) == arena.local_id or bool(pd.s):
-						continue
-					var distance: float = me.p.distance_squared_to(pd.p)
-					if distance < nearest_distance:
-						nearest_distance = distance
-						nearest_pos = pd.p
-				if nearest_distance < INF:
-					target = vp * 0.5 + (nearest_pos - Vector2(800, 450)) * 0.78
-		"timer": target = Vector2(vp.x * 0.5, 55)
-		"score": target = Vector2(175, 150)
-		"help": target = Vector2(vp.x - 240, 105)
-		"light": target = Vector2(vp.x * 0.5, vp.y - 42)
-		"dash": target = Vector2(vp.x * 0.5, vp.y - 18)
-		"arena": target = vp * 0.5
-	var origin := Vector2(vp.x * 0.5, vp.y * 0.5 + 165)
-	pointer.points = PackedVector2Array([origin, origin + Vector2(0, -35), target])
-	pointer_dot.position = target + Vector2(sin(pulse * 3.0) * 4.0, cos(pulse * 3.0) * 4.0)
-	pointer.width = 2.5 + 0.8 * (0.5 + 0.5 * sin(pulse * 4.0))
-	pointer_dot.rotation = (origin - target).angle()
-	pointer.default_color = Color("#68efff", 0.75 + 0.25 * sin(pulse * 4.0))
+func _update_completion_pulse() -> void:
+	panel.modulate.a = 0.96 + 0.04 * sin(pulse * 2.0)
+
+
+func _show_completion() -> void:
+	if finished:
+		return
+	stage = "completion"
+	Engine.time_scale = NORMAL_SPEED
+	_hide_shade()
+	pointer_target = ""
+	title_label.text = "ОБУЧЕНИЕ ПРОЙДЕНО!"
+	body_label.text = "Отличная работа! Теперь ты знаешь основы Светобаламута. Можешь сразу начать матч или пройти обучение ещё раз."
+	_set_keys([])
+	next_button.visible = false
+	panel.visible = true
+	panel.position = Vector2((get_viewport_rect().size.x - 650) * 0.5, (get_viewport_rect().size.y - 190) * 0.5)
+	panel.size = Vector2(650, 190)
+	var column := panel.get_child(0) as VBoxContainer
+	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	actions.add_theme_constant_override("separation", 12)
+	var finish_btn := Button.new()
+	finish_btn.text = "ЗАВЕРШИТЬ ОБУЧЕНИЕ"
+	finish_btn.custom_minimum_size = Vector2(235, 42)
+	finish_btn.pressed.connect(_complete_and_exit)
+	actions.add_child(finish_btn)
+	var replay_btn := Button.new()
+	replay_btn.text = "ПРОЙТИ ЕЩЁ РАЗ"
+	replay_btn.custom_minimum_size = Vector2(200, 42)
+	replay_btn.pressed.connect(_restart_tutorial)
+	actions.add_child(replay_btn)
+	column.add_child(actions)
+	skip_button.visible = false
+	G.tutorial_done = true
+	G.save_settings()
+
+
+func _complete_and_exit() -> void:
+	if finished:
+		return
+	finished = true
+	var back_to_lobby := G.tutorial_return_to_lobby
+	Engine.time_scale = NORMAL_SPEED
+	G.tutorial_active = false
+	if back_to_lobby:
+		G.mode = G.tutorial_previous_mode
+		G.tutorial_return_to_lobby = false
+		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+	else:
+		G.start_single_game()
+
+
+func _restart_tutorial() -> void:
+	if finished:
+		return
+	finished = true
+	var back_to_lobby := G.tutorial_return_to_lobby
+	Engine.time_scale = NORMAL_SPEED
+	G.tutorial_active = false
+	G.start_tutorial_game(back_to_lobby)
 
 
 func _exit_tree() -> void:
@@ -367,29 +467,3 @@ func _exit_tree() -> void:
 		if G.tutorial_return_to_lobby:
 			G.mode = G.tutorial_previous_mode
 		G.tutorial_return_to_lobby = false
-
-
-func _finish_tutorial() -> void:
-	finished = true
-	Engine.time_scale = NORMAL_SPEED
-	G.tutorial_active = false
-	if G.tutorial_return_to_lobby:
-		G.mode = G.tutorial_previous_mode
-	G.tutorial_done = true
-	G.save_settings()
-	if is_instance_valid(layer):
-		layer.queue_free()
-	if G.tutorial_return_to_lobby:
-		G.tutorial_return_to_lobby = false
-		get_tree().change_scene_to_file("res://scenes/menu.tscn")
-
-
-func _input(event: InputEvent) -> void:
-	if finished:
-		return
-	if stage == "shadow_intro" and event is InputEventKey and event.pressed and (event.keycode == KEY_E):
-		stage = "wait_possess"
-	elif stage == "shadow_intro" and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
-		stage = "wait_possess"
-	if stage == "force_shadow" and event is InputEventMouseButton and event.pressed:
-		return
