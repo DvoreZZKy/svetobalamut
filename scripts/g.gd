@@ -17,6 +17,8 @@ var vol_music := 0.7
 var vol_sfx := 0.9
 var shake_on := true
 var fullscreen := false
+var graphics_quality := 0 # 0: high, 1: medium, 2: low, 3: potato
+const GRAPHICS_PRESETS := ["Высокая", "Средняя", "Низкая", "Режим картошки"]
 var tutorial_done := false
 const TUTORIAL_VERSION := 4
 var tutorial_active := false
@@ -105,14 +107,7 @@ func get_additive_material() -> CanvasItemMaterial:
 func make_env() -> WorldEnvironment:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_CANVAS
-	env.glow_enabled = true
-	env.glow_intensity = 0.32
-	env.glow_strength = 0.3
-	env.glow_bloom = 0.04
-	env.glow_hdr_threshold = 1.0
-	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
-	for i in range(1, 7):
-		env.set_glow_level(i, 0.12 if i != 1 else 0.08)
+	_configure_environment(env)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	return we
@@ -170,6 +165,7 @@ func save_settings() -> void:
 	c.set_value("s", "sfx", vol_sfx)
 	c.set_value("s", "shake", shake_on)
 	c.set_value("s", "fullscreen", fullscreen)
+	c.set_value("s", "graphics_quality", graphics_quality)
 	c.set_value("s", "tutorial_done", tutorial_done)
 	c.set_value("s", "tutorial_version", TUTORIAL_VERSION)
 	c.save(SAVE_PATH)
@@ -188,9 +184,11 @@ func load_settings() -> void:
 	vol_sfx = c.get_value("s", "sfx", vol_sfx)
 	shake_on = c.get_value("s", "shake", shake_on)
 	fullscreen = c.get_value("s", "fullscreen", fullscreen)
+	graphics_quality = clampi(int(c.get_value("s", "graphics_quality", graphics_quality)), 0, 3)
 	var saved_tutorial_version := int(c.get_value("s", "tutorial_version", 0))
 	tutorial_done = bool(c.get_value("s", "tutorial_done", false)) if saved_tutorial_version >= TUTORIAL_VERSION else false
 	apply_display()
+	apply_graphics()
 
 
 func apply_display() -> void:
@@ -205,3 +203,25 @@ func apply_display() -> void:
 		var screen_size := DisplayServer.screen_get_size(screen)
 		var screen_pos := DisplayServer.screen_get_position(screen)
 		DisplayServer.window_set_position(screen_pos + (screen_size - Vector2i(1280, 720)) / 2, window_id)
+
+
+func _configure_environment(env: Environment) -> void:
+	var glow_enabled := graphics_quality <= 1
+	env.glow_enabled = glow_enabled
+	env.glow_intensity = [0.62, 0.34, 0.0, 0.0][graphics_quality]
+	env.glow_strength = [0.72, 0.38, 0.0, 0.0][graphics_quality]
+	env.glow_bloom = [0.08, 0.035, 0.0, 0.0][graphics_quality]
+	env.glow_hdr_threshold = 1.0
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+	for i in range(1, 7):
+		var level := 0.10 if i <= 3 else 0.0
+		if graphics_quality == 1:
+			level *= 0.55
+		env.set_glow_level(i, level if glow_enabled else 0.0)
+
+
+func apply_graphics() -> void:
+	for node in get_tree().root.find_children("*", "WorldEnvironment", true, false):
+		var world_env := node as WorldEnvironment
+		if world_env != null and world_env.environment != null:
+			_configure_environment(world_env.environment)
