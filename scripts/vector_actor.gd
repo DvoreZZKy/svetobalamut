@@ -1,5 +1,4 @@
 extends Node2D
-class_name VectorActor
 
 var kind := 0
 var tint := Color("#54eaff")
