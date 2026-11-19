@@ -64,6 +64,7 @@ static func make_player(kind: int) -> Texture2D:
 			_rect(img, 14, 13, 2, 2, Color("#8b5cff"))
 			_rect(img, 6, 12, 2, 4, Color("#1e9de5"))
 			_rect(img, 16, 12, 2, 4, Color("#1e9de5"))
+	img.resize(48, 48, Image.INTERPOLATE_NEAREST)
 	var tex := ImageTexture.create_from_image(img)
 	_cache[k] = tex
 	return tex
