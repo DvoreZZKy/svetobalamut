@@ -161,6 +161,7 @@ func _ready() -> void:
 		if child is Button:
 			child.custom_minimum_size = Vector2(520, 38)
 			child.add_theme_font_size_override("font_size", 17)
+	_refresh_profile()
 	var lobby_actions := HBoxContainer.new()
 	lobby_actions.add_theme_constant_override("separation", 12)
 	lobby.add_child(lobby_actions)
