@@ -217,7 +217,7 @@ func _process(dt: float) -> void:
 
 func _read_input() -> Dictionary:
 	var move := Vector2(Input.get_axis("left","right"),Input.get_axis("up","down")).normalized()
-	var aim := (get_global_mouse_position() - (players[local_id].pos if players.has(local_id) else Vector2(300,360))).normalized()
+	var aim: Vector2 = (get_global_mouse_position() - (players[local_id].pos if players.has(local_id) else Vector2(300,360))).normalized()
 	return {"move":move,"aim":aim,"mine":Input.is_action_pressed("interact"),"attack":Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),"eat":Input.is_action_just_pressed("eat")}
 
 
