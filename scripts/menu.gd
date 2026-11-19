@@ -1,9 +1,11 @@
 extends Control
 
 const VectorActor = preload("res://scripts/vector_actor.gd")
+const FacetButton = preload("res://scripts/facet_button.gd")
 ## Главное меню и подэкраны профиля, подключения, настроек и лобби.
 
 var t := 0.0
+var bg_shards: Array[Polygon2D] = []
 var title: Label
 var boxes := {}
 var status: Label
@@ -181,6 +183,13 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	t += dt
+	for i in bg_shards.size():
+		var shard := bg_shards[i]
+		shard.rotation += dt * (0.08 if i % 2 == 0 else -0.06)
+		shard.position.y += sin(t * 0.35 + float(i)) * dt * 2.2
+		if shard.position.y > 740.0:
+			shard.position.y = -30.0
+		shard.position.x += sin(t * 0.22 + float(i) * 0.7) * dt * 3.0
 	title.modulate = G.hdr(Color.from_hsv(fmod(t * 0.08 + 0.5, 1.0), 0.6, 1.0), 1.45 + 0.22 * sin(t * 2.2))
 
 
@@ -200,6 +209,7 @@ func _build_particles() -> void:
 		shard.color = shard_colors[i % shard_colors.size()]
 		shard.color.a = randf_range(0.12, 0.28)
 		add_child(shard)
+		bg_shards.append(shard)
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
@@ -259,17 +269,18 @@ func _add_facet_panel(parent: Node, pos: Vector2, panel_size: Vector2, fill: Col
 
 func _make_vector_preview(parent: Node) -> Node2D:
 	var container := SubViewportContainer.new()
-	container.custom_minimum_size = Vector2(180, 116)
+	container.custom_minimum_size = Vector2(260, 190)
 	container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	container.stretch = true
 	var vp := SubViewport.new()
-	vp.size = Vector2i(240, 150)
+	vp.size = Vector2i(320, 230)
 	vp.transparent_bg = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	container.add_child(vp)
 	parent.add_child(container)
 	var actor := VectorActor.new()
-	actor.position = Vector2(120, 82)
+	actor.position = Vector2(160, 120)
+	actor.scale = Vector2.ONE * 1.8
 	vp.add_child(actor)
 	actor.setup(G.profile_kind, G.col(G.profile_color), G.profile_outfit, G.profile_hat)
 	return actor
@@ -301,21 +312,13 @@ func _title(parent: Node, text: String) -> void:
 
 
 func _btn(text: String, parent: Node, cb: Callable) -> Button:
-	var b := Button.new()
+	var b: Button = FacetButton.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(380, 58)
-	b.add_theme_font_size_override("font_size", 26)
-	for st in ["normal", "hover", "pressed"]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0.035, 0.045, 0.075) if st == "normal" else Color(0.08, 0.12, 0.2)
-		sb.set_border_width_all(2)
-		sb.border_color = Color(0.22, 0.65, 0.78) if st == "normal" else Color(0.4, 0.9, 1.0)
-		sb.set_corner_radius_all(0)
-		b.add_theme_stylebox_override(st, sb)
+	b.add_theme_font_size_override("font_size", 21)
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	return b
-
 
 func _slider(parent: Node, text: String, val: float, cb: Callable) -> void:
 	var h := HBoxContainer.new()
