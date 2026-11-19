@@ -35,6 +35,7 @@ var ui_index := 0
 var control_index := 0
 var transition_target := ""
 var transition_deadline := 0
+var fade_started := 0
 var pointer_target := ""
 var focus_rect := Rect2()
 var pulse := 0.0
@@ -59,6 +60,19 @@ func _process(_dt: float) -> void:
 				_show_ui_step(ui_index)
 			elif transition_target == "control":
 				_show_control_step(control_index)
+		return
+	if stage == "ui_fade" or stage == "control_fade":
+		var fade_duration := 650.0 if stage == "ui_fade" else 420.0
+		var alpha := clampf(float(Time.get_ticks_msec() - fade_started) / fade_duration, 0.0, 1.0)
+		panel.modulate.a = alpha
+		for part in shade_parts:
+			part.modulate.a = alpha
+		if alpha >= 1.0:
+			if stage == "ui_fade":
+				stage = "ui"
+				Engine.time_scale = 0.0
+			else:
+				stage = "control"
 		return
 	if stage == "ui":
 		_update_focus()
@@ -220,8 +234,8 @@ func _show_ui_step(index: int) -> void:
 	if index >= UI_STEPS.size():
 		_begin_transition("control", 0)
 		return
-	stage = "ui"
-	Engine.time_scale = 0.0
+	stage = "ui_fade"
+	Engine.time_scale = SLOW_SPEED
 	var item: Dictionary = UI_STEPS[index]
 	title_label.text = str(item.title)
 	body_label.text = str(item.body)
@@ -229,7 +243,10 @@ func _show_ui_step(index: int) -> void:
 	next_button.visible = true
 	next_button.text = "ДАЛЕЕ"
 	panel.visible = true
-	panel.modulate.a = 1.0
+	panel.modulate.a = 0.0
+	fade_started = Time.get_ticks_msec()
+	for part in shade_parts:
+		part.modulate.a = 0.0
 	pointer_target = str(item.target)
 	_update_focus()
 
@@ -238,7 +255,7 @@ func _show_control_step(index: int) -> void:
 	if index >= CONTROL_STEPS.size():
 		_show_completion()
 		return
-	stage = "control"
+	stage = "control_fade"
 	Engine.time_scale = SLOW_SPEED
 	_hide_shade()
 	var item: Dictionary = CONTROL_STEPS[index]
@@ -373,7 +390,7 @@ func _update_pointer() -> void:
 		var me := _local_player()
 		if not me.is_empty():
 			target = vp * 0.5 + (me.p - Vector2(800, 450)) * 0.78
-	if stage == "ui":
+	if stage == "ui" or stage == "ui_fade":
 		var start := panel.position + Vector2(panel.size.x * 0.5, panel.size.y * 0.5)
 		var direction := (target - start).normalized()
 		var edge_start := start + direction * 108.0
