@@ -31,18 +31,25 @@ func _run() -> void:
 		push_error("Arena scene did not become current_scene")
 		quit(1)
 		return
-	var tutorial_found := false
+	var tutorial_controller: Node
 	for child in arena.get_children():
 		if child.get_script() == TUTORIAL_SCRIPT:
-			tutorial_found = true
+			tutorial_controller = child
 			break
-	if not tutorial_found:
+	if not is_instance_valid(tutorial_controller):
 		push_error("Interactive tutorial controller was not attached to the arena")
+		quit(1)
+		return
+	var tutorial_panel := tutorial_controller.get("panel") as Control
+	if not is_instance_valid(tutorial_panel) or not tutorial_panel.visible:
+		push_error("Interactive tutorial overlay panel is not visible")
 		quit(1)
 		return
 	if not bool(global_state.get("tutorial_active")):
 		push_error("Tutorial flag was unexpectedly cleared during arena startup")
 		quit(1)
 		return
-	print("Tutorial smoke test passed: arena and interactive tutorial controller are active")
+	print("Tutorial smoke test passed: arena, controller and visible tutorial overlay are active")
+	arena.queue_free()
+	await process_frame
 	quit(0)
