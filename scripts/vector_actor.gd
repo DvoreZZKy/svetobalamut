@@ -68,7 +68,7 @@ func _draw() -> void:
 			draw_line(Vector2(-7,-10),Vector2(0,-17),Color.WHITE,1.8,true)
 	# Geometric costume overlay.
 	if outfit > 0:
-		var cloth := [Color("#26334f"),Color("#f4d35e"),Color("#3ddc97"),Color("#f05d9b"),Color("#d6e4ff")][outfit]
+		var cloth: Color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][outfit]
 		match outfit:
 			1:
 				_poly([Vector2(-13,-1),Vector2(13,-1),Vector2(11,14),Vector2(5,19),Vector2(-5,19),Vector2(-11,14)], cloth)
