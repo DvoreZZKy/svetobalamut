@@ -7,10 +7,15 @@ var outfit := 0
 var hat := 0
 
 func setup(p_kind: int, p_tint: Color, p_outfit: int, p_hat: int) -> void:
-	kind = posmod(p_kind, 4)
+	var next_kind := posmod(p_kind, 4)
+	var next_outfit := posmod(p_outfit, 5)
+	var next_hat := posmod(p_hat, 5)
+	if kind == next_kind and tint == p_tint and outfit == next_outfit and hat == next_hat:
+		return
+	kind = next_kind
 	tint = p_tint
-	outfit = posmod(p_outfit, 5)
-	hat = posmod(p_hat, 5)
+	outfit = next_outfit
+	hat = next_hat
 	queue_redraw()
 
 func _poly(points: Array, color: Color, outline := true) -> void:
