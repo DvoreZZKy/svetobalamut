@@ -427,14 +427,14 @@ var ambient_diamond := PackedVector2Array([
 ])
 var ambient_h_line := PackedVector2Array([Vector2(-3, 0), Vector2(3, 0)])
 var ambient_v_line := PackedVector2Array([Vector2(0, -3), Vector2(0, 3)])
+var ambient_palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
 
 
 func _draw_ambient() -> void:
-	var palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
 	for mote in ambient_motes:
 		var r: float = mote.r
 		var pulse := 0.45 + 0.35 * sin(t * 1.7 + float(mote.phase))
-		var color: Color = palette[int(mote.tone)]
+		var color: Color = ambient_palette[int(mote.tone)]
 		ambient_layer.draw_set_transform(mote.p, 0.0, Vector2(r, r))
 		ambient_layer.draw_colored_polygon(ambient_diamond, Color(color, pulse * 0.32))
 		ambient_layer.draw_polyline(ambient_h_line, Color(color, pulse * 0.22), 1.0, true)
