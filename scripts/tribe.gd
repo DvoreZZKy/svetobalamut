@@ -4,6 +4,7 @@ extends Node2D
 const ACTOR = preload("res://scripts/vector_actor.gd")
 
 class TribeMap extends Control:
+	const MAP_WORLD := Vector2(2600.0, 1640.0)
 	var explored_cells := {}
 	var player_pos := Vector2.ZERO
 	func _draw() -> void:
@@ -15,7 +16,7 @@ class TribeMap extends Control:
 		draw_circle(Vector2(0.16,0.25)*size,5,Color("#51eaff"))
 		draw_circle(Vector2(0.50,0.50)*size,5,Color("#ff7655"))
 		draw_circle(Vector2(0.84,0.76)*size,5,Color("#bc7aff"))
-		draw_circle(player_pos/WORLD*size,4,Color.WHITE)
+		draw_circle(player_pos/MAP_WORLD*size,4,Color.WHITE)
 const WORLD := Vector2(2600.0, 1640.0)
 const GOLD_RESPAWN_SECONDS := 180.0
 const ORE_DATA := {
@@ -83,6 +84,7 @@ func _ready() -> void:
 		players.clear()
 	_build_hud()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	Sfx.play_tribe_music()
 	queue_redraw()
 
 
