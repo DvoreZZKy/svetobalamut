@@ -91,8 +91,8 @@ func _build_overlay() -> void:
 	layer.add_child(pointer_dot)
 	panel = PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	panel.position = Vector2(-390, -190)
-	panel.size = Vector2(780, 160)
+	panel.position = Vector2(-390, -320)
+	panel.size = Vector2(780, 300)
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	layer.add_child(panel)
 	var column := VBoxContainer.new()
@@ -333,7 +333,7 @@ func _update_pointer() -> void:
 		"light": target = Vector2(vp.x * 0.5, vp.y - 42)
 		"dash": target = Vector2(vp.x * 0.5, vp.y - 18)
 		"arena": target = vp * 0.5
-	var origin := Vector2(vp.x * 0.5, vp.y - 190)
+	var origin := Vector2(vp.x * 0.5, vp.y - 320)
 	pointer.points = PackedVector2Array([origin, origin + Vector2(0, -35), target])
 	pointer_dot.position = target
 	pointer_dot.rotation = (origin - target).angle()
@@ -342,6 +342,9 @@ func _update_pointer() -> void:
 
 func _exit_tree() -> void:
 	Engine.time_scale = NORMAL_SPEED
+	if not finished:
+		G.tutorial_active = false
+		G.tutorial_return_to_lobby = false
 
 
 func _finish_tutorial() -> void:
