@@ -26,3 +26,5 @@ jobs:
         run: godot --headless --path . --quit-after 3
       - name: Verify interactive tutorial startup
         run: godot --headless --path . --script res://tests/tutorial_smoke.gd
+      - name: Verify TRIBE vertical slice
+        run: godot --headless --path . --script res://tests/tribe_smoke.gd
