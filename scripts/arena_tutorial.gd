@@ -242,7 +242,10 @@ func _show_step(step_title: String, description: String, target: String) -> void
 	Engine.time_scale = 0.0
 	title_label.text = step_title
 	body_label.text = description
-	_set_keys([])
+	if step_title == "ТВОЯ АТАКА":
+		_set_keys(["ЛКМ"])
+	else:
+		_set_keys([])
 	next_button.visible = true
 	pointer_target = target
 
