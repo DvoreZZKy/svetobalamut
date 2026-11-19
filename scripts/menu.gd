@@ -55,9 +55,12 @@ func _ready() -> void:
 	_btn("Назад", join, func(): _show("main"))
 
 	var profile := _box("profile")
+	profile.position = Vector2(390, 42)
+	profile.size = Vector2(500, 650)
+	profile.add_theme_constant_override("separation", 8)
 	_title(profile, "ТВОЙ ПЕРСОНАЖ")
 	profile_preview = TextureRect.new()
-	profile_preview.custom_minimum_size = Vector2(140, 92)
+	profile_preview.custom_minimum_size = Vector2(140, 76)
 	profile_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	profile_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	profile_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -79,6 +82,12 @@ func _ready() -> void:
 		G.profile_hat = (G.profile_hat + 1) % 5
 		_refresh_profile())
 	_btn("Сохранить и назад", profile, func(): G.save_settings(); _show("main"))
+	for profile_btn in [profile_color_btn, profile_kind_btn, profile_outfit_btn, profile_hat_btn]:
+		profile_btn.custom_minimum_size = Vector2(480, 44)
+		profile_btn.add_theme_font_size_override("font_size", 21)
+	var save_profile_btn := profile.get_child(profile.get_child_count() - 1) as Button
+	save_profile_btn.custom_minimum_size = Vector2(480, 44)
+	save_profile_btn.add_theme_font_size_override("font_size", 21)
 	_refresh_profile()
 
 	var st := _box("settings")
