@@ -65,8 +65,10 @@ func _process(dt: float) -> void:
 		var me := _local_player()
 		if not me.is_empty() and bool(me.get("s", false)):
 			_show_shadow_intro()
-	elif stage == "wait_possess" and Input.is_action_pressed("possess"):
-		_finish_tutorial()
+	elif stage == "wait_possess":
+		var shadow_state: Dictionary = arena.sim.players.get(arena.local_id, {})
+		if int(shadow_state.get("poss_target", 0)) != 0:
+			_finish_tutorial()
 
 
 func _build_overlay() -> void:
@@ -309,10 +311,10 @@ func _show_shadow_intro() -> void:
 	stage = "shadow_intro"
 	Engine.time_scale = 0.0
 	title_label.text = "СПОСОБНОСТИ ТЕНИ"
-	body_label.text = "Тень быстрее обычного игрока и может скрытно приблизиться к живому сопернику. Для вселения подойди к нему и нажми ПКМ или E."
+	body_label.text = "Тень быстрее обычного игрока и невидима для светящихся соперников. Подойди к живому игроку и нажми ПКМ или E: ты вселишься в него на 2 секунды и сможешь управлять им."
 	_set_keys(["ПКМ", "E"])
 	next_button.visible = true
-	pointer_target = "player"
+	pointer_target = "opponent"
 
 
 func _local_player() -> Dictionary:
@@ -330,6 +332,20 @@ func _update_pointer() -> void:
 			var me := _local_player()
 			if not me.is_empty():
 				target = vp * 0.5 + (me.p - Vector2(800, 450)) * 0.78
+		"opponent":
+			var me := _local_player()
+			var nearest_pos := Vector2.ZERO
+			var nearest_distance := INF
+			if not me.is_empty():
+				for pd in arena.view.get("pl", []):
+					if int(pd.i) == arena.local_id or bool(pd.s):
+						continue
+					var distance: float = me.p.distance_squared_to(pd.p)
+					if distance < nearest_distance:
+						nearest_distance = distance
+						nearest_pos = pd.p
+				if nearest_distance < INF:
+					target = vp * 0.5 + (nearest_pos - Vector2(800, 450)) * 0.78
 		"timer": target = Vector2(vp.x * 0.5, 55)
 		"score": target = Vector2(175, 150)
 		"help": target = Vector2(vp.x - 240, 105)
