@@ -6,7 +6,7 @@ static var _cache: Dictionary = {}
 static func make_player(kind: int) -> Texture2D:
 	var k := posmod(kind, 4)
 	if _cache.has(k):
-		return _cache[k]
+		return _cache[k] as Texture2D
 	var img := Image.create(24, 24, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	match k:
