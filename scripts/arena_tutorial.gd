@@ -4,7 +4,7 @@ const FacetButton = preload("res://scripts/facet_button.gd")
 ## Обучение с живой симуляцией: сначала интерфейс, затем практические действия.
 
 const NORMAL_SPEED := 1.0
-const SLOW_SPEED := 0.10
+const SLOW_SPEED := 0.22
 const TRANSITION_MS := 1750
 const UI_STEPS := [
 	{"title":"ТАЙМЕР РАУНДА","body":"Здесь отображается оставшееся время матча. Следи за ним: когда время закончится, победитель определяется по очкам хаоса.","target":"timer"},
