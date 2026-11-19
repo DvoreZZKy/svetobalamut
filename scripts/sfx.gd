@@ -55,13 +55,35 @@ func refresh_volume() -> void:
 	music.volume_db = linear_to_db(maxf(G.vol_music, 0.0001)) - 4.0
 
 
+# Minimum gap between two plays of the same sound, so a 10-player firefight doesn't turn into a buzz.
+const MIN_GAP_MS := {"shot": 45, "hit": 35, "eat": 60, "dash": 50, "click": 30}
+# Sounds that must always be heard, even if every voice is busy (they steal one).
+const IMPORTANT := ["death", "boom", "chaos", "win", "possess"]
+var last_played := {}
+
+
 func play(n: String, pitch := 1.0, vol := 0.0) -> void:
 	if not streams.has(n):
 		return
+	var now := Time.get_ticks_msec()
+	var gap: int = MIN_GAP_MS.get(n, 0)
+	if gap > 0:
+		if now - int(last_played.get(n, -1000)) < gap:
+			return
+		last_played[n] = now
+	var target: AudioStreamPlayer = null
 	for pl in pool:
 		if not pl.playing:
-			pl.stream = streams[n]
-			pl.pitch_scale = pitch * randf_range(0.94, 1.06)
-			pl.volume_db = linear_to_db(maxf(G.vol_sfx, 0.0001)) + vol
-			pl.play()
+			target = pl
+			break
+	if target == null:
+		if not IMPORTANT.has(n):
 			return
+		target = pool[0]
+		for pl in pool:
+			if pl.get_playback_position() > target.get_playback_position():
+				target = pl  # steal the voice that is furthest along
+	target.stream = streams[n]
+	target.pitch_scale = pitch * randf_range(0.94, 1.06)
+	target.volume_db = linear_to_db(maxf(G.vol_sfx, 0.0001)) + vol
+	target.play()

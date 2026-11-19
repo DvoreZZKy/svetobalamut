@@ -21,6 +21,10 @@ var profiles := {}         # peer_id -> внешний вид
 var inputs := {}           # на хосте: peer_id -> dict ввода
 var latest_snap := {}
 var snap_seq := 0
+## Gameplay events (shots, deaths, chaos...) travel on a reliable channel, so a lost
+## snapshot packet can no longer swallow a death, a chaos banner or a sound.
+var event_queue: Array = []
+const MAX_QUEUED_EVENTS := 400
 
 
 func _ready() -> void:
@@ -32,6 +36,8 @@ func _ready() -> void:
 
 
 func host() -> int:
+	if online:
+		leave()
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(PORT, MAX_PLAYERS - 1)
 	if err != OK:
@@ -67,6 +73,8 @@ func join(address: String) -> int:
 		host_port = int(parsed_port)
 	if host_ip.is_empty() or host_port < 1 or host_port > 65535:
 		return ERR_INVALID_PARAMETER
+	if online:
+		leave()  # a double click on "Connect" must not leak a second peer
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_client(host_ip, host_port)
 	if err != OK:
@@ -104,6 +112,7 @@ func leave() -> void:
 	inputs.clear()
 	latest_snap = {}
 	snap_seq = 0
+	event_queue.clear()
 
 
 func _on_connected() -> void:
@@ -157,8 +166,11 @@ func _hello(pname: String, profile: Dictionary) -> void:
 	if not is_host:
 		return
 	var id := multiplayer.get_remote_sender_id()
-	names[id] = pname.substr(0, 16)
-	profiles[id] = profile
+	if not names.has(id) and names.size() >= MAX_PLAYERS:
+		return
+	var clean_name := pname.strip_edges().substr(0, 16)
+	names[id] = clean_name if clean_name != "" else "Светляк"
+	profiles[id] = sanitize_profile(profile)
 	_names.rpc(names, profiles)
 	lobby_changed.emit()
 
@@ -212,9 +224,70 @@ func _profile_update(p: Dictionary) -> void:
 	var sender := multiplayer.get_remote_sender_id()
 	if not names.has(sender):
 		return
-	profiles[sender] = p
+	profiles[sender] = sanitize_profile(p)
 	_names.rpc(names, profiles)
 	lobby_changed.emit()
+
+
+static func _clamp_int(value: Variant, low: int, high: int) -> int:
+	if typeof(value) != TYPE_INT and typeof(value) != TYPE_FLOAT:
+		return low
+	return clampi(int(value), low, high)
+
+
+## Remote data is untrusted: bring a client's appearance into valid ranges.
+static func sanitize_profile(p: Dictionary) -> Dictionary:
+	return {
+		"color": _clamp_int(p.get("color", 0), 0, 7),
+		"kind": _clamp_int(p.get("kind", 0), 0, 3),
+		"outfit": _clamp_int(p.get("outfit", 0), 0, 4),
+		"hat": _clamp_int(p.get("hat", 0), 0, 4),
+	}
+
+
+## Remote data is untrusted: only well-typed, bounded input reaches the simulation.
+static func sanitize_input(d: Dictionary) -> Dictionary:
+	var mv := Vector2.ZERO
+	var aim := Vector2(800, 450)
+	if d.get("mv") is Vector2:
+		mv = d["mv"]
+		if is_nan(mv.x) or is_nan(mv.y):
+			mv = Vector2.ZERO
+		mv = mv.limit_length(1.0)
+	if d.get("aim") is Vector2:
+		aim = d["aim"]
+		if is_nan(aim.x) or is_nan(aim.y):
+			aim = Vector2(800, 450)
+		aim = aim.clamp(Vector2(-400, -400), Vector2(2000, 1300))
+	return {
+		"mv": mv, "aim": aim,
+		"fire": _flag(d.get("fire", false)),
+		"dash": _flag(d.get("dash", false)),
+		"poss": _flag(d.get("poss", false)),
+		"ability": _flag(d.get("ability", false)),
+	}
+
+
+static func _flag(value: Variant) -> bool:
+	return typeof(value) == TYPE_BOOL and value
+
+
+func broadcast_events(ev: Array) -> void:
+	if online and is_host and not ev.is_empty():
+		_events.rpc(ev)
+
+
+@rpc("authority", "reliable")
+func _events(ev: Array) -> void:
+	event_queue.append_array(ev)
+	if event_queue.size() > MAX_QUEUED_EVENTS:
+		event_queue = event_queue.slice(event_queue.size() - MAX_QUEUED_EVENTS)
+
+
+func take_events() -> Array:
+	var out := event_queue
+	event_queue = []
+	return out
 
 
 func send_input(d: Dictionary) -> void:
@@ -225,7 +298,7 @@ func send_input(d: Dictionary) -> void:
 @rpc("any_peer", "unreliable_ordered")
 func _input_rpc(d: Dictionary) -> void:
 	if is_host:
-		inputs[multiplayer.get_remote_sender_id()] = d
+		inputs[multiplayer.get_remote_sender_id()] = sanitize_input(d)
 
 
 func broadcast_snap(d: Dictionary) -> void:

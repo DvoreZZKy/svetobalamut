@@ -53,7 +53,7 @@ func _ready() -> void:
 	_btn("Подключиться", main, func(): Sfx.play("click"); _show("join"))
 	_btn("Персонаж", main, func(): Sfx.play("click"); _refresh_profile(); _show("profile"))
 	_btn("Настройки", main, func(): Sfx.play("click"); _show("settings"))
-	_btn("Выход", main, func(): get_tree().quit())
+	_btn("Выход", main, func(): G.save_settings(); get_tree().quit())
 
 	var join := _box("join")
 	_title(join, "АДРЕС КОМНАТЫ (IP:ПОРТ)")
@@ -192,11 +192,33 @@ func _ready() -> void:
 	_btn("ВЫЙТИ", lobby_actions, func(): G.save_settings(); Net.leave(); _show("main"))
 
 	Net.lobby_changed.connect(_on_lobby_changed)
-	Net.join_failed.connect(func(): status.text = "Не удалось подключиться"; _show("join"))
-	Net.disconnected.connect(func(): _show("main"))
-	Net.match_started.connect(func(): get_tree().change_scene_to_file("res://scenes/arena.tscn"))
+	Net.join_failed.connect(_on_join_failed)
+	Net.disconnected.connect(_on_net_disconnected)
+	Net.match_started.connect(_on_match_started)
 	_show("lobby" if Net.online else "main")
 	Sfx.play_music()
+
+
+func _exit_tree() -> void:
+	# Net is an autoload that outlives this scene: never leave stale connections behind.
+	for pair in [[Net.lobby_changed, _on_lobby_changed], [Net.join_failed, _on_join_failed],
+			[Net.disconnected, _on_net_disconnected], [Net.match_started, _on_match_started]]:
+		if pair[0].is_connected(pair[1]):
+			pair[0].disconnect(pair[1])
+
+
+func _on_join_failed() -> void:
+	status.text = "Не удалось подключиться"
+	_show("join")
+
+
+func _on_net_disconnected() -> void:
+	status.text = "Соединение потеряно"
+	_show("main")
+
+
+func _on_match_started() -> void:
+	get_tree().change_scene_to_file("res://scenes/arena.tscn")
 
 
 func _process(dt: float) -> void:

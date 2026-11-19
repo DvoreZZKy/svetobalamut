@@ -28,6 +28,7 @@ const KILL_BONUS := 24.0
 const MATCH_TIME := 240.0
 const MIN_SURVIVAL_TIME := 60.0
 const P_RADIUS := 28.0
+const MAX_EATERS_RAIN := 16
 const ZONES := [Vector3(420, 250, 125), Vector3(1180, 250, 125), Vector3(420, 650, 125), Vector3(1180, 650, 125), Vector3(800, 450, 95)]
 const CHAOS := ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]
 const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog": 6.0, "magnet": 5.0}
@@ -48,6 +49,9 @@ var bomb_t := 0.0
 var next_id := 1
 var shake_req := 0.0
 var rng := RandomNumberGenerator.new()
+## Tutorial mode: the match never ends by itself and random chaos does not interrupt the lesson.
+var endless := false
+var chaos_enabled := true
 
 
 func reset(cfg: Array) -> void:
@@ -64,6 +68,9 @@ func reset(cfg: Array) -> void:
 	chaos_timer = 10.0
 	eater_timer = 4.0
 	bomb_id = 0
+	bomb_t = 0.0
+	next_id = 1
+	shake_req = 0.0
 	var n := cfg.size()
 	var shuffled := range(n)
 	shuffled.shuffle()
@@ -87,7 +94,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"ability_cd": 0.0, "ability_t": 0.0,
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
-		"pts": 0, "kills": 0, "last_hit": 0, "hit_t": 0.0, "push_cd": 0.0,
+		"pts": 0, "kills": 0, "last_hit": 0, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0,
 		"bot": {"t": 0.0, "strafe": 1.0, "want": 350.0},
@@ -98,8 +105,10 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 func step(dt: float) -> void:
 	if phase != "play":
 		return
-	time_left -= dt
-	_chaos_tick(dt)
+	if not endless:
+		time_left -= dt
+	if chaos_enabled:
+		_chaos_tick(dt)
 	for k in effects.keys():
 		effects[k] -= dt
 		if effects[k] <= 0.0:
@@ -125,7 +134,8 @@ func step(dt: float) -> void:
 			if p.life <= 0.0 or p.light <= 0.0:
 				events.append({"t": "death", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "id": id})
 				players.erase(id)
-	_check_end()
+	if not endless:
+		_check_end()
 
 
 # ------------------------------------------------------------- игроки ----
@@ -154,12 +164,14 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		want_fire = d.fire
 		want_dash = d.dash
 		want_poss = false
+		want_ability = false
 		if p.derp_t <= 0.0:
 			p.derp_by = 0
 	p.dash_cd = maxf(0.0, p.dash_cd - dt)
 	p.inv = maxf(0.0, p.inv - dt)
 	p.fire_cd = maxf(0.0, p.fire_cd - dt)
 	p.hit_t = maxf(0.0, p.hit_t - dt)
+	p.hit_age += dt
 	p.push_cd = maxf(0.0, p.push_cd - dt)
 	p.poss_cd = maxf(0.0, p.poss_cd - dt)
 	p.ability_cd = maxf(0.0, p.ability_cd - dt)
@@ -226,7 +238,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.light += REGEN_ZONE * dt
 	p.light = clampf(p.light, 0.0, p.max_light)
 	if p.light <= 0.0 and not p.decoy:
-		_make_shadow(p, p.last_hit, false)
+		# Credit a kill only for a recent hit; otherwise this is starvation (no stale kill credit).
+		_make_shadow(p, p.last_hit if p.hit_age < 4.0 else 0, false)
 
 
 func _use_ability(p: Dictionary) -> void:
@@ -342,6 +355,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 		reduced *= 0.25
 	p.light -= reduced
 	p.last_hit = src
+	p.hit_age = 0.0
 	p.hit_t = 0.14
 	events.append({"t": "hit", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
 	shake_req = maxf(shake_req, 7.0)
@@ -409,6 +423,9 @@ func _collisions(_dt: float) -> void:
 					b.push_cd = 0.6
 					b.pts += 1
 					shake_req = maxf(shake_req, 5.0)
+				# Separation must never push anyone out of the arena.
+				a.pos = (a.pos as Vector2).clamp(Vector2(30, 30), A - Vector2(30, 30))
+				b.pos = (b.pos as Vector2).clamp(Vector2(30, 30), A - Vector2(30, 30))
 
 
 func _update_bullets(dt: float) -> void:
@@ -532,21 +549,24 @@ func trigger(name: String) -> void:
 	match name:
 		"rain":
 			for i in 8:
+				if eaters.size() >= MAX_EATERS_RAIN:
+					break  # repeated rains must not bury the arena in never-expiring eaters
 				_spawn_eater(Vector2(rng.randf_range(60, A.x - 60), -40.0 - i * 20.0), rng.randf() < 0.5)
 		"steal":
 			if lit.size() >= 2:
 				lit.shuffle()
 				var a: Dictionary = lit[0]
 				var b: Dictionary = lit[1]
-				var amt: float = minf(b.light * 0.4, a.max_light - a.light)
-				a.light += amt
-				b.light = maxf(1.0, b.light - amt)
-				var tk: int = a.kind
-				var tc: int = a.ci
-				a.kind = b.kind
+				var amt: float = b.light * 0.4
+				var old_kind: int = a.kind
+				var old_color: int = a.ci
+				# Swap class AND its stats together; otherwise a swapped sprite keeps the old class's stats.
+				_set_kind(a, b.kind)
 				a.ci = b.ci
-				b.kind = tk
-				b.ci = tc
+				_set_kind(b, old_kind)
+				b.ci = old_color
+				a.light = minf(a.max_light, a.light + amt)
+				b.light = maxf(1.0, b.light - amt)
 		"doubles":
 			if not lit.is_empty():
 				for i in 3:
@@ -564,7 +584,24 @@ func trigger(name: String) -> void:
 				bomb_id = v.id
 				bomb_t = 4.0
 		_:
-			effects[name] = DUR.get(name, 5.0) + effects.get(name, 0.0)
+			# Stacking extends the effect, but never beyond twice its base duration.
+			var base: float = DUR.get(name, 5.0)
+			effects[name] = minf(base + effects.get(name, 0.0), base * 2.0)
+
+
+## Switch a player's class while keeping the light ratio and applying that class's real stats.
+func _set_kind(p: Dictionary, kind: int) -> void:
+	var k: int = posmod(kind, CLASS_STATS.size())
+	var st: Dictionary = CLASS_STATS[k]
+	var ratio: float = float(p.light) / maxf(float(p.max_light), 1.0)
+	p.kind = k
+	p.max_light = st.hp
+	p.light = clampf(ratio * float(st.hp), 0.0, float(st.hp))
+	p.defense = st.def
+	p.attack = st.atk
+	p.speed_mult = st.speed
+	p.fire_rate = st.rate
+	p.ability_t = 0.0
 
 
 func _bomb_tick(dt: float) -> void:

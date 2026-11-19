@@ -20,6 +20,11 @@ var last_seq := 0
 var shake := 0.0
 var t := 0.0
 var last_bullet_count := -1
+var ability_latch := 0.0
+var last_score_text := ""
+var timer_glitch_until := 0
+var glitch_step := -1
+var glitch_text := "0:00"
 
 var pviews := {}
 var eviews := {}
@@ -110,13 +115,35 @@ func _ready() -> void:
 		Net.disconnected.connect(_to_menu)
 	else:
 		sim = Sim.new()
+		sim.endless = G.tutorial_active          # the lesson can't end by timeout or last-survivor
+		sim.chaos_enabled = not G.tutorial_active  # and random chaos doesn't derail it
 		sim.reset(G.cfg)
 		Net.peer_left.connect(_on_peer_left)
 		view = sim.snapshot()
 	if G.tutorial_active:
 		var tutorial_controller := ArenaTutorial.new()
 		add_child(tutorial_controller)
+		if Net.online:
+			# A lobby member doing the tutorial must still be pulled into the match the host starts.
+			Net.match_started.connect(_on_lobby_match_started)
 	Sfx.play_music()
+
+
+func _exit_tree() -> void:
+	if Net.match_started.is_connected(_on_lobby_match_started):
+		Net.match_started.disconnect(_on_lobby_match_started)
+	if Net.peer_left.is_connected(_on_peer_left):
+		Net.peer_left.disconnect(_on_peer_left)
+	if Net.disconnected.is_connected(_to_menu):
+		Net.disconnected.disconnect(_to_menu)
+
+
+func _on_lobby_match_started() -> void:
+	G.tutorial_active = false
+	G.tutorial_return_to_lobby = false
+	G.mode = "host" if Net.is_host else "client"
+	Engine.time_scale = 1.0
+	get_tree().change_scene_to_file("res://scenes/arena.tscn")
 
 
 func _on_peer_left(id: int) -> void:
@@ -486,6 +513,12 @@ func _process(dt: float) -> void:
 	t += dt
 	_update_ambient(dt)
 	var inp := _read_input()
+	# Inputs travel over an unreliable channel: stretch the one-frame ability press over ~0.18 s
+	# so a dropped or overwritten packet can't eat it. The ability cooldown makes repeats harmless.
+	if Input.is_action_just_pressed("ability"):
+		ability_latch = 0.18
+	ability_latch = maxf(0.0, ability_latch - dt)
+	inp["ability"] = ability_latch > 0.0
 	if pause_open:
 		inp = {"mv": Vector2.ZERO, "aim": get_global_mouse_position(),
 			"fire": false, "dash": false, "poss": false, "ability": false}
@@ -503,12 +536,14 @@ func _process(dt: float) -> void:
 		_handle_events(ev)
 		net_ev.append_array(ev)
 		snap_timer -= dt
-		if Net.online and not G.tutorial_active and snap_timer <= 0.0:
-			snap_timer = 0.05
-			view["ev"] = net_ev
-			net_ev = []
-			Net.broadcast_snap(view)
-			view.erase("ev")
+		if Net.online and not G.tutorial_active:
+			if snap_timer <= 0.0:
+				snap_timer = 0.05
+				Net.broadcast_snap(view)
+				Net.broadcast_events(net_ev)  # reliable channel, batched at snapshot rate
+				net_ev = []
+		else:
+			net_ev.clear()  # solo/tutorial: nobody consumes the batch, don't let it grow forever
 		snap_age = 0.0
 		if Input.is_action_just_pressed("restart") and view.ph == "over":
 			sim.reset(G.cfg)
@@ -519,9 +554,9 @@ func _process(dt: float) -> void:
 			last_seq = Net.snap_seq
 			view = Net.latest_snap
 			snap_age = 0.0
-			_handle_events(view.get("ev", []))
 		else:
 			snap_age = minf(snap_age + dt, 0.12)
+		_handle_events(Net.take_events())
 		wait_lbl.visible = view.is_empty()
 	if not view.is_empty():
 		_update_views(dt)
@@ -604,6 +639,10 @@ func _layout_pause_menu() -> void:
 func _toggle_pause() -> void:
 	pause_open = not pause_open
 	pause_layer.visible = pause_open
+	if pause_open:
+		shake = 0.0  # don't freeze the camera mid-shake behind the pause panel
+		cam.offset = Vector2.ZERO
+		cam.rotation = 0.0
 	if is_instance_valid(cursor_canvas):
 		cursor_canvas.visible = not pause_open
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if pause_open else Input.MOUSE_MODE_HIDDEN
@@ -643,6 +682,15 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	local_ring.visible = false
 	local_ring.z_index = 5
 	root.add_child(local_ring)
+	# Ring that shows an active class ability (Светляк overdrive / Капсула shield).
+	var ability_ring := Line2D.new()
+	ability_ring.width = 3.0
+	ability_ring.closed = true
+	for i in 20:
+		ability_ring.add_point(Vector2.from_angle(TAU * float(i) / 20.0) * 38.0)
+	ability_ring.visible = false
+	ability_ring.z_index = 4
+	root.add_child(ability_ring)
 	var lbl := Label.new()
 	lbl.position = Vector2(-70, -66)
 	lbl.size = Vector2(140, 22)
@@ -660,7 +708,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	line.material = sm
 	trail_layer.add_child(line)
 	return {"root": root, "halo": halo, "actor": actor, "lbl": lbl, "line": line, "mat": sm,
-		"local_ring": local_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
+		"local_ring": local_ring, "ability_ring": ability_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
 		"kick": 0.0, "kind": pd.k, "ci": pd.c}
 
 
@@ -695,7 +743,8 @@ func _update_views(dt: float) -> void:
 			line.clear_points()
 		var shadow: bool = pd.s
 		var vis: bool = (not shadow) or local_shadow or id == local_id
-		var lf: float = pd.l / 100.0
+		# Light fraction relative to THIS class's maximum (classes have 100..155 max light).
+		var lf: float = clampf(float(pd.l) / maxf(float(pd.get("hpmax", 100.0)), 1.0), 0.0, 1.0) * 1.1
 		var col: Color = G.col(pd.c)
 		var root: Node2D = pv.root
 		var actor = pv.actor
@@ -713,6 +762,14 @@ func _update_views(dt: float) -> void:
 		root.visible = vis
 		local_ring.visible = (id == local_id and not shadow)
 		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
+		var ability_ring: Line2D = pv.ability_ring
+		var ability_on: bool = float(pd.get("ab", 0.0)) > 0.0 and not shadow and (int(pd.k) == 0 or int(pd.k) == 1)
+		ability_ring.visible = ability_on
+		if ability_on:
+			var ring_color := Color(0.35, 1.7, 2.2) if int(pd.k) == 0 else Color(2.2, 1.6, 0.5)
+			ring_color.a = 0.55 + 0.35 * sin(t * 16.0)
+			ability_ring.default_color = ring_color
+			ability_ring.scale = Vector2.ONE * (1.0 + 0.08 * sin(t * 12.0))
 		line.visible = vis
 		root.position = pv.pos
 		pv.rot = lerp_angle(pv.rot, (pd.a as Vector2).angle(), minf(1.0, 30.0 * dt))
@@ -842,6 +899,14 @@ func _update_hud(dt: float) -> void:
 	var secs := maxi(0, int(view.get("tl", Sim.MATCH_TIME)))
 	timer_lbl.text = "%d:%02d" % [secs / 60, secs % 60]
 	timer_lbl.modulate = Color("#ff789b") if secs <= 30 else Color("#b8f8ff")
+	# Chaos messes with the HUD clock (display only; the real match clock is untouched).
+	if not over and Time.get_ticks_msec() < timer_glitch_until:
+		var step := int(Time.get_ticks_msec() / 85)
+		if step != glitch_step:
+			glitch_step = step
+			glitch_text = "%d:%02d" % [randi() % 9, randi() % 60]
+		timer_lbl.text = glitch_text
+		timer_lbl.modulate = Color("#ffd45c")
 	if over:
 		timer_lbl.text = "0:00"
 	var rows: Array = []
@@ -858,7 +923,9 @@ func _update_hud(dt: float) -> void:
 		var st := "ТЕНЬ" if pd.s else str(int(pd.l))
 		var display_name: String = str(pd.n) + (" (бот)" if bool(pd.get("bot", false)) else "")
 		txt += "[color=#%s]%s%s[/color]  %s  [color=#8890aa]хаос %d[/color]\n" % [hex, "> " if pd.i == local_id else "", display_name, st, pd.pt]
-	score_lbl.text = txt
+	if txt != last_score_text:  # re-parsing BBCode every frame was needless work
+		last_score_text = txt
+		score_lbl.text = txt
 	if not me.is_empty():
 		light_bar.max_value = me.hpmax
 		light_bar.value = me.l
@@ -956,7 +1023,7 @@ func _handle_events(evs: Array) -> void:
 				shake = maxf(shake, 6.0)
 			"death":
 				Sfx.play("death")
-				burst(pos, col, 46, 640.0, 0.85)
+				burst(pos, col, 46, 640.0, 0.85, true)
 				flash(pos, 220.0, col, 0.5)
 				shake = maxf(shake, 20.0 if e.get("id", 0) != local_id else 34.0)
 			"dash":
@@ -964,7 +1031,7 @@ func _handle_events(evs: Array) -> void:
 				burst(pos, col, 8, 300.0, 0.25)
 			"possess":
 				Sfx.play("possess")
-				burst(pos, Color(0.8, 0.25, 1.0), 34, 280.0, 0.9)
+				burst(pos, Color(0.8, 0.25, 1.0), 34, 280.0, 0.9, true)
 				flash(pos, 150.0, Color(0.8, 0.25, 1.0), 0.6)
 			"eat":
 				Sfx.play("eat")
@@ -972,11 +1039,12 @@ func _handle_events(evs: Array) -> void:
 			"boom":
 				Sfx.play("boom")
 				flash(pos, float(e.get("r", 260.0)) * 1.3, Color(1.0, 0.85, 0.4), 0.55)
-				burst(pos, Color(1.0, 0.6, 0.2), 90, 900.0, 0.9)
+				burst(pos, Color(1.0, 0.6, 0.2), 90, 900.0, 0.9, true)
 				shake = maxf(shake, 48.0)
 			"chaos":
 				Sfx.play("chaos")
 				shake = maxf(shake, 26.0)
+				timer_glitch_until = Time.get_ticks_msec() + 1800
 				_show_banner(CHAOS_RU.get(e.n, str(e.n)).to_upper())
 				var tw := create_tween()
 				tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
@@ -984,18 +1052,19 @@ func _handle_events(evs: Array) -> void:
 				Sfx.play("dash", 1.0, -2.0)
 				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
 				flash(pos, 190.0, ability_color, 0.45)
-				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55)
+				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55, true)
 			"win":
 				Sfx.play("win")
 
 
-func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float) -> void:
+func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, important := false) -> void:
 	# Keep event bursts lightweight: many overlapping CPU particle systems were a major frame-time spike.
+	# Routine bursts (shots, hits) leave headroom so deaths, bombs and abilities are never starved.
 	var active_bursts := 0
 	for child in fx_layer.get_children():
 		if child is CPUParticles2D:
 			active_bursts += 1
-	if active_bursts >= 10:
+	if active_bursts >= (16 if important else 8):
 		return
 	var p := CPUParticles2D.new()
 	p.position = pos

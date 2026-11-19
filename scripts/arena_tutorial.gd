@@ -349,6 +349,8 @@ func _show_shadow_explanation() -> void:
 		candidate.pos = Vector2(900, 450)
 		candidate.vel = Vector2.ZERO
 		candidate.human = true
+		# It is no longer driven by bot AI; drop its last bot input so it truly stands still.
+		arena.sim.inputs.erase(candidate.id)
 		break
 	arena.view = arena.sim.snapshot()
 	stage = "ui"

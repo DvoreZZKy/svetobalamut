@@ -32,6 +32,12 @@ func _ready() -> void:
 	load_settings()
 
 
+func _notification(what: int) -> void:
+	# Closing the window (Alt+F4, the X button) must not lose changed settings.
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		save_settings()
+
+
 func _setup_input() -> void:
 	var keys := {
 		"up": [KEY_W, KEY_UP],

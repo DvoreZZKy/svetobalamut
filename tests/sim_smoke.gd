@@ -1,0 +1,126 @@
+extends SceneTree
+## Headless simulation check: bots play full matches, every chaos effect is triggered,
+## and core invariants (effects expire, stats stay consistent, match ends) are verified.
+## Run: godot --headless --path . --script res://tests/sim_smoke.gd
+
+var failures: Array[String] = []
+
+
+func _initialize() -> void:
+	call_deferred("_run")
+
+
+func _fail(msg: String) -> void:
+	failures.append(msg)
+	push_error("SIM TEST FAILED: " + msg)
+
+
+func _run() -> void:
+	var global_state := root.get_node("G")
+	global_state.set("mode", "single")
+	global_state.set("tutorial_active", false)
+	var cfg: Array = [{"id": 1, "name": "QA", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0}]
+	for i in 5:
+		cfg.append({"id": -(i + 1), "name": "Bot %d" % i, "human": false})
+	global_state.set("cfg", cfg)
+	var result := change_scene_to_file("res://scenes/arena.tscn")
+	if result != OK:
+		push_error("Could not load arena scene")
+		quit(1)
+		return
+	await process_frame
+	await process_frame
+	var arena := current_scene
+	arena.set_process(false)  # this test steps the simulation by hand
+	var sim = arena.sim
+	if sim == null:
+		push_error("Arena has no simulation")
+		quit(1)
+		return
+
+	# 1) Every chaos effect can be triggered, timed effects stay within 2x duration, nothing crashes.
+	sim.reset(cfg)
+	for name in Sim.CHAOS:
+		sim.trigger(name)
+		sim.trigger(name)  # stacking
+		for pid in sim.players:
+			var p: Dictionary = sim.players[pid]
+			if is_nan(float(p.light)) or float(p.light) > float(p.max_light) + 0.01:
+				_fail("light out of range after chaos '%s'" % name)
+	for name in Sim.DUR:
+		if sim.effects.has(name) and float(sim.effects[name]) > float(Sim.DUR[name]) * 2.0 + 0.01:
+			_fail("effect '%s' stacked beyond twice its duration" % name)
+
+	# 2) Class swap ('steal') keeps class stats consistent with the class.
+	sim.reset(cfg)
+	for i in 10:
+		sim.trigger("steal")
+	for pid in sim.players:
+		var p: Dictionary = sim.players[pid]
+		var st: Dictionary = Sim.CLASS_STATS[int(p.kind) % 4]
+		if not is_equal_approx(float(p.max_light), float(st.hp)) or not is_equal_approx(float(p.defense), float(st.def)):
+			_fail("player %s has stats that don't match class %d after steal" % [str(pid), int(p.kind)])
+
+	# 3) Effects and temporary state expire; eaters stay capped under repeated rain.
+	sim.reset(cfg)
+	for i in 6:
+		sim.trigger("rain")
+	if sim.eaters.size() > Sim.MAX_EATERS_RAIN:
+		_fail("rain exceeded eater cap: %d" % sim.eaters.size())
+	sim.reset(cfg)
+	sim.chaos_enabled = false
+	sim.trigger("invert")
+	sim.trigger("reverse")
+	sim.trigger("blind")
+	for i in int(20.0 * 60.0):
+		sim.step(1.0 / 60.0)
+	if not sim.effects.is_empty():
+		_fail("effects did not expire: %s" % str(sim.effects.keys()))
+	sim.chaos_enabled = true
+
+	# 4) A full bot match always finishes with a winner; no NaN positions.
+	var finished := 0
+	for match_i in 3:
+		sim.reset(cfg)
+		var steps := 0
+		while sim.phase == "play" and steps < 16000:
+			sim.step(1.0 / 60.0)
+			sim.events.clear()
+			steps += 1
+			for pid in sim.players:
+				var pos: Vector2 = sim.players[pid].pos
+				if is_nan(pos.x) or is_nan(pos.y):
+					_fail("NaN position in match %d" % match_i)
+					break
+		if sim.phase == "over" and sim.players.has(sim.winner):
+			finished += 1
+		else:
+			_fail("match %d did not finish with a valid winner (steps=%d)" % [match_i, steps])
+	# 5) Tutorial mode never ends by itself.
+	sim.reset(cfg)
+	sim.endless = true
+	sim.chaos_enabled = false
+	for i in int(300.0 * 60.0):
+		sim.step(1.0 / 60.0)
+	if sim.phase != "play":
+		_fail("endless (tutorial) simulation ended on its own")
+	sim.endless = false
+
+	# 6) Network input from a client is sanitised.
+	var net := root.get_node("Net")
+	var cleaned: Dictionary = net.call("sanitize_input", {"mv": Vector2(50, 50), "aim": "junk", "fire": "yes", "ability": true})
+	if (cleaned["mv"] as Vector2).length() > 1.001:
+		_fail("client movement vector was not clamped")
+	if cleaned["fire"] != false or cleaned["ability"] != true:
+		_fail("client booleans were not sanitised")
+	var profile: Dictionary = net.call("sanitize_profile", {"color": 99, "kind": -4, "outfit": "x", "hat": 2})
+	if profile["color"] != 7 or profile["kind"] != 0 or profile["outfit"] != 0 or profile["hat"] != 2:
+		_fail("client profile was not clamped: %s" % str(profile))
+
+	arena.queue_free()
+	await process_frame
+	if failures.is_empty():
+		print("Sim smoke test passed: chaos, class swap, expiry, full bot matches, tutorial endless mode, net sanitising")
+		quit(0)
+	else:
+		quit(1)
