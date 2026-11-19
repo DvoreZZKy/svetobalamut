@@ -1,4 +1,6 @@
 extends Node
+
+const FacetButton = preload("res://scripts/facet_button.gd")
 ## Обучение с живой симуляцией: сначала интерфейс, затем практические действия.
 
 const NORMAL_SPEED := 1.0
@@ -122,7 +124,7 @@ func _build_overlay() -> void:
 	key_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	key_row.add_theme_constant_override("separation", 7)
 	column.add_child(key_row)
-	next_button = Button.new()
+	next_button = FacetButton.new()
 	next_button.text = "ДАЛЕЕ"
 	next_button.custom_minimum_size = Vector2(170, 38)
 	next_button.pressed.connect(_on_next)
@@ -136,13 +138,13 @@ func _build_overlay() -> void:
 	pointer_head.color = Color("#b8fbff")
 	pointer_head.z_index = 16
 	layer.add_child(pointer_head)
-	skip_button = Button.new()
+	skip_button = FacetButton.new()
 	skip_button.text = "ПРОПУСТИТЬ ОБУЧЕНИЕ"
-	skip_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	skip_button.offset_left = -225
-	skip_button.offset_top = 12
-	skip_button.offset_right = -12
-	skip_button.offset_bottom = 46
+	skip_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	skip_button.offset_left = -245
+	skip_button.offset_top = -54
+	skip_button.offset_right = -16
+	skip_button.offset_bottom = -14
 	skip_button.add_theme_font_size_override("font_size", 13)
 	skip_button.pressed.connect(_show_completion)
 	layer.add_child(skip_button)
@@ -164,7 +166,10 @@ func _panel_style() -> StyleBoxFlat:
 
 func _keycap(letter: String) -> Control:
 	var box := Control.new()
-	box.custom_minimum_size = Vector2(46, 46)
+	var font := ThemeDB.fallback_font
+	var measured := font.get_string_size(letter, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+	var cap_width := maxf(46.0, measured + 26.0)
+	box.custom_minimum_size = Vector2(cap_width, 46)
 	var frame := Panel.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var style := StyleBoxFlat.new()
@@ -325,7 +330,8 @@ func _on_next() -> void:
 	if stage != "ui":
 		return
 	ui_index += 1
-	_begin_transition("ui", ui_index)
+	# UI explanations are a continuous sequence: no gameplay-speed gap between them.
+	_show_ui_step(ui_index)
 
 
 func _target_rect() -> Rect2:
@@ -444,12 +450,12 @@ func _show_completion() -> void:
 	var actions := HBoxContainer.new()
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 12)
-	var finish_btn := Button.new()
+	var finish_btn := FacetButton.new()
 	finish_btn.text = "ЗАВЕРШИТЬ ОБУЧЕНИЕ"
 	finish_btn.custom_minimum_size = Vector2(235, 42)
 	finish_btn.pressed.connect(_complete_and_exit)
 	actions.add_child(finish_btn)
-	var replay_btn := Button.new()
+	var replay_btn := FacetButton.new()
 	replay_btn.text = "ПРОЙТИ ЕЩЁ РАЗ"
 	replay_btn.custom_minimum_size = Vector2(200, 42)
 	replay_btn.pressed.connect(_restart_tutorial)
