@@ -327,7 +327,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	root.add_child(spr)
 	var outfit := Polygon2D.new()
-	outfit.z_index = 3
+	outfit.z_index = 10
 	var outfit_shapes := [
 		PackedVector2Array(),
 		PackedVector2Array([Vector2(-13, -5), Vector2(13, -5), Vector2(10, 12), Vector2(-10, 12)]),
@@ -336,11 +336,11 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 		PackedVector2Array([Vector2(-11, -5), Vector2(11, -5), Vector2(17, 17), Vector2(-17, 17)])
 	]
 	outfit.polygon = outfit_shapes[int(pd.get("outfit", 0)) % outfit_shapes.size()]
-	outfit.scale = Vector2(1.45, 1.45)
+	outfit.scale = Vector2(0.92, 0.92)
 	outfit.color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][int(pd.get("outfit", 0)) % 5]
 	root.add_child(outfit)
 	var hat := Polygon2D.new()
-	hat.z_index = 4
+	hat.z_index = 11
 	var hat_shapes := [
 		PackedVector2Array(),
 		PackedVector2Array([Vector2(-15, -22), Vector2(-10, -37), Vector2(-3, -27), Vector2(2, -42), Vector2(8, -27), Vector2(15, -22)]),
@@ -350,7 +350,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	]
 	hat.polygon = hat_shapes[int(pd.get("hat", 0)) % hat_shapes.size()]
 	hat.color = Color("#ffe27a")
-	hat.scale = Vector2(1.25, 1.25)
+	hat.scale = Vector2(0.9, 0.9)
 	root.add_child(hat)
 	var local_ring := Line2D.new()
 	local_ring.width = 5.0
@@ -422,6 +422,8 @@ func _update_views(dt: float) -> void:
 		var outfit: Polygon2D = pv.outfit
 		var hat: Polygon2D = pv.hat
 		var local_ring: Line2D = pv.local_ring
+		outfit.visible = int(pd.get("outfit", 0)) > 0
+		hat.visible = int(pd.get("hat", 0)) > 0
 		var lbl: Label = pv.lbl
 		root.visible = vis
 		local_ring.visible = (id == local_id and not shadow)
@@ -628,7 +630,7 @@ func _handle_events(evs: Array) -> void:
 				tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
 			"ability":
 				Sfx.play("dash", 1.0, -2.0)
-				var ability_color := [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
+				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
 				flash(pos, 190.0, ability_color, 0.45)
 				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55)
 			"win":
