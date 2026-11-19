@@ -246,12 +246,14 @@ func _build_hud() -> void:
 		Vector2(-101, 15), Vector2(-101, -15)
 	])
 	timer_shape.color = Color("#0c1d31", 0.92)
+	timer_shape.z_index = -1
 	cl.add_child(timer_shape)
 	timer_outline = Line2D.new()
 	timer_outline.position = timer_shape.position
 	timer_outline.points = timer_shape.polygon
 	timer_outline.closed = true
 	timer_outline.width = 2.0
+	timer_outline.z_index = -1
 	timer_outline.default_color = Color("#39d9f0", 0.92)
 	cl.add_child(timer_outline)
 	timer_lbl.size = Vector2(190, 58)
@@ -385,6 +387,7 @@ func _build_aim_cursor() -> void:
 	cursor_canvas = Control.new()
 	cursor_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cursor_canvas.size = Vector2(38, 38)
+	cursor_canvas.z_index = 100
 	cursor_canvas.draw.connect(_draw_aim_cursor)
 	cursor_layer.add_child(cursor_canvas)
 	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
@@ -635,7 +638,14 @@ func _update_views(dt: float) -> void:
 		var actor = pv.actor
 		var halo: Sprite2D = pv.halo
 		var local_ring: Line2D = pv.local_ring
-		actor.setup(int(pd.k), G.col(int(pd.c)), int(pd.get("outfit", 0)), int(pd.get("hat", 0)))
+		var new_outfit := int(pd.get("outfit", 0))
+		var new_hat := int(pd.get("hat", 0))
+		if pv.kind != int(pd.k) or pv.ci != int(pd.c) or int(pv.get("outfit", -1)) != new_outfit or int(pv.get("hat", -1)) != new_hat:
+			actor.setup(int(pd.k), G.col(int(pd.c)), new_outfit, new_hat)
+			pv.kind = int(pd.k)
+			pv.ci = int(pd.c)
+			pv.outfit = new_outfit
+			pv.hat = new_hat
 		var lbl: Label = pv.lbl
 		root.visible = vis
 		local_ring.visible = (id == local_id and not shadow)
@@ -914,12 +924,19 @@ func _handle_events(evs: Array) -> void:
 
 
 func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float) -> void:
+	# Keep event bursts lightweight: many overlapping CPU particle systems were a major frame-time spike.
+	var active_bursts := 0
+	for child in fx_layer.get_children():
+		if child is CPUParticles2D:
+			active_bursts += 1
+	if active_bursts >= 10:
+		return
 	var p := CPUParticles2D.new()
 	p.position = pos
 	p.texture = halo_tex
 	p.material = add_mat
-	p.amount = amount
-	p.lifetime = life
+	p.amount = mini(amount, 30)
+	p.lifetime = minf(life, 0.65)
 	p.one_shot = true
 	p.explosiveness = 1.0
 	p.direction = Vector2.RIGHT
@@ -935,7 +952,7 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float) -> 
 	p.color_ramp = fade_grad
 	fx_layer.add_child(p)
 	p.emitting = true
-	get_tree().create_timer(life + 0.3).timeout.connect(p.queue_free)
+	get_tree().create_timer(minf(life, 0.65) + 0.3).timeout.connect(p.queue_free)
 
 
 func flash(pos: Vector2, radius: float, col: Color, dur := 0.4) -> void:
