@@ -172,9 +172,21 @@ func _build_hud() -> void:
 	var cl := CanvasLayer.new()
 	cl.layer = 10
 	add_child(cl)
-	timer_lbl = _label("4:00", 46, Vector2(540, 10), Vector2(200, 56), cl, true)
+	timer_lbl = _label("4:00", 46, Vector2.ZERO, Vector2(220, 58), cl, true)
+	timer_lbl.anchor_left = 0.5
+	timer_lbl.anchor_right = 0.5
+	timer_lbl.offset_left = -110
+	timer_lbl.offset_right = 110
+	timer_lbl.offset_top = 8
+	timer_lbl.offset_bottom = 66
 	timer_lbl.modulate = Color(0.6, 1.8, 2.2)
-	banner = _label("", 70, Vector2(0, 190), Vector2(1280, 100), cl, true)
+	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
+	banner.anchor_left = 0.5
+	banner.anchor_right = 0.5
+	banner.offset_left = -640
+	banner.offset_right = 640
+	banner.anchor_top = 0.28
+	banner.anchor_bottom = 0.28
 	banner.pivot_offset = Vector2(640, 50)
 	banner.modulate.a = 0.0
 	score_lbl = RichTextLabel.new()
@@ -182,18 +194,49 @@ func _build_hud() -> void:
 	score_lbl.fit_content = true
 	score_lbl.scroll_active = false
 	score_lbl.position = Vector2(16, 12)
-	score_lbl.size = Vector2(340, 300)
+	score_lbl.size = Vector2(330, 340)
+	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	score_lbl.add_theme_font_size_override("normal_font_size", 17)
 	cl.add_child(score_lbl)
-	help_lbl = _label("", 15, Vector2(850, 12), Vector2(420, 92), cl)
+	help_lbl = _label("", 15, Vector2.ZERO, Vector2(500, 112), cl)
+	help_lbl.anchor_left = 1.0
+	help_lbl.anchor_right = 1.0
+	help_lbl.offset_left = -516
+	help_lbl.offset_right = -16
+	help_lbl.anchor_top = 0.0
+	help_lbl.anchor_bottom = 0.0
 	help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help_lbl.add_theme_font_size_override("font_size", 13)
 	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.75)
-	light_bar = _bar(Vector2(440, 672), Vector2(400, 18), Color(1.6, 1.4, 0.5), cl)
-	dash_bar = _bar(Vector2(440, 696), Vector2(400, 7), Color(0.4, 1.6, 2.0), cl)
-	wait_lbl = _label("Ждём хоста…", 30, Vector2(0, 330), Vector2(1280, 60), cl, true)
+	light_bar = _bar(Vector2.ZERO, Vector2(400, 18), Color(1.6, 1.4, 0.5), cl)
+	light_bar.anchor_left = 0.5
+	light_bar.anchor_right = 0.5
+	light_bar.anchor_top = 1.0
+	light_bar.anchor_bottom = 1.0
+	light_bar.offset_left = -200
+	light_bar.offset_right = 200
+	light_bar.offset_top = -48
+	light_bar.offset_bottom = -30
+	dash_bar = _bar(Vector2.ZERO, Vector2(400, 7), Color(0.4, 1.6, 2.0), cl)
+	dash_bar.anchor_left = 0.5
+	dash_bar.anchor_right = 0.5
+	dash_bar.anchor_top = 1.0
+	dash_bar.anchor_bottom = 1.0
+	dash_bar.offset_left = -200
+	dash_bar.offset_right = 200
+	dash_bar.offset_top = -24
+	dash_bar.offset_bottom = -17
+	wait_lbl = _label("Ждём хоста…", 30, Vector2.ZERO, Vector2(1280, 60), cl, true)
+	wait_lbl.anchor_left = 0.5
+	wait_lbl.anchor_right = 0.5
+	wait_lbl.anchor_top = 0.5
+	wait_lbl.anchor_bottom = 0.5
+	wait_lbl.offset_left = -640
+	wait_lbl.offset_right = 640
+	wait_lbl.offset_top = -30
+	wait_lbl.offset_bottom = 30
 	wait_lbl.visible = is_client
 	over_rect = ColorRect.new()
 	over_rect.color = Color(0, 0, 0, 0.72)
@@ -201,7 +244,15 @@ func _build_hud() -> void:
 	over_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	over_rect.visible = false
 	cl.add_child(over_rect)
-	over_lbl = _label("", 44, Vector2(0, 220), Vector2(1280, 300), over_rect, true)
+	over_lbl = _label("", 44, Vector2.ZERO, Vector2(1280, 300), over_rect, true)
+	over_lbl.anchor_left = 0.5
+	over_lbl.anchor_right = 0.5
+	over_lbl.anchor_top = 0.5
+	over_lbl.anchor_bottom = 0.5
+	over_lbl.offset_left = -640
+	over_lbl.offset_right = 640
+	over_lbl.offset_top = -150
+	over_lbl.offset_bottom = 150
 
 
 # -------------------------------------------------------------- рисование --
