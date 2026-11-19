@@ -57,13 +57,13 @@ func make_env() -> WorldEnvironment:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_CANVAS
 	env.glow_enabled = true
-	env.glow_intensity = 1.1
-	env.glow_strength = 1.15
-	env.glow_bloom = 0.25
-	env.glow_hdr_threshold = 0.7
+	env.glow_intensity = 0.75
+	env.glow_strength = 0.85
+	env.glow_bloom = 0.12
+	env.glow_hdr_threshold = 1.0
 	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 	for i in range(1, 7):
-		env.set_glow_level(i, 1.0 if i != 1 else 0.6)
+		env.set_glow_level(i, 0.45 if i != 1 else 0.3)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	return we
