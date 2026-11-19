@@ -339,7 +339,10 @@ func _add_facet_panel(parent: Control, target: Control, fill: Color, edge: Color
 
 
 func _update_lobby_frames() -> void:
-	if not is_instance_valid(lobby_root) or not boxes.get("lobby", null).visible:
+	if not is_instance_valid(lobby_root) or not boxes.has("lobby"):
+		return
+	var lobby_box: Control = boxes["lobby"]
+	if not is_instance_valid(lobby_box) or not lobby_box.visible:
 		return
 	for frame in lobby_frame_data:
 		var target: Control = frame.target
@@ -531,9 +534,11 @@ func _on_lobby_changed() -> void:
 		var ips := G.local_ips()
 		var room_addresses: Array[String] = []
 		for ip in ips:
-			room_addresses.append(ip + ":" + str(Net.PORT))
-		lobby_info.text = "КОД КОМНАТЫ — ПЕРЕДАЙ ДРУЗЬЯМ\n%s\nИГРОКИ  %d / %d" % [
-			"   •   ".join(room_addresses) if not room_addresses.is_empty() else "IP этого компьютера : " + str(Net.PORT),
+			var code := Net.room_code_for_ip(ip)
+			if code != "":
+				room_addresses.append(code + "   •   " + ip + ":" + str(Net.PORT))
+		lobby_info.text = "ЦИФРОВОЙ КОД КОМНАТЫ • ВВЕДИ ЕГО В ПОДКЛЮЧЕНИИ\n%s\nИГРОКИ  %d / %d" % [
+			"\n".join(room_addresses) if not room_addresses.is_empty() else "Локальный IP недоступен • порт " + str(Net.PORT),
 			Net.names.size(), Net.MAX_PLAYERS]
 		start_btn.visible = true
 	else:
