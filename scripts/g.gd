@@ -43,6 +43,7 @@ func _setup_input() -> void:
 		"possess": [KEY_E, KEY_F],
 		"ability": [KEY_Q],
 		"restart": [KEY_ENTER, KEY_KP_ENTER],
+		"interact": [KEY_E],
 	}
 	for a in keys:
 		if not InputMap.has_action(a):
@@ -119,6 +120,7 @@ func _start_solo_config() -> void:
 
 
 func start_tutorial_game(return_to_lobby: bool) -> void:
+	game_mode = "chaos"
 	tutorial_return_to_lobby = return_to_lobby
 	if return_to_lobby:
 		tutorial_previous_mode = mode
