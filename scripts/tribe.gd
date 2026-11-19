@@ -17,6 +17,7 @@ class TribeMap extends Control:
 		draw_circle(Vector2(0.84,0.76)*size,5,Color("#bc7aff"))
 		draw_circle(player_pos/WORLD*size,4,Color.WHITE)
 const WORLD := Vector2(2600.0, 1640.0)
+const GOLD_RESPAWN_SECONDS := 180.0
 const ORE_DATA := {
 	"neon": {"name":"НЕОНОВЫЙ КРИСТАЛЛ","color":Color("#42eaff"),"xp":18,"money":8,"age":1,"time":1.0},
 	"ice": {"name":"ЛЕДЯНАЯ РУДА","color":Color("#8bcfff"),"xp":26,"money":13,"age":2,"time":1.8},
@@ -90,7 +91,7 @@ func _seed_world() -> void:
 		["neon",Vector2(250,260)],["neon",Vector2(510,520)],["neon",Vector2(680,260)],
 		["neon",Vector2(900,680)],["ice",Vector2(1030,720)],["ice",Vector2(1450,610)],
 		["magma",Vector2(1230,930)],["magma",Vector2(1510,1020)],["void",Vector2(2130,1280)],
-		["void",Vector2(2350,1410)],["gold",Vector2(1840,1010)]
+		["void",Vector2(2350,1410)]
 	]
 	for item in placements:
 		ores.append({"kind":item[0],"pos":item[1],"hp":float(ORE_DATA[item[0]].time),"max_hp":float(ORE_DATA[item[0]].time)})
@@ -235,6 +236,7 @@ func _simulate(dt: float) -> void:
 		var move: Vector2 = input_data.get("move",Vector2.ZERO)
 		if not bool(p.human):
 			move = _bot_move(p)
+			input_data = _bot_input(p, move)
 		p.pos += move * (300.0 if float(p.slow) <= 0.0 else 185.0) * dt
 		p.pos.x = clampf(p.pos.x,90,WORLD.x-90)
 		p.pos.y = clampf(p.pos.y,90,WORLD.y-90)
@@ -271,6 +273,24 @@ func _bot_move(p: Dictionary) -> Vector2:
 			best = d
 			nearest = ore.pos
 	return p.pos.direction_to(nearest) if best < 1e20 else Vector2.ZERO
+
+
+func _bot_input(p: Dictionary, move: Vector2) -> Dictionary:
+	var target := -1
+	var best := 82.0 * 82.0
+	for i in ores.size():
+		var ore: Dictionary = ores[i]
+		if int(p.age) < int(ORE_DATA[ore.kind].age):
+			continue
+		var d: float = p.pos.distance_squared_to(ore.pos)
+		if d < best:
+			best = d
+			target = i
+	var attack := false
+	for other in players.values():
+		if int(other.id) != int(p.id) and bool(other.alive) and p.pos.distance_to(other.pos) < 82.0:
+			attack = int(p.age) >= 2
+	return {"move":move,"mine":target >= 0 and best < 76.0 * 76.0,"attack":attack,"aim":move if move.length_squared() > 0.01 else Vector2.RIGHT,"eat":p.hp < p.max_hp * 0.55}
 
 
 func _mine_nearest(p: Dictionary, dt: float) -> void:
@@ -423,6 +443,7 @@ func _update_visuals(_dt: float) -> void:
 
 
 func _update_hud() -> void:
+	_draw_minimap()
 	if not players.has(local_id):
 		return
 	var p: Dictionary = players[local_id]
