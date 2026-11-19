@@ -122,8 +122,8 @@ func _ready() -> void:
 
 	var lobby := _box("lobby")
 	_title(lobby, "КОМНАТА")
-	_add_facet_panel(lobby, Vector2(0, 82), Vector2(520, 475), Color("#10283a"), Color("#287e91"))
-	_add_facet_panel(lobby, Vector2(545, 82), Vector2(635, 475), Color("#1b1b3b"), Color("#51458c"))
+	_add_facet_panel(lobby, Vector2(0, 82), Vector2(550, 475), Color("#10283a"), Color("#287e91"))
+	_add_facet_panel(lobby, Vector2(572, 82), Vector2(608, 475), Color("#1b1b3b"), Color("#51458c"))
 	lobby_info = Label.new()
 	lobby_info.add_theme_font_size_override("font_size", 17)
 	lobby_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
