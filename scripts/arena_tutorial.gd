@@ -484,6 +484,10 @@ func _local_player() -> Dictionary:
 	return {}
 
 
+func _global_state() -> Node:
+	return get_node("/root/G")
+
+
 func _update_completion_pulse() -> void:
 	panel.modulate.a = 0.96 + 0.04 * sin(pulse * 2.0)
 
@@ -519,22 +523,24 @@ func _show_completion() -> void:
 	actions.add_child(replay_btn)
 	column.add_child(actions)
 	skip_button.visible = false
-	G.tutorial_done = true
-	G.save_settings()
+	var state := _global_state()
+	state.set("tutorial_done", true)
+	state.call("save_settings")
 
 
 func _complete_and_exit() -> void:
 	if finished:
 		return
 	finished = true
-	var back_to_lobby := G.tutorial_return_to_lobby
+	var state := _global_state()
+	var back_to_lobby := bool(state.get("tutorial_return_to_lobby"))
 	Engine.time_scale = NORMAL_SPEED
-	G.tutorial_active = false
-	G.tutorial_return_to_lobby = false
+	state.set("tutorial_active", false)
+	state.set("tutorial_return_to_lobby", false)
 	if back_to_lobby:
-		G.mode = G.tutorial_previous_mode
+		state.set("mode", state.get("tutorial_previous_mode"))
 	else:
-		G.mode = "single"
+		state.set("mode", "single")
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")
 
 
@@ -542,19 +548,21 @@ func _restart_tutorial() -> void:
 	if finished:
 		return
 	finished = true
-	var back_to_lobby := G.tutorial_return_to_lobby
-	var previous_mode := G.tutorial_previous_mode
+	var state := _global_state()
+	var back_to_lobby := bool(state.get("tutorial_return_to_lobby"))
+	var previous_mode = state.get("tutorial_previous_mode")
 	Engine.time_scale = NORMAL_SPEED
-	G.tutorial_active = false
+	state.set("tutorial_active", false)
 	if back_to_lobby:
-		G.mode = previous_mode
-	G.start_tutorial_game(back_to_lobby)
+		state.set("mode", previous_mode)
+	state.call("start_tutorial_game", back_to_lobby)
 
 
 func _exit_tree() -> void:
 	Engine.time_scale = NORMAL_SPEED
 	if not finished:
-		G.tutorial_active = false
-		if G.tutorial_return_to_lobby:
-			G.mode = G.tutorial_previous_mode
-		G.tutorial_return_to_lobby = false
+		var state := _global_state()
+		state.set("tutorial_active", false)
+		if bool(state.get("tutorial_return_to_lobby")):
+			state.set("mode", state.get("tutorial_previous_mode"))
+		state.set("tutorial_return_to_lobby", false)
