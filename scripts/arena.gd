@@ -39,6 +39,7 @@ var trail_shader: Shader
 var fx_mat: ShaderMaterial
 const VectorActor = preload("res://scripts/vector_actor.gd")
 const FacetButton = preload("res://scripts/facet_button.gd")
+const ArenaTutorial = preload("res://scripts/arena_tutorial.gd")
 var invert_cur := 0.0
 var blind_cur := 0.0
 
@@ -95,13 +96,9 @@ func _ready() -> void:
 		Net.peer_left.connect(_on_peer_left)
 		view = sim.snapshot()
 	if G.tutorial_active:
-		var tutorial_script: Script = load("res://scripts/arena_tutorial.gd")
-		if tutorial_script == null:
-			push_error("Не удалось загрузить scripts/arena_tutorial.gd")
-		else:
-			var tutorial_controller := Node.new()
-			tutorial_controller.set_script(tutorial_script)
-			add_child(tutorial_controller)
+		var tutorial_controller := Node.new()
+		tutorial_controller.set_script(ArenaTutorial)
+		add_child(tutorial_controller)
 	Sfx.play_music()
 
 
@@ -354,7 +351,7 @@ func _read_input() -> Dictionary:
 
 
 func _process(dt: float) -> void:
-	if Input.is_action_just_pressed("ui_cancel") and view.get("ph", "play") != "over":
+	if not G.tutorial_active and Input.is_action_just_pressed("ui_cancel") and view.get("ph", "play") != "over":
 		_toggle_pause()
 	if pause_open and (not Net.online or G.tutorial_active):
 		# The scene and UI keep processing, but the offline match does not advance.
