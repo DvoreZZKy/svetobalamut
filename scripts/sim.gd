@@ -340,7 +340,6 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	p.last_hit = src
 	p.hit_t = 0.14
 	events.append({"t": "hit", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
-	hitstop_req = maxf(hitstop_req, 0.05)
 	shake_req = maxf(shake_req, 7.0)
 	if src != 0 and players.has(src):
 		var a: Dictionary = players[src]
@@ -576,7 +575,6 @@ func _bomb_tick(dt: float) -> void:
 		var c: Vector2 = v.pos
 		events.append({"t": "boom", "x": c.x, "y": c.y, "r": 260.0})
 		shake_req = maxf(shake_req, 45.0)
-		hitstop_req = maxf(hitstop_req, 0.1)
 		var holder := bomb_id
 		bomb_id = 0
 		for p in players.values():
