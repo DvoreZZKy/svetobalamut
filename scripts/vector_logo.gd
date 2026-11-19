@@ -22,6 +22,7 @@ var _cached_mid_left := Vector2.ZERO
 var _cached_mid_right := Vector2.ZERO
 var _cached_right := Vector2.ZERO
 var _cached_triangle := PackedVector2Array()
+var _cached_stroke_scale := 1.0
 
 
 func _process(dt: float) -> void:
@@ -56,6 +57,7 @@ func _rebuild_geometry() -> void:
 	var gap := 7.0
 	var total := WORD.length() * glyph_w + (WORD.length() - 1) * gap
 	var scale_factor := minf((size.x - 40.0) / total, (size.y - 24.0) / glyph_h)
+	_cached_stroke_scale = scale_factor
 	var w := glyph_w * scale_factor
 	var h := glyph_h * scale_factor
 	var spacing := gap * scale_factor
@@ -95,16 +97,19 @@ func _draw() -> void:
 	if _cached_paths.is_empty():
 		return
 	var pulse := 0.78 + 0.22 * sin(phase * 2.1)
+	var glow_width := 18.0 * _cached_stroke_scale
 	for path in _cached_paths:
-		_draw_tube(path, 18.0 * minf((size.x - 40.0) / (WORD.length() * 45.0 + (WORD.length() - 1) * 7.0), (size.y - 24.0) / 70.0), Color("#963cff", 0.10 * pulse))
+		_draw_tube(path, glow_width, Color("#963cff", 0.10 * pulse))
+	glow_width = 13.0 * _cached_stroke_scale
 	for path in _cached_paths:
-		_draw_tube(path, 13.0 * minf((size.x - 40.0) / (WORD.length() * 45.0 + (WORD.length() - 1) * 7.0), (size.y - 24.0) / 70.0), Color("#12cfff", 0.16 * pulse))
+		_draw_tube(path, glow_width, Color("#12cfff", 0.16 * pulse))
+	glow_width = 7.0 * _cached_stroke_scale
 	for path in _cached_paths:
-		_draw_tube(path, 7.0 * minf((size.x - 40.0) / (WORD.length() * 45.0 + (WORD.length() - 1) * 7.0), (size.y - 24.0) / 70.0), Color("#43eaff", 0.9))
+		_draw_tube(path, glow_width, Color("#43eaff", 0.9))
+	glow_width = 2.5 * _cached_stroke_scale
 	for path in _cached_paths:
-		_draw_tube(path, 2.5 * minf((size.x - 40.0) / (WORD.length() * 45.0 + (WORD.length() - 1) * 7.0), (size.y - 24.0) / 70.0), Color("#eaffff"))
-	var scale_factor := minf((size.x - 40.0) / (WORD.length() * 45.0 + (WORD.length() - 1) * 7.0), (size.y - 24.0) / 70.0)
+		_draw_tube(path, glow_width, Color("#eaffff"))
 	var accent := Color("#48eaff", 0.55 + 0.25 * pulse)
-	draw_line(_cached_left, _cached_mid_left, accent, 1.5 * scale_factor, true)
-	draw_line(_cached_mid_right, _cached_right, Color("#a982ff", accent.a), 1.5 * scale_factor, true)
+	draw_line(_cached_left, _cached_mid_left, accent, 1.5 * _cached_stroke_scale, true)
+	draw_line(_cached_mid_right, _cached_right, Color("#a982ff", accent.a), 1.5 * _cached_stroke_scale, true)
 	draw_colored_polygon(_cached_triangle, Color("#d8faff", 0.8))
