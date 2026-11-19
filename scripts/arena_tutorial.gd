@@ -364,6 +364,8 @@ func _exit_tree() -> void:
 	Engine.time_scale = NORMAL_SPEED
 	if not finished:
 		G.tutorial_active = false
+		if G.tutorial_return_to_lobby:
+			G.mode = G.tutorial_previous_mode
 		G.tutorial_return_to_lobby = false
 
 
@@ -371,6 +373,8 @@ func _finish_tutorial() -> void:
 	finished = true
 	Engine.time_scale = NORMAL_SPEED
 	G.tutorial_active = false
+	if G.tutorial_return_to_lobby:
+		G.mode = G.tutorial_previous_mode
 	G.tutorial_done = true
 	G.save_settings()
 	if is_instance_valid(layer):
