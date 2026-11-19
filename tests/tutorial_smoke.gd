@@ -9,10 +9,11 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	G.mode = "single"
-	G.tutorial_active = true
-	G.tutorial_return_to_lobby = false
-	G.cfg = [
+	var global_state := root.get_node("G")
+	global_state.mode = "single"
+	global_state.tutorial_active = true
+	global_state.tutorial_return_to_lobby = false
+	global_state.cfg = [
 		{"id": 1, "name": "QA", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
 		{"id": -1, "name": "Training bot A", "human": false},
 		{"id": -2, "name": "Training bot B", "human": false},
@@ -39,7 +40,7 @@ func _run() -> void:
 		push_error("Interactive tutorial controller was not attached to the arena")
 		quit(1)
 		return
-	if not G.tutorial_active:
+	if not global_state.tutorial_active:
 		push_error("Tutorial flag was unexpectedly cleared during arena startup")
 		quit(1)
 		return
