@@ -227,7 +227,7 @@ func _simulate(dt: float) -> void:
 	if gold_timer >= GOLD_RESPAWN_SECONDS:
 		gold_timer = 0.0
 		var gold := {"kind":"gold","pos":Vector2(rng.randf_range(1650,2380),rng.randf_range(950,1450)),"hp":4.0,"max_hp":4.0}
-		 ores.append(gold)
+		ores.append(gold)
 	for id in players:
 		var p: Dictionary = players[id]
 		if not p.alive:
