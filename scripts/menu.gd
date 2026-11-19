@@ -129,10 +129,14 @@ func _ready() -> void:
 	players_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lobby_columns.add_child(players_panel)
 	_title(players_panel, "УЧАСТНИКИ")
+	var roster_scroll := ScrollContainer.new()
+	roster_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	players_panel.add_child(roster_scroll)
 	lobby_list = Label.new()
 	lobby_list.add_theme_font_size_override("font_size", 18)
 	lobby_list.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	players_panel.add_child(lobby_list)
+	lobby_list.custom_minimum_size = Vector2(460, 0)
+	roster_scroll.add_child(lobby_list)
 	var editor_panel := VBoxContainer.new()
 	editor_panel.custom_minimum_size = Vector2(560, 390)
 	editor_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -149,6 +153,10 @@ func _ready() -> void:
 	_btn("Персонаж: изменить", editor_panel, func(): G.profile_kind = (G.profile_kind + 1) % 4; _refresh_profile(); _sync_lobby_profile())
 	_btn("Костюм: изменить", editor_panel, func(): G.profile_outfit = (G.profile_outfit + 1) % 5; _refresh_profile(); _sync_lobby_profile())
 	_btn("Шапка: изменить", editor_panel, func(): G.profile_hat = (G.profile_hat + 1) % 5; _refresh_profile(); _sync_lobby_profile())
+	for child in editor_panel.get_children():
+		if child is Button:
+			child.custom_minimum_size = Vector2(520, 38)
+			child.add_theme_font_size_override("font_size", 17)
 	var lobby_actions := HBoxContainer.new()
 	lobby_actions.add_theme_constant_override("separation", 12)
 	lobby.add_child(lobby_actions)
