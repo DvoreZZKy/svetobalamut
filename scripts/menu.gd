@@ -119,7 +119,7 @@ func _ready() -> void:
 	fs.text = "Полный экран"
 	fs.button_pressed = G.fullscreen
 	fs.add_theme_font_size_override("font_size", 22)
-	fs.toggled.connect(func(b: bool): G.fullscreen = b; G.apply_display())
+	fs.toggled.connect(func(b: bool): G.fullscreen = b; G.apply_display(); G.save_settings())
 	st.add_child(fs)
 	_btn("Назад", st, func(): G.save_settings(); _show("main"))
 
