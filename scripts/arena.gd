@@ -51,9 +51,7 @@ var dash_bar: ProgressBar
 var over_rect: ColorRect
 var over_lbl: Label
 var wait_lbl: Label
-var fake_t := 150.0
-var fake_rate := 1.0
-var fake_change := 1.0
+var objective_lbl: Label
 
 
 func _ready() -> void:
@@ -190,7 +188,7 @@ func _build_hud() -> void:
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	score_lbl.add_theme_font_size_override("normal_font_size", 17)
 	cl.add_child(score_lbl)
-	help_lbl = _label("", 15, Vector2(860, 14), Vector2(410, 60), cl)
+	help_lbl = _label("", 15, Vector2(850, 12), Vector2(420, 92), cl)
 	help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.75)
 	light_bar = _bar(Vector2(440, 672), Vector2(400, 18), Color(1.6, 1.4, 0.5), cl)
@@ -324,6 +322,21 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	var spr := Sprite2D.new()
 	spr.texture = player_tex[pd.k % 4]
 	root.add_child(spr)
+	var outfit := Polygon2D.new()
+	outfit.polygon = PackedVector2Array([Vector2(-13, -5), Vector2(13, -5), Vector2(10, 12), Vector2(-10, 12)])
+	outfit.color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][int(pd.get("outfit", 0)) % 5]
+	root.add_child(outfit)
+	var hat := Polygon2D.new()
+	var hat_shapes := [
+		PackedVector2Array(),
+		PackedVector2Array([Vector2(-15, -22), Vector2(-10, -37), Vector2(-3, -27), Vector2(2, -42), Vector2(8, -27), Vector2(15, -22)]),
+		PackedVector2Array([Vector2(-18, -24), Vector2(18, -24), Vector2(13, -34), Vector2(-12, -34)]),
+		PackedVector2Array([Vector2(-16, -25), Vector2(-26, -39), Vector2(-5, -30), Vector2(0, -24), Vector2(8, -30), Vector2(25, -39), Vector2(16, -24)]),
+		PackedVector2Array([Vector2(-17, -28), Vector2(-11, -42), Vector2(0, -47), Vector2(11, -42), Vector2(17, -28), Vector2(11, -33), Vector2(-11, -33)])
+	]
+	hat.polygon = hat_shapes[int(pd.get("hat", 0)) % hat_shapes.size()]
+	hat.color = Color("#ffe27a")
+	root.add_child(hat)
 	var lbl := Label.new()
 	lbl.position = Vector2(-70, -66)
 	lbl.size = Vector2(140, 22)
@@ -341,7 +354,8 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	line.material = sm
 	trail_layer.add_child(line)
 	return {"root": root, "halo": halo, "spr": spr, "lbl": lbl, "line": line, "mat": sm,
-		"pos": pd.p, "rot": (pd.a as Vector2).angle(), "kick": 0.0, "kind": pd.k, "ci": pd.c}
+		"outfit": outfit, "hat": hat, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
+		"kick": 0.0, "kind": pd.k, "ci": pd.c}
 
 
 func _update_views(dt: float) -> void:
@@ -381,6 +395,8 @@ func _update_views(dt: float) -> void:
 		var root: Node2D = pv.root
 		var spr: Sprite2D = pv.spr
 		var halo: Sprite2D = pv.halo
+		var outfit: Polygon2D = pv.outfit
+		var hat: Polygon2D = pv.hat
 		var lbl: Label = pv.lbl
 		root.visible = vis
 		line.visible = vis
@@ -499,17 +515,9 @@ func _update_fx(dt: float) -> void:
 
 
 func _update_hud(dt: float) -> void:
-	# «честный» таймер врёт: то стоит, то бежит назад, то ускоряется
-	fake_change -= dt
-	if fake_change <= 0.0:
-		fake_change = randf_range(0.7, 2.0)
-		fake_rate = [1.0, 1.0, 0.3, 2.6, -1.3, 0.0].pick_random()
-	fake_t = clampf(fake_t - dt * fake_rate, 0.0, 599.0)
 	var over: bool = view.get("ph", "play") == "over"
-	var secs := int(fake_t)
+	var secs := maxi(0, int(view.get("tl", Sim.MATCH_TIME)))
 	timer_lbl.text = "%d:%02d" % [secs / 60, secs % 60]
-	if randf() < 0.025:
-		timer_lbl.text = "%d:%02d" % [randi() % 9, randi() % 60]
 	if over:
 		timer_lbl.text = "0:00"
 	var rows: Array = []
@@ -529,9 +537,9 @@ func _update_hud(dt: float) -> void:
 	if not me.is_empty():
 		light_bar.value = me.l
 		dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
-		help_lbl.text = "WASD — бег • ЛКМ — выстрел • ПРОБЕЛ — рывок\nСТОЯ В ТЕНИ (тёмные круги) свет восстанавливается\nESC — меню"
+		help_lbl.text = "ЦЕЛЬ: не потерять весь свет. Тёмные зоны восстанавливают его.\nWASD — движение • ЛКМ — стрелять • ПРОБЕЛ — рывок\nПКМ / E — вселиться в игрока, если стал Тенью • ESC — меню"
 		if me.s:
-			help_lbl.text = "ТЫ — ТЕНЬ. Подойди к живому и жми ПКМ / E: вселишься на 2 сек"
+			help_lbl.text = "ТЫ — ТЕНЬ: подойди к живому игроку и нажми ПКМ / E, чтобы вселиться.\nВселение длится 2 секунды — используй их, чтобы вернуться в игру."
 	if over:
 		over_rect.visible = true
 		var wn := "никто"
