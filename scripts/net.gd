@@ -8,6 +8,7 @@ signal join_failed
 signal disconnected
 signal match_started
 signal peer_left(id: int)
+signal kicked
 
 const PORT := 24680
 const MAX_PLAYERS := 10
@@ -44,9 +45,21 @@ func host() -> int:
 	return OK
 
 
-func join(ip: String) -> int:
+func join(address: String) -> int:
+	var clean := address.strip_edges()
+	var host_ip := clean
+	var host_port := PORT
+	var split_at := clean.rfind(":")
+	if split_at > 0 and clean.find(".") >= 0:
+		host_ip = clean.substr(0, split_at).strip_edges()
+		var parsed_port := clean.substr(split_at + 1).strip_edges()
+		if not parsed_port.is_valid_int():
+			return ERR_INVALID_PARAMETER
+		host_port = int(parsed_port)
+	if host_ip.is_empty() or host_port < 1 or host_port > 65535:
+		return ERR_INVALID_PARAMETER
 	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_client(ip.strip_edges(), PORT)
+	var err := peer.create_client(host_ip, host_port)
 	if err != OK:
 		return err
 	multiplayer.multiplayer_peer = peer
@@ -85,6 +98,29 @@ func _on_peer_disconnected(id: int) -> void:
 		_names.rpc(names, profiles)
 		lobby_changed.emit()
 	peer_left.emit(id)
+
+
+
+func kick_peer(peer_id: int) -> void:
+	if not is_host or not online or peer_id <= 1 or not names.has(peer_id):
+		return
+	_kick_notice.rpc_id(peer_id)
+	# Let the reliable notice leave before ENet closes the peer.
+	await get_tree().create_timer(0.25).timeout
+	if multiplayer.multiplayer_peer is ENetMultiplayerPeer:
+		multiplayer.multiplayer_peer.disconnect_peer(peer_id, true)
+	names.erase(peer_id)
+	profiles.erase(peer_id)
+	inputs.erase(peer_id)
+	_names.rpc(names, profiles)
+	lobby_changed.emit()
+
+
+@rpc("authority", "reliable")
+func _kick_notice() -> void:
+	leave()
+	kicked.emit()
+	disconnected.emit()
 
 
 func _local_profile() -> Dictionary:
