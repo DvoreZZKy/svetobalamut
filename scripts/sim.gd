@@ -333,6 +333,10 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 
 
 func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
+	# During the guided solo tutorial the learner cannot be knocked out by bots or hazards.
+	# The tutorial's scripted _make_shadow() call remains available, so the shadow lesson still works.
+	if G.tutorial_active and bool(p.get("human", false)):
+		return
 	var reduced: float = dmg * float(p.get("defense", 1.0))
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.25
