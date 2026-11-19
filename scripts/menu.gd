@@ -11,8 +11,8 @@ var ip_edit: LineEdit
 var lobby_list: Label
 var lobby_info: Label
 var start_btn: Button
-var profile_preview: VectorActor
-var lobby_preview: VectorActor
+var profile_preview
+var lobby_preview
 var lobby_color_btn: Button
 var lobby_kind_btn: Button
 var lobby_outfit_btn: Button
