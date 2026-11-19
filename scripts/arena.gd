@@ -358,6 +358,9 @@ func _process(dt: float) -> void:
 		return
 	t += dt
 	var inp := _read_input()
+	if pause_open:
+		inp = {"mv": Vector2.ZERO, "aim": get_global_mouse_position(),
+			"fire": false, "dash": false, "poss": false, "ability": false}
 	if not is_client:
 		sim.inputs[local_id] = inp
 		if not G.tutorial_active:
