@@ -44,6 +44,11 @@ var invert_cur := 0.0
 var blind_cur := 0.0
 
 var timer_lbl: Label
+var timer_shape: Polygon2D
+var timer_outline: Line2D
+var ability_bar: ProgressBar
+var cursor_layer: CanvasLayer
+var cursor_canvas: Control
 var banner: Label
 var score_lbl: RichTextLabel
 var help_lbl: Label
@@ -88,6 +93,7 @@ func _ready() -> void:
 	_build_fx_overlay()
 	_build_hud()
 	_build_pause_menu()
+	_build_aim_cursor()
 	if is_client:
 		Net.disconnected.connect(_to_menu)
 	else:
@@ -232,6 +238,26 @@ func _build_hud() -> void:
 	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help_lbl.add_theme_font_size_override("font_size", 13)
 	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.75)
+	timer_shape = Polygon2D.new()
+	timer_shape.position = Vector2(640, 38)
+	timer_shape.polygon = PackedVector2Array([
+		Vector2(-88, -28), Vector2(88, -28), Vector2(101, -15),
+		Vector2(101, 15), Vector2(88, 28), Vector2(-88, 28),
+		Vector2(-101, 15), Vector2(-101, -15)
+	])
+	timer_shape.color = Color("#0c1d31", 0.92)
+	cl.add_child(timer_shape)
+	timer_outline = Line2D.new()
+	timer_outline.position = timer_shape.position
+	timer_outline.points = timer_shape.polygon
+	timer_outline.closed = true
+	timer_outline.width = 2.0
+	timer_outline.default_color = Color("#39d9f0", 0.92)
+	cl.add_child(timer_outline)
+	timer_lbl.size = Vector2(190, 58)
+	timer_lbl.offset_left = -95
+	timer_lbl.offset_right = 95
+	timer_lbl.add_theme_font_size_override("font_size", 40)
 	light_bar = _bar(Vector2.ZERO, Vector2(400, 18), Color(1.6, 1.4, 0.5), cl)
 	light_bar.anchor_left = 0.5
 	light_bar.anchor_right = 0.5
@@ -248,8 +274,19 @@ func _build_hud() -> void:
 	dash_bar.anchor_bottom = 1.0
 	dash_bar.offset_left = -200
 	dash_bar.offset_right = 200
-	dash_bar.offset_top = -24
-	dash_bar.offset_bottom = -17
+	dash_bar.offset_top = -39
+	dash_bar.offset_bottom = -32
+	ability_bar = _bar(Vector2.ZERO, Vector2(400, 7), Color(0.75, 0.45, 1.8), cl)
+	ability_bar.anchor_left = 0.5
+	ability_bar.anchor_right = 0.5
+	ability_bar.anchor_top = 1.0
+	ability_bar.anchor_bottom = 1.0
+	ability_bar.offset_left = -200
+	ability_bar.offset_right = 200
+	ability_bar.offset_top = -26
+	ability_bar.offset_bottom = -19
+	light_bar.offset_top = -64
+	light_bar.offset_bottom = -46
 	wait_lbl = _label("Ждём хоста…", 30, Vector2.ZERO, Vector2(1280, 60), cl, true)
 	wait_lbl.anchor_left = 0.5
 	wait_lbl.anchor_right = 0.5
@@ -279,13 +316,13 @@ func _build_hud() -> void:
 	over_lbl = _label("", 38, Vector2.ZERO, Vector2(720, 150), cl, true)
 	over_lbl.add_theme_color_override("font_color", Color("#f0fbff"))
 	over_lbl.visible = false
-	over_restart_btn = Button.new()
+	over_restart_btn = FacetButton.new()
 	over_restart_btn.text = "РЕВАНШ"
 	over_restart_btn.custom_minimum_size = Vector2(210, 48)
 	_style_result_button(over_restart_btn, Color("#42eaff"))
 	over_restart_btn.pressed.connect(_restart_match)
 	cl.add_child(over_restart_btn)
-	over_menu_btn = Button.new()
+	over_menu_btn = FacetButton.new()
 	over_menu_btn.text = "В МЕНЮ"
 	over_menu_btn.custom_minimum_size = Vector2(210, 48)
 	_style_result_button(over_menu_btn, Color("#b58aff"))
@@ -339,6 +376,33 @@ func _draw_bullets() -> void:
 
 
 # ----------------------------------------------------------------- цикл ---
+
+func _build_aim_cursor() -> void:
+	cursor_layer = CanvasLayer.new()
+	cursor_layer.layer = 100
+	cursor_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(cursor_layer)
+	cursor_canvas = Control.new()
+	cursor_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cursor_canvas.size = Vector2(38, 38)
+	cursor_canvas.draw.connect(_draw_aim_cursor)
+	cursor_layer.add_child(cursor_canvas)
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
+
+func _draw_aim_cursor() -> void:
+	if not is_instance_valid(cursor_canvas):
+		return
+	var center := Vector2(19, 19)
+	var color := Color("#8df6ff")
+	cursor_canvas.draw_arc(center, 10.0, 0.0, TAU, 32, Color(color, 0.9), 1.6, true)
+	cursor_canvas.draw_line(Vector2(19, 1), Vector2(19, 8), color, 2.0, true)
+	cursor_canvas.draw_line(Vector2(19, 30), Vector2(19, 37), color, 2.0, true)
+	cursor_canvas.draw_line(Vector2(1, 19), Vector2(8, 19), color, 2.0, true)
+	cursor_canvas.draw_line(Vector2(30, 19), Vector2(37, 19), color, 2.0, true)
+	cursor_canvas.draw_circle(center, 2.0, Color.WHITE)
+
+
 func _read_input() -> Dictionary:
 	return {
 		"mv": Input.get_vector("left", "right", "up", "down"),
@@ -407,6 +471,9 @@ func _process(dt: float) -> void:
 		_update_fx(dt)
 		_update_hud(dt)
 	bullet_layer.queue_redraw()
+	if is_instance_valid(cursor_canvas):
+		cursor_canvas.position = get_viewport().get_mouse_position() - cursor_canvas.size * 0.5
+		cursor_canvas.queue_redraw()
 	shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
 	var s: float = shake if G.shake_on else 0.0
 	cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * s
@@ -575,8 +642,6 @@ func _update_views(dt: float) -> void:
 		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
 		line.visible = vis
 		root.position = pv.pos
-		if pv.kind != pd.k:
-			pv.kind = pd.k
 		pv.rot = lerp_angle(pv.rot, (pd.a as Vector2).angle(), minf(1.0, 30.0 * dt))
 		actor.rotation = pv.rot
 		pv.kick = maxf(0.0, pv.kick - dt * 7.0)
@@ -606,6 +671,8 @@ func _update_views(dt: float) -> void:
 		var nm: String = pd.n
 		if pd.d:
 			nm = ci_name.get(pd.c, "?")
+		if bool(pd.get("bot", false)):
+			nm += " (бот)"
 		lbl.text = ("> " + nm) if id == local_id else nm
 		if bomb_id == id:
 			lbl.text = "БОМБА %.1f" % maxf(bomb_t, 0.0)
@@ -698,6 +765,7 @@ func _update_hud(dt: float) -> void:
 	var over: bool = view.get("ph", "play") == "over"
 	var secs := maxi(0, int(view.get("tl", Sim.MATCH_TIME)))
 	timer_lbl.text = "%d:%02d" % [secs / 60, secs % 60]
+	timer_lbl.modulate = Color("#ff789b") if secs <= 30 else Color("#b8f8ff")
 	if over:
 		timer_lbl.text = "0:00"
 	var rows: Array = []
@@ -712,12 +780,14 @@ func _update_hud(dt: float) -> void:
 	for pd in rows:
 		var hex: String = G.col(pd.c).to_html(false)
 		var st := "ТЕНЬ" if pd.s else str(int(pd.l))
-		txt += "[color=#%s]%s%s[/color]  %s  [color=#8890aa]хаос %d[/color]\n" % [hex, "> " if pd.i == local_id else "", pd.n, st, pd.pt]
+		var display_name: String = str(pd.n) + (" (бот)" if bool(pd.get("bot", false)) else "")
+		txt += "[color=#%s]%s%s[/color]  %s  [color=#8890aa]хаос %d[/color]\n" % [hex, "> " if pd.i == local_id else "", display_name, st, pd.pt]
 	score_lbl.text = txt
 	if not me.is_empty():
 		light_bar.max_value = me.hpmax
 		light_bar.value = me.l
 		dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
+		ability_bar.value = 100.0 * (1.0 - clampf(me.acd / 9.0, 0.0, 1.0))
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
 		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
 		help_lbl.text = "%s • Q: %s (%s)\nЦЕЛЬ: остаться последним светящимся.\nWASD — движение • ЛКМ — атака • ПРОБЕЛ — рывок • ESC — меню" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
