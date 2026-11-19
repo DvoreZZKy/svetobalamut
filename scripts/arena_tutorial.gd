@@ -270,7 +270,8 @@ func _show_control_step(index: int) -> void:
 		"fire": _set_keys(["ЛКМ"])
 	next_button.visible = false
 	panel.visible = true
-	panel.modulate.a = 1.0
+	panel.modulate.a = 0.0
+	fade_started = Time.get_ticks_msec()
 	pointer_target = "player"
 	_position_control_panel()
 	_update_pointer()
