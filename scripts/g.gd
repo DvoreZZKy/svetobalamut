@@ -92,12 +92,25 @@ func local_ips() -> Array:
 func start_single() -> void:
 	tutorial_return_to_lobby = false
 	if not tutorial_done:
-		get_tree().change_scene_to_file("res://scenes/tutorial.tscn")
+		start_tutorial_game(false)
 		return
 	start_single_game()
 
 
+func start_tutorial_game(return_to_lobby: bool) -> void:
+	tutorial_return_to_lobby = return_to_lobby
+	tutorial_active = true
+	mode = "single"
+	cfg = [{"id": 1, "name": player_name, "human": true, "color": profile_color,
+		"kind": profile_kind, "outfit": profile_outfit, "hat": profile_hat}]
+	for i in 3:
+		cfg.append({"id": -(i + 1), "name": BOT_NAMES[i], "human": false})
+	get_tree().change_scene_to_file("res://scenes/arena.tscn")
+
+
 func start_single_game() -> void:
+	tutorial_active = false
+	tutorial_return_to_lobby = false
 	mode = "single"
 	cfg = [{"id": 1, "name": player_name, "human": true, "color": profile_color,
 		"kind": profile_kind, "outfit": profile_outfit, "hat": profile_hat}]
