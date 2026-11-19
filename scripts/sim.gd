@@ -46,7 +46,6 @@ var eater_timer := 3.0
 var bomb_id := 0
 var bomb_t := 0.0
 var next_id := 1
-var hitstop_req := 0.0
 var shake_req := 0.0
 var rng := RandomNumberGenerator.new()
 
@@ -316,7 +315,6 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 	p.poss_target = 0
 	events.append({"t": "death", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "id": p.id})
 	shake_req = maxf(shake_req, 18.0)
-	hitstop_req = maxf(hitstop_req, 0.05)
 	if killer != 0 and killer != p.id and players.has(killer):
 		var k: Dictionary = players[killer]
 		if not k.shadow:
