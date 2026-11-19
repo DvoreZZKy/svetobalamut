@@ -563,6 +563,7 @@ func _update_hud(dt: float) -> void:
 		txt += "[color=#%s]%s%s[/color]  %s  [color=#8890aa]хаос %d[/color]\n" % [hex, "> " if pd.i == local_id else "", pd.n, st, pd.pt]
 	score_lbl.text = txt
 	if not me.is_empty():
+		light_bar.max_value = me.hpmax
 		light_bar.value = me.l
 		dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
