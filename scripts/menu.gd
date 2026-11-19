@@ -2,12 +2,13 @@ extends Control
 
 const VectorActor = preload("res://scripts/vector_actor.gd")
 const FacetButton = preload("res://scripts/facet_button.gd")
+const VectorLogo = preload("res://scripts/vector_logo.gd")
 ## Главное меню и подэкраны профиля, подключения, настроек и лобби.
 
 var t := 0.0
 var bg_shards: Array[Polygon2D] = []
 var bg_orbs: Array[Node2D] = []
-var title: Label
+var title: Control
 var boxes := {}
 var status: Label
 var ip_edit: LineEdit
@@ -35,12 +36,9 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 	_build_particles()
-	title = Label.new()
-	title.text = "СВЕТОБАЛАМУТ"
-	title.add_theme_font_size_override("font_size", 96)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.position = Vector2(0, 20)
-	title.size = Vector2(1280, 120)
+	title = VectorLogo.new()
+	title.position = Vector2(0, 14)
+	title.size = Vector2(1280, 112)
 	add_child(title)
 
 	var main := _box("main")
@@ -136,10 +134,15 @@ func _ready() -> void:
 	var players_panel := VBoxContainer.new()
 	players_panel.custom_minimum_size = Vector2(500, 390)
 	players_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	players_panel.size_flags_stretch_ratio = 0.48
 	lobby_columns.add_child(players_panel)
-	_title(players_panel, "УЧАСТНИКИ")
+	var players_heading := _title(players_panel, "УЧАСТНИКИ")
+	players_heading.custom_minimum_size.y = 42
+	players_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var roster_scroll := ScrollContainer.new()
 	roster_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	roster_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	roster_scroll.clip_contents = true
 	players_panel.add_child(roster_scroll)
 	lobby_list = VBoxContainer.new()
 	lobby_list.add_theme_constant_override("separation", 8)
@@ -148,9 +151,12 @@ func _ready() -> void:
 	var editor_panel := VBoxContainer.new()
 	editor_panel.custom_minimum_size = Vector2(560, 390)
 	editor_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	editor_panel.size_flags_stretch_ratio = 0.52
 	editor_panel.add_theme_constant_override("separation", 4)
 	lobby_columns.add_child(editor_panel)
-	_title(editor_panel, "ВАШ ПЕРСОНАЖ")
+	var editor_heading := _title(editor_panel, "ВАШ ПЕРСОНАЖ")
+	editor_heading.custom_minimum_size.y = 42
+	editor_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lobby_preview = _make_vector_preview(editor_panel)
 	var lobby_editor_info := Label.new()
 	lobby_editor_info.text = "Изменения сразу видны остальным игрокам"
@@ -163,7 +169,7 @@ func _ready() -> void:
 	lobby_hat_btn = _btn("Шапка", editor_panel, func(): G.profile_hat = (G.profile_hat + 1) % 5; _refresh_profile(); _sync_lobby_profile())
 	for child in editor_panel.get_children():
 		if child is Button:
-			child.custom_minimum_size = Vector2(500, 38)
+			child.custom_minimum_size = Vector2(470, 38)
 			child.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			child.add_theme_font_size_override("font_size", 17)
 	_refresh_profile()
@@ -244,7 +250,7 @@ func _box(key: String) -> VBoxContainer:
 	if key == "lobby":
 		b.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		b.offset_left = 36
-		b.offset_top = 24
+		b.offset_top = 40
 		b.offset_right = -36
 		b.offset_bottom = -24
 	else:
@@ -306,15 +312,16 @@ func _make_player_portrait(parent: Node, kind: int, color: int, outfit: int, hat
 	var container := SubViewportContainer.new()
 	container.stretch = true
 	container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var vp := SubViewport.new()
-	vp.size = Vector2i(180, 180)
+	vp.size = Vector2i(140, 140)
 	vp.transparent_bg = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	container.add_child(vp)
 	parent.add_child(container)
 	var actor := VectorActor.new()
-	actor.position = Vector2(90, 91)
-	actor.scale = Vector2.ONE * 1.65
+	actor.position = Vector2(70, 73)
+	actor.scale = Vector2.ONE * 1.22
 	vp.add_child(actor)
 	actor.setup(kind, G.col(color), outfit, hat)
 	return container
@@ -420,6 +427,7 @@ func _on_lobby_changed() -> void:
 		var p: Dictionary = Net.profiles.get(id, {})
 		var card := PanelContainer.new()
 		card.custom_minimum_size = Vector2(0, 108)
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var card_style := StyleBoxFlat.new()
 		card_style.bg_color = Color("#0b1b2d", 0.72)
 		card_style.border_color = Color("#287e91", 0.85)
@@ -433,14 +441,16 @@ func _on_lobby_changed() -> void:
 		lobby_list.add_child(card)
 		var row := HBoxContainer.new()
 		row.custom_minimum_size = Vector2(0, 96)
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_theme_constant_override("separation", 12)
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		card.add_child(row)
 		var portrait := _make_player_portrait(row,
 			int(p.get("kind", 0)), int(p.get("color", 0)),
 			int(p.get("outfit", 0)), int(p.get("hat", 0)))
-		portrait.custom_minimum_size = Vector2(104, 96)
+		portrait.custom_minimum_size = Vector2(112, 96)
 		portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		portrait.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		var details := VBoxContainer.new()
 		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		details.alignment = BoxContainer.ALIGNMENT_CENTER
