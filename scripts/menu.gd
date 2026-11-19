@@ -45,6 +45,7 @@ func _ready() -> void:
 
 	var main := _box("main")
 	_btn("Играть одному (с ботами)", main, func(): Sfx.play("click"); G.start_single())
+	_btn("Обучение", main, func(): Sfx.play("click"); G.start_tutorial_game(false))
 	_btn("Создать комнату", main, _on_host)
 	_btn("Подключиться", main, func(): Sfx.play("click"); _show("join"))
 	_btn("Персонаж", main, func(): Sfx.play("click"); _refresh_profile(); _show("profile"))
@@ -162,7 +163,8 @@ func _ready() -> void:
 	lobby_hat_btn = _btn("Шапка", editor_panel, func(): G.profile_hat = (G.profile_hat + 1) % 5; _refresh_profile(); _sync_lobby_profile())
 	for child in editor_panel.get_children():
 		if child is Button:
-			child.custom_minimum_size = Vector2(570, 38)
+			child.custom_minimum_size = Vector2(500, 38)
+			child.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 			child.add_theme_font_size_override("font_size", 17)
 	_refresh_profile()
 	var lobby_actions := HBoxContainer.new()
@@ -305,14 +307,14 @@ func _make_player_portrait(parent: Node, kind: int, color: int, outfit: int, hat
 	container.stretch = true
 	container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var vp := SubViewport.new()
-	vp.size = Vector2i(180, 150)
+	vp.size = Vector2i(180, 180)
 	vp.transparent_bg = true
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	container.add_child(vp)
 	parent.add_child(container)
 	var actor := VectorActor.new()
-	actor.position = Vector2(90, 76)
-	actor.scale = Vector2.ONE * 1.45
+	actor.position = Vector2(90, 91)
+	actor.scale = Vector2.ONE * 1.65
 	vp.add_child(actor)
 	actor.setup(kind, G.col(color), outfit, hat)
 	return container
@@ -416,13 +418,29 @@ func _on_lobby_changed() -> void:
 		child.queue_free()
 	for id in Net.names:
 		var p: Dictionary = Net.profiles.get(id, {})
+		var card := PanelContainer.new()
+		card.custom_minimum_size = Vector2(0, 108)
+		var card_style := StyleBoxFlat.new()
+		card_style.bg_color = Color("#0b1b2d", 0.72)
+		card_style.border_color = Color("#287e91", 0.85)
+		card_style.set_border_width_all(1)
+		card_style.set_corner_radius_all(0)
+		card_style.content_margin_left = 8
+		card_style.content_margin_right = 8
+		card_style.content_margin_top = 4
+		card_style.content_margin_bottom = 4
+		card.add_theme_stylebox_override("panel", card_style)
+		lobby_list.add_child(card)
 		var row := HBoxContainer.new()
-		row.custom_minimum_size = Vector2(0, 82)
+		row.custom_minimum_size = Vector2(0, 96)
 		row.add_theme_constant_override("separation", 12)
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		card.add_child(row)
 		var portrait := _make_player_portrait(row,
 			int(p.get("kind", 0)), int(p.get("color", 0)),
 			int(p.get("outfit", 0)), int(p.get("hat", 0)))
-		portrait.custom_minimum_size = Vector2(86, 76)
+		portrait.custom_minimum_size = Vector2(104, 96)
+		portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var details := VBoxContainer.new()
 		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		details.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -436,7 +454,6 @@ func _on_lobby_changed() -> void:
 		role_label.add_theme_font_size_override("font_size", 13)
 		role_label.modulate = Color("#9bb4ce")
 		details.add_child(role_label)
-		lobby_list.add_child(row)
 	if Net.is_host:
 		var ips := G.local_ips()
 		lobby_info.text = "Адрес для друзей: %s : %d\nИгроков: %d / %d (до 6 добьём ботами)" % [
