@@ -1,4 +1,6 @@
 extends Control
+
+const PixelArt = preload("res://scripts/pixel_art.gd")
 ## Главное меню и подэкраны профиля, подключения, настроек и лобби.
 
 var t := 0.0
@@ -63,6 +65,7 @@ func _ready() -> void:
 	profile_preview.custom_minimum_size = Vector2(100, 64)
 	profile_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	profile_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	profile_preview.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	profile_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	profile.add_child(profile_preview)
 	profile_info = Label.new()
