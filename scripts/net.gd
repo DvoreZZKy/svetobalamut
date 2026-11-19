@@ -49,6 +49,15 @@ func join(address: String) -> int:
 	var clean := address.strip_edges()
 	var host_ip := clean
 	var host_port := PORT
+	# Numeric room code is the IPv4 address packed into one unsigned 32-bit number.
+	if clean.is_valid_int() and not clean.contains("."):
+		var room_code := int(clean)
+		if room_code < 0 or room_code > 4294967295:
+			return ERR_INVALID_PARAMETER
+		host_ip = "%d.%d.%d.%d" % [
+			(room_code >> 24) & 255, (room_code >> 16) & 255,
+			(room_code >> 8) & 255, room_code & 255
+		]
 	var split_at := clean.rfind(":")
 	if split_at > 0 and clean.find(".") >= 0:
 		host_ip = clean.substr(0, split_at).strip_edges()
@@ -67,6 +76,21 @@ func join(address: String) -> int:
 	online = true
 	G.mode = "client"
 	return OK
+
+
+func room_code_for_ip(ip: String) -> String:
+	var parts := ip.split(".")
+	if parts.size() != 4:
+		return ""
+	var value: int = 0
+	for part in parts:
+		if not part.is_valid_int():
+			return ""
+		var octet := int(part)
+		if octet < 0 or octet > 255:
+			return ""
+		value = (value << 8) | octet
+	return "%010d" % value
 
 
 func leave() -> void:
