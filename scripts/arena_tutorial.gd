@@ -60,6 +60,7 @@ func _process(dt: float) -> void:
 				break
 		if bot_shot_seen:
 			_show_step("ПОПАДАНИЕ И СВЕТ", "Бот уже открыл огонь. Попадание уменьшает твой запас света — полоса также является твоим здоровьем. Когда свет закончится, ты превратишься в Тень.", "light")
+			step_index = 1
 	elif stage == "wait_shadow":
 		var me := _local_player()
 		if not me.is_empty() and bool(me.get("s", false)):
@@ -122,8 +123,11 @@ func _build_overlay() -> void:
 	column.add_child(next_button)
 	skip_button = Button.new()
 	skip_button.text = "ПРОПУСТИТЬ ТУТОРИАЛ"
-	skip_button.position = Vector2(0, 0)
-	skip_button.custom_minimum_size = Vector2(190, 32)
+	skip_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	skip_button.offset_left = -210
+	skip_button.offset_top = 12
+	skip_button.offset_right = -12
+	skip_button.offset_bottom = 44
 	skip_button.add_theme_font_size_override("font_size", 13)
 	skip_button.pressed.connect(_finish_tutorial)
 	layer.add_child(skip_button)
@@ -173,19 +177,30 @@ func _set_keys(keys: Array[String]) -> void:
 	key_row.visible = not keys.is_empty()
 
 
+func _set_wasd_keys() -> void:
+	for child in key_row.get_children():
+		child.queue_free()
+	var layout := VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 4)
+	layout.alignment = BoxContainer.ALIGNMENT_CENTER
+	var top := HBoxContainer.new()
+	top.alignment = BoxContainer.ALIGNMENT_CENTER
+	top.add_child(_keycap("W"))
+	layout.add_child(top)
+	var bottom := HBoxContainer.new()
+	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
+	bottom.add_theme_constant_override("separation", 6)
+	for letter in ["A", "S", "D"]:
+		bottom.add_child(_keycap(letter))
+	layout.add_child(bottom)
+	key_row.add_child(layout)
+	key_row.visible = true
+
+
 func _show_movement_intro() -> void:
 	stage = "move_intro"
 	Engine.time_scale = 0.0
-	_set_keys(["W"])
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(0, 0)
-	_set_keys(["W"])
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_child(_keycap("A"))
-	row.add_child(_keycap("S"))
-	row.add_child(_keycap("D"))
-	key_row.add_child(row)
+	_set_wasd_keys()
 	title_label.text = "ПЕРЕДВИЖЕНИЕ"
 	body_label.text = "Для перемещения используй клавиши WASD. Нажми «Далее», затем попробуй пройтись по арене."
 	next_button.visible = true
@@ -273,7 +288,7 @@ func _on_next() -> void:
 
 
 func _step_target(index: int) -> String:
-	return ["timer", "score", "help", "dash", "arena"][mini(index - 1, 4)]
+	return ["player", "timer", "score", "help", "dash", "arena"][mini(index - 1, 5)]
 
 
 func _force_shadow() -> void:
