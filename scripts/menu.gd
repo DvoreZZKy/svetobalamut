@@ -291,8 +291,8 @@ func _sync_lobby_profile() -> void:
 
 
 func _open_lobby_tutorial() -> void:
-	G.tutorial_return_to_lobby = true
-	get_tree().change_scene_to_file("res://scenes/tutorial.tscn")
+	Sfx.play("click")
+	G.start_tutorial_game(true)
 
 func _show(key: String) -> void:
 	title.visible = (key == "main")
