@@ -55,19 +55,19 @@ func _ready() -> void:
 	_btn("Назад", join, func(): _show("main"))
 
 	var profile := _box("profile")
-	profile.position = Vector2(390, 42)
-	profile.size = Vector2(500, 650)
-	profile.add_theme_constant_override("separation", 8)
+	profile.position = Vector2(390, 72)
+	profile.size = Vector2(500, 560)
+	profile.add_theme_constant_override("separation", 5)
 	_title(profile, "ТВОЙ ПЕРСОНАЖ")
 	profile_preview = TextureRect.new()
-	profile_preview.custom_minimum_size = Vector2(140, 76)
+	profile_preview.custom_minimum_size = Vector2(100, 64)
 	profile_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	profile_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	profile_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	profile.add_child(profile_preview)
 	profile_info = Label.new()
 	profile_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	profile_info.add_theme_font_size_override("font_size", 18)
+	profile_info.add_theme_font_size_override("font_size", 15)
 	profile.add_child(profile_info)
 	profile_color_btn = _btn("Цвет", profile, func():
 		G.profile_color = (G.profile_color + 1) % G.PROFILE_COLORS.size()
@@ -83,11 +83,11 @@ func _ready() -> void:
 		_refresh_profile())
 	_btn("Сохранить и назад", profile, func(): G.save_settings(); _show("main"))
 	for profile_btn in [profile_color_btn, profile_kind_btn, profile_outfit_btn, profile_hat_btn]:
-		profile_btn.custom_minimum_size = Vector2(480, 44)
-		profile_btn.add_theme_font_size_override("font_size", 21)
+		profile_btn.custom_minimum_size = Vector2(450, 38)
+		profile_btn.add_theme_font_size_override("font_size", 18)
 	var save_profile_btn := profile.get_child(profile.get_child_count() - 1) as Button
-	save_profile_btn.custom_minimum_size = Vector2(480, 44)
-	save_profile_btn.add_theme_font_size_override("font_size", 21)
+	save_profile_btn.custom_minimum_size = Vector2(450, 38)
+	save_profile_btn.add_theme_font_size_override("font_size", 18)
 	_refresh_profile()
 
 	var st := _box("settings")
@@ -102,8 +102,9 @@ func _ready() -> void:
 	_slider(st, "Музыка", G.vol_music, func(v: float): G.vol_music = v; Sfx.refresh_volume())
 	_slider(st, "Звуки", G.vol_sfx, func(v: float): G.vol_sfx = v; Sfx.play("shot"))
 	var sh := CheckBox.new()
-	sh.text = "Тряска экрана"
+	sh.text = "Эффекты камеры"
 	sh.button_pressed = G.shake_on
+	sh.tooltip_text = "Лёгкая тряска при ударах, столкновениях и взрывах."
 	sh.add_theme_font_size_override("font_size", 22)
 	sh.toggled.connect(func(b: bool): G.shake_on = b)
 	st.add_child(sh)
@@ -188,7 +189,7 @@ func _refresh_profile() -> void:
 	var kinds := ["Светляк", "Капсула", "Призрак", "Кристалл"]
 	var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
 	var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
-	profile_preview.texture = load("res://assets/sprites/player_%d.png" % G.profile_kind)
+	profile_preview.texture = PixelArt.make_player(G.profile_kind)
 	profile_preview.modulate = G.col(G.profile_color)
 	profile_color_btn.text = "Цвет: " + colors[G.profile_color]
 	profile_kind_btn.text = "Персонаж: " + kinds[G.profile_kind]
@@ -204,6 +205,7 @@ func _refresh_profile() -> void:
 
 
 func _show(key: String) -> void:
+	title.visible = (key == "main")
 	for k in boxes:
 		boxes[k].visible = (k == key)
 	if key == "lobby":
