@@ -17,6 +17,8 @@ var ip_edit: LineEdit
 var lobby_list: VBoxContainer
 var lobby_info: Label
 var start_btn: Button
+var solo_mode_box: VBoxContainer
+var lobby_mode_select: OptionButton
 var profile_preview
 var lobby_preview
 var lobby_color_btn: Button
@@ -47,13 +49,19 @@ func _ready() -> void:
 	add_child(title)
 
 	var main := _box("main")
-	_btn("Играть одному (с ботами)", main, func(): Sfx.play("click"); G.start_single())
+	_btn("Играть одному", main, func(): Sfx.play("click"); _show("solo_mode"))
 	_btn("Обучение", main, _start_tutorial_from_menu)
 	_btn("Создать комнату", main, _on_host)
 	_btn("Подключиться", main, func(): Sfx.play("click"); _show("join"))
 	_btn("Персонаж", main, func(): Sfx.play("click"); _refresh_profile(); _show("profile"))
 	_btn("Настройки", main, func(): Sfx.play("click"); _show("settings"))
 	_btn("Выход", main, func(): get_tree().quit())
+
+ 	var solo := _box("solo_mode")
+	_title(solo, "ВЫБЕРИ РЕЖИМ")
+	_btn("СВЕТОБАЛАМУТ • ХАОС", solo, func(): Sfx.play("click"); G.start_solo_mode("chaos"))
+	_btn("TRIBE • ПЕЩЕРА", solo, func(): Sfx.play("click"); G.start_solo_mode("tribe"))
+	_btn("НАЗАД", solo, func(): _show("main"))
 
 	var join := _box("join")
 	_title(join, "АДРЕС КОМНАТЫ (IP:ПОРТ)")
@@ -188,6 +196,14 @@ func _ready() -> void:
 	lobby_actions.add_theme_constant_override("separation", 12)
 	lobby.add_child(lobby_actions)
 	_btn("ПРОЙТИ ТУТОРИАЛ", lobby_actions, _open_lobby_tutorial)
+ 	lobby_mode_select = OptionButton.new()
+	lobby_mode_select.add_item("РЕЖИМ: СВЕТОБАЛАМУТ", 0)
+	lobby_mode_select.add_item("РЕЖИМ: TRIBE", 1)
+	lobby_mode_select.custom_minimum_size = Vector2(250, 58)
+	lobby_mode_select.item_selected.connect(func(index: int):
+		if Net.is_host:
+			Net.set_room_mode("tribe" if index == 1 else "chaos"))
+	lobby_actions.add_child(lobby_mode_select)
 	start_btn = _btn("СТАРТ", lobby_actions, func(): Net.start_match())
 	_btn("ВЫЙТИ", lobby_actions, func(): G.save_settings(); Net.leave(); _show("main"))
 
@@ -538,6 +554,8 @@ func _on_lobby_changed() -> void:
 			kick_btn.pressed.connect(func(): Net.kick_peer(kicked_id))
 			row.add_child(kick_btn)
 	if Net.is_host:
+		lobby_mode_select.visible = true
+		lobby_mode_select.select(1 if Net.room_mode == "tribe" else 0)
 		var ips := G.local_ips()
 		var room_addresses: Array[String] = []
 		for ip in ips:
@@ -549,5 +567,6 @@ func _on_lobby_changed() -> void:
 			Net.names.size(), Net.MAX_PLAYERS]
 		start_btn.visible = true
 	else:
-		lobby_info.text = "ОЖИДАНИЕ ХОСТА • ПОДКЛЮЧЕНИЕ ПО IP:ПОРТ"
+		lobby_mode_select.visible = false
+		lobby_info.text = "РЕЖИМ: %s\nОЖИДАНИЕ ХОСТА • ПОДКЛЮЧЕНИЕ ПО IP:ПОРТ" % ("TRIBE" if Net.room_mode == "tribe" else "СВЕТОБАЛАМУТ")
 		start_btn.visible = false
