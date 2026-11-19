@@ -5,6 +5,12 @@ extends RefCounted
 
 const A := Vector2(1600, 900)
 const MAX_LIGHT := 125.0
+const CLASS_STATS := [
+	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.075, "ability": "Перегрузка"},
+	{"name": "Капсула", "hp": 155.0, "def": 0.72, "atk": 1.45, "speed": 0.78, "rate": 0.62, "ability": "Энергощит"},
+	{"name": "Призрак", "hp": 100.0, "def": 1.12, "atk": 0.68, "speed": 1.38, "rate": 0.105, "ability": "Фазовый скачок"},
+	{"name": "Кристалл", "hp": 112.0, "def": 0.92, "atk": 1.9, "speed": 0.88, "rate": 0.82, "ability": "Звёздный залп"}
+]
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
 const DASH_TIME := 0.18
@@ -76,7 +82,11 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 	return {
 		"id": id, "name": pname, "human": human, "kind": kind, "ci": ci, "hat": hat, "outfit": outfit,
 		"pos": pos, "vel": Vector2.ZERO, "aim": (A / 2.0 - pos).normalized(),
-		"light": MAX_LIGHT, "shadow": false, "decoy": false, "life": 0.0,
+		"light": CLASS_STATS[kind % 4].hp, "max_light": CLASS_STATS[kind % 4].hp,
+		"defense": CLASS_STATS[kind % 4].def, "attack": CLASS_STATS[kind % 4].atk,
+		"speed_mult": CLASS_STATS[kind % 4].speed, "fire_rate": CLASS_STATS[kind % 4].rate,
+		"ability_cd": 0.0, "ability_t": 0.0,
+		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"pts": 0, "kills": 0, "last_hit": 0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
@@ -127,6 +137,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	var want_fire: bool = inp.get("fire", false)
 	var want_dash: bool = inp.get("dash", false)
 	var want_poss: bool = inp.get("poss", false)
+	var want_ability: bool = inp.get("ability", false)
 	if effects.has("reverse") and not p.decoy:
 		mv = -mv
 	if p.derp_t > 0.0:
@@ -152,6 +163,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.hit_t = maxf(0.0, p.hit_t - dt)
 	p.push_cd = maxf(0.0, p.push_cd - dt)
 	p.poss_cd = maxf(0.0, p.poss_cd - dt)
+	p.ability_cd = maxf(0.0, p.ability_cd - dt)
+	p.ability_t = maxf(0.0, p.ability_t - dt)
 
 	if p.shadow:
 		_update_shadow(p, dt, mv, want_poss)
@@ -166,7 +179,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.vel = p.dash_dir * DASH_SPEED
 	else:
 		var k := 0.9 if effects.has("zerog") else 15.0
-		p.vel = p.vel.lerp(mv.limit_length(1.0) * SPEED, clampf(k * dt, 0.0, 1.0))
+		var speed_boost := 1.55 if p.kind == 0 and p.ability_t > 0.0 else 1.0
+		p.vel = p.vel.lerp(mv.limit_length(1.0) * SPEED * p.speed_mult * speed_boost, clampf(k * dt, 0.0, 1.0))
 		if want_dash and p.dash_cd <= 0.0 and p.light > DASH_COST:
 			p.dash_dir = mv.normalized() if mv.length() > 0.1 else p.aim
 			p.dash_t = DASH_TIME
@@ -174,6 +188,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			p.dash_cd = DASH_CD
 			p.light -= DASH_COST
 			events.append({"t": "dash", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
+	if want_ability and p.ability_cd <= 0.0:
+		_use_ability(p)
 	if effects.has("magnet"):
 		var b := _brightest(p.id)
 		if not b.is_empty():
@@ -182,14 +198,22 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	_wall_bounce(p)
 
 	if want_fire and p.fire_cd <= 0.0 and p.light > SHOT_COST + 0.5:
-		var ang: float = p.aim.angle() + rng.randf_range(-0.025, 0.025)
-		var dir := Vector2.from_angle(ang)
-		bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * BULLET_SPEED + p.vel * 0.25,
-			"owner": p.id, "life": 1.4, "bn": 0})
-		next_id += 1
+		var spread_count := 3 if p.kind == 0 else 1
+		for shot_i in spread_count:
+			var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
+			var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
+			var dir := Vector2.from_angle(ang)
+			var bolt_speed := 880.0 if p.kind == 1 else (960.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED))
+			var bolt_radius := 11.0 if p.kind == 3 else (10.0 if p.kind == 1 else (4.0 if p.kind == 2 else 6.0))
+			var damage_mult := 0.42 if p.kind == 0 else 1.0
+			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
+				"owner": p.id, "life": 1.4, "bn": 0, "dmg": BULLET_DMG * p.attack * damage_mult,
+				"radius": bolt_radius})
+			next_id += 1
 		p.light -= SHOT_COST
-		p.fire_cd = FIRE_CD
-		p.vel -= dir * 55.0
+		var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
+		p.fire_cd = p.fire_rate * haste
+		p.vel -= p.aim * 55.0
 		events.append({"t": "shot", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
 
 	var spd_ratio: float = p.vel.length() / SPEED
@@ -201,9 +225,31 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.light += REGEN_STILL * dt
 	if in_zone:
 		p.light += REGEN_ZONE * dt
-	p.light = clampf(p.light, 0.0, MAX_LIGHT)
+	p.light = clampf(p.light, 0.0, p.max_light)
 	if p.light <= 0.0 and not p.decoy:
 		_make_shadow(p, p.last_hit, false)
+
+
+func _use_ability(p: Dictionary) -> void:
+	p.ability_cd = 9.0
+	match p.kind:
+		0:
+			p.ability_t = 2.8
+			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 0})
+		1:
+			p.ability_t = 2.8
+			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 1})
+		2:
+			p.pos = (p.pos + p.aim * 270.0).clamp(Vector2(40, 40), A - Vector2(40, 40))
+			p.inv = 0.65
+			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 2})
+		3:
+			for i in 10:
+				var dir := Vector2.from_angle(TAU * float(i) / 10.0)
+				bullets.append({"id": next_id, "pos": p.pos + dir * 40.0, "vel": dir * 760.0,
+					"owner": p.id, "life": 1.1, "bn": 0, "dmg": BULLET_DMG * p.attack * 0.72, "radius": 9.0})
+				next_id += 1
+			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
 
 
 func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> void:
@@ -274,7 +320,7 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 	if killer != 0 and killer != p.id and players.has(killer):
 		var k: Dictionary = players[killer]
 		if not k.shadow:
-			k.light = minf(MAX_LIGHT, k.light + KILL_BONUS)
+			k.light = minf(k.max_light, k.light + KILL_BONUS)
 			k.kills += 1
 		if k.derp_t > 0.0 and players.has(k.derp_by):
 			players[k.derp_by].pts += 2
@@ -289,7 +335,10 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 
 
 func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
-	p.light -= dmg
+	var reduced := dmg * p.defense
+	if p.kind == 1 and p.ability_t > 0.0:
+		reduced *= 0.25
+	p.light -= reduced
 	p.last_hit = src
 	p.hit_t = 0.14
 	events.append({"t": "hit", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
@@ -298,7 +347,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	if src != 0 and players.has(src):
 		var a: Dictionary = players[src]
 		if not a.shadow:
-			a.light = minf(MAX_LIGHT, a.light + dmg * 0.35)
+			a.light = minf(a.max_light, a.light + reduced * 0.35)
 	if p.light <= 0.0 and not p.decoy and not p.shadow:
 		_make_shadow(p, src, false)
 		if bounced and players.has(src) and src != p.id:
@@ -396,8 +445,8 @@ func _update_bullets(dt: float) -> void:
 					continue
 				if p.id == b.owner and b.bn == 0:
 					continue
-				if (p.pos - b.pos).length_squared() < pow(P_RADIUS + 6.0, 2):
-					_damage(p, BULLET_DMG, b.owner, b.bn > 0)
+				if (p.pos - b.pos).length_squared() < pow(P_RADIUS + float(b.get("radius", 6.0)), 2):
+					_damage(p, float(b.get("dmg", BULLET_DMG)), b.owner, b.bn > 0)
 					dead = true
 					break
 		if not dead:
@@ -410,7 +459,7 @@ func _update_bullets(dt: float) -> void:
 						e.dead = true
 						events.append({"t": "eat", "x": e.pos.x, "y": e.pos.y, "c": 0})
 						if players.has(b.owner) and not players[b.owner].shadow:
-							players[b.owner].light = minf(MAX_LIGHT, players[b.owner].light + 9.0)
+							players[b.owner].light = minf(players[b.owner].max_light, players[b.owner].light + 9.0)
 					else:
 						events.append({"t": "hit", "x": e.pos.x, "y": e.pos.y, "c": 0})
 					break
@@ -662,10 +711,11 @@ func snapshot() -> Dictionary:
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts,
+			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t,
 			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var bl: Array = []
 	for b in bullets:
-		bl.append([b.id, b.pos, b.vel, b.owner, b.bn])
+		bl.append([b.id, b.pos, b.vel, b.owner, b.bn, int(players.get(b.owner, {}).get("kind", 0)), float(b.get("radius", 6.0))])
 	var ea: Array = []
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
