@@ -45,6 +45,7 @@ var trail_grad: Gradient
 var fade_grad: Gradient
 var trail_shader: Shader
 var fx_mat: ShaderMaterial
+var fx_overlay: ColorRect
 const VectorActor = preload("res://scripts/vector_actor.gd")
 const FacetButton = preload("res://scripts/facet_button.gd")
 const ArenaTutorial = preload("res://scripts/arena_tutorial.gd")
@@ -194,12 +195,14 @@ func _build_fx_overlay() -> void:
 	var cl := CanvasLayer.new()
 	cl.layer = 5
 	add_child(cl)
-	var r := ColorRect.new()
+	fx_overlay = ColorRect.new()
+	var r: ColorRect = fx_overlay
 	r.set_anchors_preset(Control.PRESET_FULL_RECT)
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fx_mat = ShaderMaterial.new()
 	fx_mat.shader = load("res://shaders/screen_fx.gdshader")
 	r.material = fx_mat
+	r.visible = false
 	cl.add_child(r)
 
 
@@ -886,6 +889,12 @@ func _update_fx(dt: float) -> void:
 	var fx: Dictionary = view.get("fx", {})
 	invert_cur = move_toward(invert_cur, 1.0 if fx.has("invert") else 0.0, dt * 5.0)
 	blind_cur = move_toward(blind_cur, 1.0 if fx.has("blind") else 0.0, dt * 4.0)
+	var needs_post_fx: bool = invert_cur > 0.01 or blind_cur > 0.01
+	# Avoid a full-screen screen-texture shader pass during normal gameplay.
+	if fx_overlay.visible != needs_post_fx:
+		fx_overlay.visible = needs_post_fx
+	if not needs_post_fx:
+		return
 	fx_mat.set_shader_parameter("invert", invert_cur)
 	fx_mat.set_shader_parameter("blind", blind_cur)
 	var ws := Vector2(get_window().size)
@@ -1051,8 +1060,7 @@ func _handle_events(evs: Array) -> void:
 				shake = maxf(shake, 26.0)
 				timer_glitch_until = Time.get_ticks_msec() + 1800
 				_show_banner(CHAOS_RU.get(e.n, str(e.n)).to_upper())
-				var tw := create_tween()
-				tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
+				# Chromatic aberration omitted: it forced an expensive full-screen shader pass.
 			"ability":
 				Sfx.play("dash", 1.0, -2.0)
 				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
