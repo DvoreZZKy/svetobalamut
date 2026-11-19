@@ -365,6 +365,11 @@ func _build_hud() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.012, 0.012, 0.035))
 	if _is_potato():
+		# Keep the arena's gameplay zones visible, but draw them as cheap outlines:
+		# no filled polygons, inner decoration, ticks, or background grid.
+		for z in Sim.ZONES:
+			var center := Vector2(z.x, z.y)
+			draw_arc(center, z.z, 0.0, TAU, 48, Color(0.30, 0.34, 0.46, 0.78), 2.0, true)
 		var simple_border := PackedVector2Array([
 			Vector2(24, 0), Vector2(ARENA.x - 24, 0), Vector2(ARENA.x, 24),
 			Vector2(ARENA.x, ARENA.y - 24), Vector2(ARENA.x - 24, ARENA.y),
