@@ -239,7 +239,7 @@ func _refresh_profile() -> void:
 func _add_facet_panel(parent: Node, pos: Vector2, panel_size: Vector2, fill: Color, edge: Color) -> void:
 	var shape := Polygon2D.new()
 	shape.position = pos
-	shape.z_index = -1
+	shape.z_index = 0
 	shape.polygon = PackedVector2Array([
 		Vector2(18, 0), Vector2(panel_size.x - 18, 0), Vector2(panel_size.x, 18),
 		Vector2(panel_size.x, panel_size.y - 18), Vector2(panel_size.x - 18, panel_size.y),
@@ -249,6 +249,7 @@ func _add_facet_panel(parent: Node, pos: Vector2, panel_size: Vector2, fill: Col
 	parent.add_child(shape)
 	var outline := Line2D.new()
 	outline.position = pos
+	outline.z_index = 0
 	outline.width = 2.0
 	outline.default_color = edge
 	outline.closed = true
