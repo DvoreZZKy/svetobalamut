@@ -322,7 +322,7 @@ func _current_control_done() -> bool:
 		"ability": return Input.is_action_just_pressed("ability")
 		"fire": return Input.is_action_just_pressed("fire")
 		"possess":
-			var me := arena.sim.players.get(arena.local_id, {})
+			var me: Dictionary = arena.sim.players.get(arena.local_id, {})
 			return not me.is_empty() and int(me.get("poss_target", 0)) != 0
 	return false
 
