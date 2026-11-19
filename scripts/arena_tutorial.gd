@@ -20,6 +20,7 @@ var panel: PanelContainer
 var title_label: Label
 var body_label: Label
 var next_button: Button
+var skip_button: Button
 var key_row: HBoxContainer
 var pointer: Line2D
 var pointer_dot: Polygon2D
@@ -119,6 +120,13 @@ func _build_overlay() -> void:
 	next_button.add_theme_font_size_override("font_size", 18)
 	next_button.pressed.connect(_on_next)
 	column.add_child(next_button)
+	skip_button = Button.new()
+	skip_button.text = "ПРОПУСТИТЬ ТУТОРИАЛ"
+	skip_button.position = Vector2(0, 0)
+	skip_button.custom_minimum_size = Vector2(190, 32)
+	skip_button.add_theme_font_size_override("font_size", 13)
+	skip_button.pressed.connect(_finish_tutorial)
+	layer.add_child(skip_button)
 
 
 func _panel_style() -> StyleBoxFlat:
