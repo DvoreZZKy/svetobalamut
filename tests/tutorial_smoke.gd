@@ -10,15 +10,15 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var global_state := root.get_node("G")
-	global_state.mode = "single"
-	global_state.tutorial_active = true
-	global_state.tutorial_return_to_lobby = false
-	global_state.cfg = [
+	global_state.set("mode", "single")
+	global_state.set("tutorial_active", true)
+	global_state.set("tutorial_return_to_lobby", false)
+	global_state.set("cfg", [
 		{"id": 1, "name": "QA", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
 		{"id": -1, "name": "Training bot A", "human": false},
 		{"id": -2, "name": "Training bot B", "human": false},
 		{"id": -3, "name": "Training bot C", "human": false}
-	]
+	])
 	var result := change_scene_to_file("res://scenes/arena.tscn")
 	if result != OK:
 		push_error("Could not load arena scene: %s" % error_string(result))
@@ -40,7 +40,7 @@ func _run() -> void:
 		push_error("Interactive tutorial controller was not attached to the arena")
 		quit(1)
 		return
-	if not global_state.tutorial_active:
+	if not bool(global_state.get("tutorial_active")):
 		push_error("Tutorial flag was unexpectedly cleared during arena startup")
 		quit(1)
 		return
