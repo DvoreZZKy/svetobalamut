@@ -256,7 +256,7 @@ func _add_facet_panel(parent: Node, pos: Vector2, panel_size: Vector2, fill: Col
 	parent.add_child(outline)
 
 
-func _make_vector_preview(parent: Node) -> VectorActor
+func _make_vector_preview(parent: Node) -> Node2D:
 	var container := SubViewportContainer.new()
 	container.custom_minimum_size = Vector2(180, 116)
 	container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
