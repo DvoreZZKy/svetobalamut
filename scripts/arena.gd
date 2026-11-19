@@ -83,12 +83,13 @@ func _ready() -> void:
 	is_client = G.mode == "client"
 	local_id = multiplayer.get_unique_id() if G.mode != "single" else 1
 	var arena_env := G.make_env()
-	arena_env.environment.glow_enabled = true
-	arena_env.environment.glow_intensity = 0.62
-	arena_env.environment.glow_strength = 0.72
-	arena_env.environment.glow_bloom = 0.08
+	var quality := G.graphics_quality
+	arena_env.environment.glow_enabled = quality >= 1
+	arena_env.environment.glow_intensity = 0.24 if quality == 1 else 0.62
+	arena_env.environment.glow_strength = 0.25 if quality == 1 else 0.72
+	arena_env.environment.glow_bloom = 0.02 if quality == 1 else 0.08
 	for glow_level in range(1, 7):
-		arena_env.environment.set_glow_level(glow_level, 0.10 if glow_level <= 3 else 0.0)
+		arena_env.environment.set_glow_level(glow_level, (0.04 if quality == 1 else 0.10) if glow_level <= 3 and quality >= 1 else 0.0)
 	add_child(arena_env)
 	cam = Camera2D.new()
 	cam.position = ARENA / 2.0
@@ -409,7 +410,8 @@ func _draw() -> void:
 func _seed_ambient() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	for i in 22:
+	var mote_count: int = [0, 8, 22][G.graphics_quality]
+	for i in mote_count:
 		ambient_motes.append({
 			"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
 			"v": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(7.0, 20.0),
@@ -698,7 +700,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	lbl.add_theme_font_size_override("font_size", 14)
 	root.add_child(lbl)
 	var line := Line2D.new()
-	line.width = 28.0
+	line.width = 12.0 if G.graphics_quality == 0 else (20.0 if G.graphics_quality == 1 else 28.0)
 	line.width_curve = trail_curve
 	line.gradient = trail_grad
 	line.joint_mode = Line2D.LINE_JOINT_BEVEL
@@ -814,7 +816,7 @@ func _update_views(dt: float) -> void:
 			var point_count := line.get_point_count()
 			if point_count == 0 or line.get_point_position(point_count - 1).distance_squared_to(pv.pos) >= 81.0 or pd.dt:
 				line.add_point(pv.pos)
-			var maxp := 30 if pd.dt else 20
+			var maxp := (8 if G.graphics_quality == 0 else (16 if G.graphics_quality == 1 else 30)) if pd.dt else (5 if G.graphics_quality == 0 else (10 if G.graphics_quality == 1 else 20))
 			while line.get_point_count() > maxp:
 				line.remove_point(0)
 		elif line.get_point_count() > 0:
@@ -1064,14 +1066,14 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, imp
 	for child in fx_layer.get_children():
 		if child is CPUParticles2D:
 			active_bursts += 1
-	if active_bursts >= (16 if important else 8):
+	if active_bursts >= ([2, 5, 8][G.graphics_quality] if important else [1, 3, 4][G.graphics_quality]):
 		return
 	var p := CPUParticles2D.new()
 	p.position = pos
 	p.texture = halo_tex
 	p.material = add_mat
-	p.amount = mini(amount, 30)
-	p.lifetime = minf(life, 0.65)
+	p.amount = mini(amount, [5, 14, 30][G.graphics_quality])
+	p.lifetime = minf(life, [0.28, 0.45, 0.65][G.graphics_quality])
 	p.one_shot = true
 	p.explosiveness = 1.0
 	p.direction = Vector2.RIGHT
@@ -1087,7 +1089,7 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, imp
 	p.color_ramp = fade_grad
 	fx_layer.add_child(p)
 	p.emitting = true
-	get_tree().create_timer(minf(life, 0.65) + 0.3).timeout.connect(p.queue_free)
+	get_tree().create_timer(minf(life, [0.28, 0.45, 0.65][G.graphics_quality]) + 0.2).timeout.connect(p.queue_free)
 
 
 func flash(pos: Vector2, radius: float, col: Color, dur := 0.4) -> void:
