@@ -393,6 +393,8 @@ func _seed_ambient() -> void:
 
 
 func _update_ambient(dt: float) -> void:
+	if dt <= 0.0:
+		return
 	for mote in ambient_motes:
 		mote.p += mote.v * dt
 		if mote.p.x < 20.0 or mote.p.x > ARENA.x - 20.0:
