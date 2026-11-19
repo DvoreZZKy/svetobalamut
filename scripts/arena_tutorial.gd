@@ -67,6 +67,8 @@ func _process(_dt: float) -> void:
 		panel.modulate.a = alpha
 		for part in shade_parts:
 			part.modulate.a = alpha
+		if stage == "ui_fade":
+			_update_pointer()
 		if alpha >= 1.0:
 			if stage == "ui_fade":
 				stage = "ui"
