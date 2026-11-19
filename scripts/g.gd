@@ -44,6 +44,7 @@ func _setup_input() -> void:
 		"ability": [KEY_Q],
 		"restart": [KEY_ENTER, KEY_KP_ENTER],
 		"interact": [KEY_E],
+		"eat": [KEY_F],
 	}
 	for a in keys:
 		if not InputMap.has_action(a):
