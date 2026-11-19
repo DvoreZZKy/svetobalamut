@@ -550,7 +550,7 @@ func _update_eaters(dt: float) -> void:
 		var tpos: Vector2 = ed[1] + vel * snap_age
 		ev.pos = ev.pos.lerp(tpos, minf(1.0, 24.0 * dt)) if is_client else tpos
 		var root: Node2D = ev.root
-		var spr: Sprite2D = ev.spr
+		var spr: Polygon2D = ev.spr
 		var halo: Sprite2D = ev.halo
 		root.position = ev.pos
 		if vel.length() > 5.0:
