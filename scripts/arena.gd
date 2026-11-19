@@ -356,7 +356,7 @@ func _read_input() -> Dictionary:
 func _process(dt: float) -> void:
 	if Input.is_action_just_pressed("ui_cancel") and view.get("ph", "play") != "over":
 		_toggle_pause()
-	if pause_open and not Net.online:
+	if pause_open and (not Net.online or G.tutorial_active):
 		# The scene and UI keep processing, but the offline match does not advance.
 		return
 	t += dt
@@ -474,7 +474,7 @@ func _toggle_pause() -> void:
 	pause_open = not pause_open
 	pause_layer.visible = pause_open
 	if pause_open:
-		pause_title.text = "ПАУЗА" if not Net.online else "МЕНЮ МАТЧА"
+		pause_title.text = "ПАУЗА" if (not Net.online or G.tutorial_active) else "МЕНЮ МАТЧА"
 		pause_menu_btn.text = "ВЫЙТИ ИЗ МАТЧА"
 		_layout_pause_menu()
 
