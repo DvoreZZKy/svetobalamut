@@ -230,8 +230,10 @@ func _draw_bullets() -> void:
 		var tail := pos - vel * 0.075
 		var glow := G.hdr(col, 1.6)
 		glow.a = 0.35
-		bullet_layer.draw_line(tail, pos, glow, 15.0, true)
-		bullet_layer.draw_line(tail, pos, G.hdr(col, 3.5), 5.0, true)
+		var radius: float = float(b[6]) if b.size() > 6 else 6.0
+		var width := 8.0 + radius * 0.8
+		bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
+		bullet_layer.draw_line(tail, pos, G.hdr(col, 3.5), width * 0.45, true)
 		bullet_layer.draw_circle(pos, 6.0, Color(4, 4, 4))
 
 
@@ -243,6 +245,7 @@ func _read_input() -> Dictionary:
 		"fire": Input.is_action_pressed("fire"),
 		"dash": Input.is_action_pressed("dash"),
 		"poss": Input.is_action_pressed("possess"),
+		"ability": Input.is_action_just_pressed("ability"),
 	}
 
 
@@ -562,7 +565,9 @@ func _update_hud(dt: float) -> void:
 	if not me.is_empty():
 		light_bar.value = me.l
 		dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
-		help_lbl.text = "ЦЕЛЬ: остаться последним светящимся игроком.\nТёмные круги восстанавливают свет; выстрелы и бег его тратят.\nWASD — движение • ЛКМ — огонь • ПРОБЕЛ — рывок • ESC — меню"
+		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
+		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
+		help_lbl.text = "%s • Q: %s (%s)\nЦЕЛЬ: остаться последним светящимся.\nWASD — движение • ЛКМ — атака • ПРОБЕЛ — рывок • ESC — меню" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
 		if me.s:
 			help_lbl.text = "ТЫ — ТЕНЬ: подойди к живому игроку и нажми ПКМ / E, чтобы вселиться.\nВселение длится 2 секунды — используй их, чтобы вернуться в игру."
 	if over:
@@ -620,6 +625,11 @@ func _handle_events(evs: Array) -> void:
 				_show_banner(CHAOS_RU.get(e.n, str(e.n)).to_upper())
 				var tw := create_tween()
 				tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
+			"ability":
+				Sfx.play("dash", 1.0, -2.0)
+				var ability_color := [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
+				flash(pos, 190.0, ability_color, 0.45)
+				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55)
 			"win":
 				Sfx.play("win")
 
