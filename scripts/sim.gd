@@ -599,11 +599,14 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 	var b: Dictionary = p.bot
 	b.t -= dt
 	if p.shadow:
-		var t := _nearest(p, false)
-		if not t.is_empty():
-			var to: Vector2 = t.pos - p.pos
+		var target := _nearest(p, false)
+		if not target.is_empty():
+			var to: Vector2 = target.pos - p.pos
+			var distance := to.length()
 			inp.mv = to.normalized()
-			inp.poss = to.length() < 85.0
+			inp.poss = distance < 125.0
+			if distance > 180.0 and p.dash_cd <= 0.0 and rng.randf() < 0.035:
+				inp.dash = true
 		inputs[p.id] = inp
 		return
 	if b.t <= 0.0:
@@ -611,6 +614,13 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 		b.strafe = -1.0 if rng.randf() < 0.5 else 1.0
 		b.want = rng.randf_range(260.0, 480.0)
 	var mv := Vector2.ZERO
+	for ghost in players.values():
+		if ghost.id == p.id or not ghost.shadow:
+			continue
+		var ghost_delta: Vector2 = p.pos - ghost.pos
+		var ghost_distance := ghost_delta.length()
+		if ghost_distance < 230.0:
+			mv += ghost_delta.normalized() * (2.1 if ghost_distance < 115.0 else 1.25)
 	var tgt := _nearest(p, true)
 	if not tgt.is_empty():
 		var to: Vector2 = tgt.pos - p.pos
