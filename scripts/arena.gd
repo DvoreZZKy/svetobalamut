@@ -214,10 +214,20 @@ func _draw() -> void:
 		draw_line(Vector2(0, y), Vector2(ARENA.x, y), gc, 1.5)
 	for z in Sim.ZONES:
 		var c := Vector2(z.x, z.y)
-		draw_circle(c, z.z, Color(0, 0, 0, 0.6))
-		draw_arc(c, z.z, 0.0, TAU, 72, Color(0.28, 0.16, 0.52, 0.42), 3.0, true)
-		draw_arc(c, z.z * 0.6, 0.0, TAU, 48, Color(0.22, 0.12, 0.42, 0.22), 2.0, true)
-	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.48, 0.2, 0.72), false, 3.0)
+		var zone_poly := PackedVector2Array()
+		for i in 12:
+			zone_poly.append(c + Vector2.from_angle(TAU * float(i) / 12.0) * z.z)
+		draw_colored_polygon(zone_poly, Color(0.015, 0.01, 0.035, 0.55))
+		var zone_outline := zone_poly.duplicate()
+		zone_outline.append(zone_poly[0])
+		draw_polyline(zone_outline, Color(0.28, 0.16, 0.52, 0.42), 3.0, true)
+	var border := PackedVector2Array([
+		Vector2(24,0), Vector2(ARENA.x-24,0), Vector2(ARENA.x,24),
+		Vector2(ARENA.x,ARENA.y-24), Vector2(ARENA.x-24,ARENA.y),
+		Vector2(24,ARENA.y), Vector2(0,ARENA.y-24), Vector2(0,24)
+	])
+	border.append(border[0])
+	draw_polyline(border, Color(0.48, 0.2, 0.72), 3.0, true)
 
 
 func _draw_bullets() -> void:
