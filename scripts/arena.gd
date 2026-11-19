@@ -120,7 +120,7 @@ func _build_resources() -> void:
 	fade_grad.set_color(1, Color(1, 1, 1, 0))
 	trail_shader = load("res://shaders/trail.gdshader")
 	for i in 4:
-		player_tex.append(load("res://assets/sprites/player_%d.png" % i))
+		player_tex.append(PixelArt.make_player(i))
 	for i in 2:
 		eater_tex.append(load("res://assets/sprites/eater_%d.png" % i))
 
@@ -323,11 +323,11 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	halo.material = add_mat
 	root.add_child(halo)
 	var spr := Sprite2D.new()
-	spr.texture = player_tex[pd.k % 4]
+	spr.texture = PixelArt.make_player(int(pd.k))
 	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	root.add_child(spr)
 	var outfit := Polygon2D.new()
-	outfit.z_index = 10
+	outfit.z_index = 2
 	var outfit_shapes := [
 		PackedVector2Array(),
 		PackedVector2Array([Vector2(-13, -5), Vector2(13, -5), Vector2(10, 12), Vector2(-10, 12)]),
@@ -336,11 +336,11 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 		PackedVector2Array([Vector2(-11, -5), Vector2(11, -5), Vector2(17, 17), Vector2(-17, 17)])
 	]
 	outfit.polygon = outfit_shapes[int(pd.get("outfit", 0)) % outfit_shapes.size()]
-	outfit.scale = Vector2(0.92, 0.92)
+	outfit.scale = Vector2(1.2, 1.2)
 	outfit.color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][int(pd.get("outfit", 0)) % 5]
 	root.add_child(outfit)
 	var hat := Polygon2D.new()
-	hat.z_index = 11
+	hat.z_index = 3
 	var hat_shapes := [
 		PackedVector2Array(),
 		PackedVector2Array([Vector2(-15, -22), Vector2(-10, -37), Vector2(-3, -27), Vector2(2, -42), Vector2(8, -27), Vector2(15, -22)]),
@@ -350,7 +350,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	]
 	hat.polygon = hat_shapes[int(pd.get("hat", 0)) % hat_shapes.size()]
 	hat.color = Color("#ffe27a")
-	hat.scale = Vector2(0.9, 0.9)
+	hat.scale = Vector2(1.15, 1.15)
 	root.add_child(hat)
 	var local_ring := Line2D.new()
 	local_ring.width = 5.0
