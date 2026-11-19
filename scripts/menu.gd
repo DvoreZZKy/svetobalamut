@@ -9,6 +9,12 @@ var ip_edit: LineEdit
 var lobby_list: Label
 var lobby_info: Label
 var start_btn: Button
+var profile_preview: ColorRect
+var profile_info: Label
+var profile_color_btn: Button
+var profile_kind_btn: Button
+var profile_outfit_btn: Button
+var profile_hat_btn: Button
 
 
 func _ready() -> void:
@@ -31,6 +37,7 @@ func _ready() -> void:
 	_btn("Играть одному (с ботами)", main, func(): Sfx.play("click"); G.start_single())
 	_btn("Создать комнату", main, _on_host)
 	_btn("Подключиться", main, func(): Sfx.play("click"); _show("join"))
+	_btn("Персонаж", main, func(): Sfx.play("click"); _refresh_profile(); _show("profile"))
 	_btn("Настройки", main, func(): Sfx.play("click"); _show("settings"))
 	_btn("Выход", main, func(): get_tree().quit())
 
@@ -46,6 +53,32 @@ func _ready() -> void:
 	status.add_theme_font_size_override("font_size", 20)
 	join.add_child(status)
 	_btn("Назад", join, func(): _show("main"))
+
+	var profile := _box("profile")
+	_title(profile, "ТВОЙ ПЕРСОНАЖ")
+	profile_preview = ColorRect.new()
+	profile_preview.custom_minimum_size = Vector2(140, 92)
+	profile_preview.color = G.col(G.profile_color)
+	profile_preview.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	profile.add_child(profile_preview)
+	profile_info = Label.new()
+	profile_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	profile_info.add_theme_font_size_override("font_size", 18)
+	profile.add_child(profile_info)
+	profile_color_btn = _btn("Цвет", profile, func():
+		G.profile_color = (G.profile_color + 1) % G.PROFILE_COLORS.size()
+		_refresh_profile())
+	profile_kind_btn = _btn("Персонаж", profile, func():
+		G.profile_kind = (G.profile_kind + 1) % 4
+		_refresh_profile())
+	profile_outfit_btn = _btn("Костюм", profile, func():
+		G.profile_outfit = (G.profile_outfit + 1) % 5
+		_refresh_profile())
+	profile_hat_btn = _btn("Шапка", profile, func():
+		G.profile_hat = (G.profile_hat + 1) % 5
+		_refresh_profile())
+	_btn("Сохранить и назад", profile, func(): G.save_settings(); _show("main"))
+	_refresh_profile()
 
 	var st := _box("settings")
 	_title(st, "Настройки")
@@ -132,12 +165,25 @@ func _build_particles() -> void:
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
-	b.position = Vector2(440, 230)
-	b.size = Vector2(400, 460)
+	b.position = Vector2(440, 145)
+	b.size = Vector2(400, 560)
 	b.add_theme_constant_override("separation", 14)
 	add_child(b)
 	boxes[key] = b
 	return b
+
+
+func _refresh_profile() -> void:
+	var colors := ["Неоновый голубой", "Розовый", "Золотой", "Фиолетовый", "Мятный", "Оранжевый", "Белый", "Маджента"]
+	var kinds := ["Светляк", "Капсула", "Призрак", "Кристалл"]
+	var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
+	var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
+	profile_preview.color = G.col(G.profile_color)
+	profile_color_btn.text = "Цвет: " + colors[G.profile_color]
+	profile_kind_btn.text = "Персонаж: " + kinds[G.profile_kind]
+	profile_outfit_btn.text = "Костюм: " + outfits[G.profile_outfit]
+	profile_hat_btn.text = "Шапка: " + hats[G.profile_hat]
+	profile_info.text = "%s • %s • %s" % [kinds[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
 
 
 func _show(key: String) -> void:
