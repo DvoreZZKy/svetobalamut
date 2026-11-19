@@ -19,6 +19,7 @@ var lobby_info: Label
 var start_btn: Button
 var solo_mode_box: VBoxContainer
 var lobby_mode_select: OptionButton
+var lobby_tutorial_btn: Button
 var profile_preview
 var lobby_preview
 var lobby_color_btn: Button
@@ -57,7 +58,7 @@ func _ready() -> void:
 	_btn("Настройки", main, func(): Sfx.play("click"); _show("settings"))
 	_btn("Выход", main, func(): get_tree().quit())
 
- 	var solo := _box("solo_mode")
+	var solo := _box("solo_mode")
 	_title(solo, "ВЫБЕРИ РЕЖИМ")
 	_btn("СВЕТОБАЛАМУТ • ХАОС", solo, func(): Sfx.play("click"); G.start_solo_mode("chaos"))
 	_btn("TRIBE • ПЕЩЕРА", solo, func(): Sfx.play("click"); G.start_solo_mode("tribe"))
@@ -195,8 +196,8 @@ func _ready() -> void:
 	var lobby_actions := HBoxContainer.new()
 	lobby_actions.add_theme_constant_override("separation", 12)
 	lobby.add_child(lobby_actions)
-	_btn("ПРОЙТИ ТУТОРИАЛ", lobby_actions, _open_lobby_tutorial)
- 	lobby_mode_select = OptionButton.new()
+	lobby_tutorial_btn = _btn("ПРОЙТИ ТУТОРИАЛ", lobby_actions, _open_lobby_tutorial)
+	lobby_mode_select = OptionButton.new()
 	lobby_mode_select.add_item("РЕЖИМ: СВЕТОБАЛАМУТ", 0)
 	lobby_mode_select.add_item("РЕЖИМ: TRIBE", 1)
 	lobby_mode_select.custom_minimum_size = Vector2(250, 58)
@@ -210,7 +211,7 @@ func _ready() -> void:
 	Net.lobby_changed.connect(_on_lobby_changed)
 	Net.join_failed.connect(func(): status.text = "Не удалось подключиться"; _show("join"))
 	Net.disconnected.connect(func(): _show("main"))
-	Net.match_started.connect(func(): get_tree().change_scene_to_file("res://scenes/arena.tscn"))
+	Net.match_started.connect(func(): get_tree().change_scene_to_file("res://scenes/tribe.tscn" if G.game_mode == "tribe" else "res://scenes/arena.tscn"))
 	_show("lobby" if Net.online else "main")
 	Sfx.play_music()
 
@@ -553,6 +554,7 @@ func _on_lobby_changed() -> void:
 			var kicked_id := int(id)
 			kick_btn.pressed.connect(func(): Net.kick_peer(kicked_id))
 			row.add_child(kick_btn)
+	lobby_tutorial_btn.visible = Net.room_mode == "chaos"
 	if Net.is_host:
 		lobby_mode_select.visible = true
 		lobby_mode_select.select(1 if Net.room_mode == "tribe" else 0)
