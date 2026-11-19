@@ -24,6 +24,7 @@ var tutorial_return_to_lobby := false
 var tutorial_previous_mode := "single"
 
 var mode := "single"        # single | host | client
+var game_mode := "chaos"    # chaos | tribe
 var cfg: Array = []         # [{id:int, name:String, human:bool}]
 
 
@@ -92,12 +93,29 @@ func local_ips() -> Array:
 
 
 func start_single() -> void:
-	# First launch after tutorial update always enters the guided flow.
+	start_solo_mode("chaos")
+
+
+func start_solo_mode(selected_mode: String) -> void:
+	game_mode = "tribe" if selected_mode == "tribe" else "chaos"
 	tutorial_return_to_lobby = false
+	if game_mode == "tribe":
+		tutorial_active = false
+		_start_solo_config()
+		get_tree().change_scene_to_file("res://scenes/tribe.tscn")
+		return
 	if not tutorial_done:
 		start_tutorial_game(false)
 	else:
 		start_single_game()
+
+
+func _start_solo_config() -> void:
+	mode = "single"
+	cfg = [{"id": 1, "name": player_name, "human": true, "color": profile_color,
+		"kind": profile_kind, "outfit": profile_outfit, "hat": profile_hat}]
+	for i in 5:
+		cfg.append({"id": -(i + 1), "name": BOT_NAMES[i], "human": false})
 
 
 func start_tutorial_game(return_to_lobby: bool) -> void:
@@ -114,6 +132,7 @@ func start_tutorial_game(return_to_lobby: bool) -> void:
 
 
 func start_single_game() -> void:
+	game_mode = "chaos"
 	tutorial_active = false
 	tutorial_return_to_lobby = false
 	mode = "single"
