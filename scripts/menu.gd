@@ -117,26 +117,6 @@ func _ready() -> void:
 	sh.add_theme_font_size_override("font_size", 22)
 	sh.toggled.connect(func(b: bool): G.shake_on = b)
 	st.add_child(sh)
-	var quality_label := Label.new()
-	quality_label.text = "Качество графики"
-	quality_label.add_theme_font_size_override("font_size", 22)
-	st.add_child(quality_label)
-	var quality := OptionButton.new()
-	quality.add_item("Низкое", 0)
-	quality.add_item("Среднее", 1)
-	quality.add_item("Высокое", 2)
-	quality.select(G.graphics_quality)
-	quality.custom_minimum_size = Vector2(380, 44)
-	quality.item_selected.connect(func(index: int):
-		G.graphics_quality = index
-		G.save_settings())
-	st.add_child(quality)
-	var vs := CheckBox.new()
-	vs.text = "Вертикальная синхронизация"
-	vs.button_pressed = G.vsync_enabled
-	vs.add_theme_font_size_override("font_size", 18)
-	vs.toggled.connect(func(b: bool): G.vsync_enabled = b; G.apply_display(); G.save_settings())
-	st.add_child(vs)
 	var fs := CheckBox.new()
 	fs.text = "Полный экран"
 	fs.button_pressed = G.fullscreen
