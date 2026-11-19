@@ -78,6 +78,9 @@ var pause_resume_btn: Button
 var pause_menu_btn: Button
 var pause_open := false
 
+func _is_potato() -> bool:
+	return G.graphics_quality >= 3
+
 
 func _ready() -> void:
 	is_client = G.mode == "client"
@@ -174,6 +177,8 @@ func _build_resources() -> void:
 
 
 func _build_fx_overlay() -> void:
+	if _is_potato():
+		return
 	var cl := CanvasLayer.new()
 	cl.layer = 5
 	add_child(cl)
@@ -359,6 +364,14 @@ func _build_hud() -> void:
 # -------------------------------------------------------------- рисование --
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.012, 0.012, 0.035))
+	if _is_potato():
+		var simple_border := PackedVector2Array([
+			Vector2(24, 0), Vector2(ARENA.x - 24, 0), Vector2(ARENA.x, 24),
+			Vector2(ARENA.x, ARENA.y - 24), Vector2(ARENA.x - 24, ARENA.y),
+			Vector2(24, ARENA.y), Vector2(0, ARENA.y - 24), Vector2(0, 24), Vector2(24, 0)
+		])
+		draw_polyline(simple_border, Color(0.22, 0.25, 0.34, 0.8), 2.0, true)
+		return
 	var gc := Color(0.12, 0.28, 0.48, 0.14)
 	for x in range(0, 1601, 100):
 		draw_line(Vector2(x, 0), Vector2(x, ARENA.y), gc, 1.5)
@@ -405,7 +418,7 @@ func _seed_ambient() -> void:
 
 
 func _update_ambient(dt: float) -> void:
-	if dt <= 0.0:
+	if _is_potato() or dt <= 0.0:
 		return
 	var mote_count: int = [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
 	for i in mote_count:
@@ -448,6 +461,10 @@ func _draw_bullets() -> void:
 		var col: Color = G.col(cis.get(b[3], 0))
 		if b[4] > 0:
 			col = Color(1, 1, 1)
+		if _is_potato():
+			bullet_layer.draw_line(pos - vel * 0.035, pos, col, 3.0, false)
+			bullet_layer.draw_circle(pos, 4.0, col)
+			continue
 		var tail := pos - vel * 0.075
 		var glow := G.hdr(col, 1.6)
 		glow.a = 0.35
@@ -661,6 +678,7 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	var root := Node2D.new()
 	ent_layer.add_child(root)
 	var halo := Sprite2D.new()
+	halo.visible = not _is_potato()
 	halo.texture = halo_tex
 	halo.material = add_mat
 	root.add_child(halo)
@@ -697,9 +715,13 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	line.gradient = trail_grad
 	line.joint_mode = Line2D.LINE_JOINT_BEVEL
 	line.begin_cap_mode = Line2D.LINE_CAP_NONE
-	var sm := ShaderMaterial.new()
-	sm.shader = trail_shader
-	line.material = sm
+	var sm: ShaderMaterial = null
+	if not _is_potato():
+		sm = ShaderMaterial.new()
+		sm.shader = trail_shader
+		line.material = sm
+	else:
+		line.visible = false
 	trail_layer.add_child(line)
 	return {"root": root, "halo": halo, "actor": actor, "lbl": lbl, "line": line, "mat": sm,
 		"local_ring": local_ring, "ability_ring": ability_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
@@ -754,11 +776,11 @@ func _update_views(dt: float) -> void:
 			pv.hat = new_hat
 		var lbl: Label = pv.lbl
 		root.visible = vis
-		local_ring.visible = (id == local_id and not shadow)
+		local_ring.visible = (id == local_id and not shadow and not _is_potato())
 		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
 		var ability_ring: Line2D = pv.ability_ring
 		var ability_on: bool = float(pd.get("ab", 0.0)) > 0.0 and not shadow and (int(pd.k) == 0 or int(pd.k) == 1)
-		ability_ring.visible = ability_on
+		ability_ring.visible = ability_on and not _is_potato()
 		if ability_on:
 			var ring_color := Color(0.35, 1.7, 2.2) if int(pd.k) == 0 else Color(2.2, 1.6, 0.5)
 			ring_color.a = 0.55 + 0.35 * sin(t * 16.0)
@@ -770,8 +792,10 @@ func _update_views(dt: float) -> void:
 		actor.rotation = pv.rot
 		pv.kick = maxf(0.0, pv.kick - dt * 7.0)
 		var pulse := 1.0 + 0.07 * sin(t * 11.0 + id)
-		actor.scale = Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
-		halo.scale = Vector2.ONE * (0.55 + 0.75 * lf)
+		actor.scale = Vector2.ONE * (0.92 + 0.18 * lf) if _is_potato() else Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
+		halo.visible = not _is_potato()
+		if not _is_potato():
+			halo.scale = Vector2.ONE * (0.55 + 0.75 * lf)
 		if shadow:
 			var ghost_alpha := 0.66 + 0.10 * sin(t * 3.6 + float(id))
 			actor.modulate = Color(0.20, 0.11, 0.38, ghost_alpha)
@@ -872,6 +896,8 @@ func _update_eaters(dt: float) -> void:
 
 
 func _update_fx(dt: float) -> void:
+	if _is_potato() or not is_instance_valid(fx_mat):
+		return
 	var fx: Dictionary = view.get("fx", {})
 	invert_cur = move_toward(invert_cur, 1.0 if fx.has("invert") else 0.0, dt * 5.0)
 	blind_cur = move_toward(blind_cur, 1.0 if fx.has("blind") else 0.0, dt * 4.0)
@@ -1040,8 +1066,9 @@ func _handle_events(evs: Array) -> void:
 				shake = maxf(shake, 26.0)
 				timer_glitch_until = Time.get_ticks_msec() + 1800
 				_show_banner(CHAOS_RU.get(e.n, str(e.n)).to_upper())
-				var tw := create_tween()
-				tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
+				if is_instance_valid(fx_mat):
+					var tw := create_tween()
+					tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
 			"ability":
 				Sfx.play("dash", 1.0, -2.0)
 				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
@@ -1052,6 +1079,8 @@ func _handle_events(evs: Array) -> void:
 
 
 func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, important := false) -> void:
+	if _is_potato():
+		return
 	# Keep event bursts lightweight: many overlapping CPU particle systems were a major frame-time spike.
 	# Routine bursts (shots, hits) leave headroom so deaths, bombs and abilities are never starved.
 	var active_bursts := 0
@@ -1087,6 +1116,8 @@ func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, imp
 
 
 func flash(pos: Vector2, radius: float, col: Color, dur := 0.4) -> void:
+	if _is_potato():
+		return
 	var s := Sprite2D.new()
 	s.texture = halo_tex
 	s.material = add_mat
