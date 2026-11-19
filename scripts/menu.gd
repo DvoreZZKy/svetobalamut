@@ -132,19 +132,35 @@ func _ready() -> void:
 	quality_buttons.add_theme_constant_override("separation", 6)
 	var quality_group := ButtonGroup.new()
 	var quality_names := ["ВЫСОКАЯ", "СРЕДНЯЯ", "НИЗКАЯ", "КАРТОШКА"]
+	var quality_texts: Array[Label] = []
 	for i in G.GRAPHICS_PRESETS.size():
 		var preset_index := i
 		var quality_btn := FacetButton.new()
-		quality_btn.text = quality_names[i]
 		quality_btn.toggle_mode = true
 		quality_btn.button_group = quality_group
 		quality_btn.button_pressed = i == G.graphics_quality
 		quality_btn.custom_minimum_size = Vector2(0, 46)
 		quality_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		quality_btn.add_theme_font_size_override("font_size", 12)
+		quality_btn.text = ""
+		var quality_text := Label.new()
+		quality_text.text = quality_names[i]
+		quality_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		quality_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		quality_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		quality_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		quality_text.z_index = 3
+		quality_text.add_theme_font_size_override("font_size", 12)
+		quality_text.add_theme_font_override("font", ThemeDB.fallback_font)
+		quality_text.add_theme_color_override("font_color", Color("#ffffff") if i == G.graphics_quality else Color("#b9eefa"))
+		quality_text.add_theme_color_override("font_outline_color", Color("#07111f"))
+		quality_text.add_theme_constant_override("outline_size", 2)
+		quality_btn.add_child(quality_text)
+		quality_texts.append(quality_text)
 		quality_btn.pressed.connect(func():
 			G.graphics_quality = preset_index
 			quality_value.text = G.GRAPHICS_PRESETS[preset_index].to_upper()
+			for j in quality_texts.size():
+				quality_texts[j].add_theme_color_override("font_color", Color("#ffffff") if j == preset_index else Color("#b9eefa"))
 			G.apply_graphics()
 			_apply_menu_quality()
 			G.save_settings())
