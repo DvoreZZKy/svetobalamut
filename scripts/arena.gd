@@ -37,9 +37,7 @@ var trail_grad: Gradient
 var fade_grad: Gradient
 var trail_shader: Shader
 var fx_mat: ShaderMaterial
-const PixelArt = preload("res://scripts/pixel_art.gd")
-var player_tex: Array = []
-var eater_tex: Array = []
+const VectorActor = preload("res://scripts/vector_actor.gd")
 var invert_cur := 0.0
 var blind_cur := 0.0
 
@@ -58,7 +56,9 @@ var objective_lbl: Label
 func _ready() -> void:
 	is_client = G.mode == "client"
 	local_id = multiplayer.get_unique_id() if G.mode != "single" else 1
-	add_child(G.make_env())
+	var arena_env := G.make_env()
+	arena_env.environment.glow_enabled = false
+	add_child(arena_env)
 	cam = Camera2D.new()
 	cam.position = ARENA / 2.0
 	cam.zoom = Vector2(0.78, 0.78)
@@ -120,10 +120,7 @@ func _build_resources() -> void:
 	fade_grad.set_color(0, Color(1, 1, 1, 1))
 	fade_grad.set_color(1, Color(1, 1, 1, 0))
 	trail_shader = load("res://shaders/trail.gdshader")
-	for i in 4:
-		player_tex.append(PixelArt.make_player(i))
-	for i in 2:
-		eater_tex.append(load("res://assets/sprites/eater_%d.png" % i))
+	
 
 
 func _build_fx_overlay() -> void:
@@ -191,6 +188,8 @@ func _build_hud() -> void:
 	cl.add_child(score_lbl)
 	help_lbl = _label("", 15, Vector2(850, 12), Vector2(420, 92), cl)
 	help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	help_lbl.add_theme_font_size_override("font_size", 13)
 	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.75)
 	light_bar = _bar(Vector2(440, 672), Vector2(400, 18), Color(1.6, 1.4, 0.5), cl)
 	dash_bar = _bar(Vector2(440, 696), Vector2(400, 7), Color(0.4, 1.6, 2.0), cl)
@@ -208,7 +207,7 @@ func _build_hud() -> void:
 # -------------------------------------------------------------- рисование --
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.012, 0.012, 0.035))
-	var gc := Color(0.25, 0.6, 1.8, 0.22)
+	var gc := Color(0.12, 0.28, 0.48, 0.14)
 	for x in range(0, 1601, 100):
 		draw_line(Vector2(x, 0), Vector2(x, ARENA.y), gc, 1.5)
 	for y in range(0, 901, 100):
@@ -216,9 +215,9 @@ func _draw() -> void:
 	for z in Sim.ZONES:
 		var c := Vector2(z.x, z.y)
 		draw_circle(c, z.z, Color(0, 0, 0, 0.6))
-		draw_arc(c, z.z, 0.0, TAU, 72, Color(0.7, 0.3, 2.2, 0.9), 3.0, true)
-		draw_arc(c, z.z * 0.6, 0.0, TAU, 48, Color(0.5, 0.2, 1.6, 0.35), 2.0, true)
-	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(1.8, 0.4, 2.6), false, 6.0)
+		draw_arc(c, z.z, 0.0, TAU, 72, Color(0.28, 0.16, 0.52, 0.42), 3.0, true)
+		draw_arc(c, z.z * 0.6, 0.0, TAU, 48, Color(0.22, 0.12, 0.42, 0.22), 2.0, true)
+	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.48, 0.2, 0.72), false, 3.0)
 
 
 func _draw_bullets() -> void:
@@ -323,10 +322,9 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	halo.texture = halo_tex
 	halo.material = add_mat
 	root.add_child(halo)
-	var spr := Sprite2D.new()
-	spr.texture = PixelArt.make_player(int(pd.k))
-	spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	root.add_child(spr)
+	var actor := VectorActor.new()
+	actor.setup(int(pd.k), G.col(int(pd.c)), int(pd.get("outfit", 0)), int(pd.get("hat", 0)))
+	root.add_child(actor)
 	var outfit := Polygon2D.new()
 	outfit.z_index = 2
 	var outfit_shapes := [
@@ -336,23 +334,8 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 		PackedVector2Array([Vector2(-13, -7), Vector2(13, -7), Vector2(7, 13), Vector2(-7, 13)]),
 		PackedVector2Array([Vector2(-11, -5), Vector2(11, -5), Vector2(17, 17), Vector2(-17, 17)])
 	]
-	outfit.polygon = outfit_shapes[int(pd.get("outfit", 0)) % outfit_shapes.size()]
-	outfit.scale = Vector2(1.2, 1.2)
-	outfit.color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][int(pd.get("outfit", 0)) % 5]
-	root.add_child(outfit)
-	var hat := Polygon2D.new()
-	hat.z_index = 3
-	var hat_shapes := [
-		PackedVector2Array(),
-		PackedVector2Array([Vector2(-15, -22), Vector2(-10, -37), Vector2(-3, -27), Vector2(2, -42), Vector2(8, -27), Vector2(15, -22)]),
-		PackedVector2Array([Vector2(-18, -24), Vector2(18, -24), Vector2(13, -34), Vector2(-12, -34)]),
-		PackedVector2Array([Vector2(-16, -25), Vector2(-26, -39), Vector2(-5, -30), Vector2(0, -24), Vector2(8, -30), Vector2(25, -39), Vector2(16, -24)]),
-		PackedVector2Array([Vector2(-17, -28), Vector2(-11, -42), Vector2(0, -47), Vector2(11, -42), Vector2(17, -28), Vector2(11, -33), Vector2(-11, -33)])
-	]
-	hat.polygon = hat_shapes[int(pd.get("hat", 0)) % hat_shapes.size()]
-	hat.color = Color("#ffe27a")
-	hat.scale = Vector2(1.15, 1.15)
-	root.add_child(hat)
+	
+	
 	var local_ring := Line2D.new()
 	local_ring.width = 5.0
 	local_ring.default_color = Color(0.25, 0.95, 1.0, 0.95)
@@ -378,8 +361,8 @@ func _make_pv(pd: Dictionary) -> Dictionary:
 	sm.shader = trail_shader
 	line.material = sm
 	trail_layer.add_child(line)
-	return {"root": root, "halo": halo, "spr": spr, "lbl": lbl, "line": line, "mat": sm,
-		"outfit": outfit, "hat": hat, "local_ring": local_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
+	return {"root": root, "halo": halo, "actor": actor, "lbl": lbl, "line": line, "mat": sm,
+		"local_ring": local_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle(),
 		"kick": 0.0, "kind": pd.k, "ci": pd.c}
 
 
@@ -418,13 +401,10 @@ func _update_views(dt: float) -> void:
 		var lf: float = pd.l / 100.0
 		var col: Color = G.col(pd.c)
 		var root: Node2D = pv.root
-		var spr: Sprite2D = pv.spr
+		var actor: Node2D = pv.actor
 		var halo: Sprite2D = pv.halo
-		var outfit: Polygon2D = pv.outfit
-		var hat: Polygon2D = pv.hat
 		var local_ring: Line2D = pv.local_ring
-		outfit.visible = int(pd.get("outfit", 0)) > 0
-		hat.visible = int(pd.get("hat", 0)) > 0
+		actor.setup(int(pd.k), G.col(int(pd.c)), int(pd.get("outfit", 0)), int(pd.get("hat", 0)))
 		var lbl: Label = pv.lbl
 		root.visible = vis
 		local_ring.visible = (id == local_id and not shadow)
@@ -432,18 +412,17 @@ func _update_views(dt: float) -> void:
 		line.visible = vis
 		root.position = pv.pos
 		if pv.kind != pd.k:
-			spr.texture = player_tex[pd.k % 4]
 			pv.kind = pd.k
 		pv.rot = lerp_angle(pv.rot, (pd.a as Vector2).angle(), minf(1.0, 30.0 * dt))
-		spr.rotation = pv.rot
+		actor.rotation = pv.rot
 		pv.kick = maxf(0.0, pv.kick - dt * 7.0)
 		var pulse := 1.0 + 0.07 * sin(t * 11.0 + id)
-		spr.scale = Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
+		actor.scale = Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
 		halo.scale = Vector2.ONE * (0.9 + 1.8 * lf)
 		if shadow:
-			spr.modulate = Color(0.6, 0.25, 1.3, 0.7)
+			actor.modulate = Color(0.65, 0.45, 0.95, 0.9)
 			halo.modulate = Color(0.5, 0.15, 1.2, 0.5)
-			spr.scale = Vector2.ONE * 0.5
+			actor.scale = Vector2.ONE * 0.5
 		else:
 			var c := G.hdr(col, 0.9 + 1.5 * lf)
 			if pd.h > 0.0:
@@ -455,7 +434,7 @@ func _update_views(dt: float) -> void:
 			if pd.dr > 0.0:
 				c = Color(2.4, 0.4, 2.8) if int(t * 14.0) % 2 == 0 else Color(0.6, 2.0, 2.4)
 				root.position += Vector2(randf_range(-6, 6), randf_range(-6, 6))
-			spr.modulate = c
+			actor.modulate = c
 			var hc := G.hdr(col, 0.3 + 1.3 * lf)
 			hc.a = 0.25 + 0.65 * lf
 			halo.modulate = hc
@@ -499,9 +478,13 @@ func _update_eaters(dt: float) -> void:
 			halo.texture = halo_tex
 			halo.material = add_mat
 			root.add_child(halo)
-			var spr := Sprite2D.new()
-			spr.texture = eater_tex[ed[3]]
-			spr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			var spr := Polygon2D.new()
+			if int(ed[3]) == 0:
+				spr.polygon = PackedVector2Array([Vector2(-24,-15),Vector2(-10,-27),Vector2(16,-24),Vector2(29,-7),Vector2(20,19),Vector2(-8,25),Vector2(-27,8)])
+				spr.color = Color("#b84b72")
+			else:
+				spr.polygon = PackedVector2Array([Vector2(0,-29),Vector2(22,-5),Vector2(17,20),Vector2(0,29),Vector2(-17,20),Vector2(-22,-5)])
+				spr.color = Color("#8051b8")
 			root.add_child(spr)
 			ent_layer.add_child(root)
 			ev = {"root": root, "spr": spr, "halo": halo, "pos": ed[1], "rot": 0.0}
@@ -518,7 +501,7 @@ func _update_eaters(dt: float) -> void:
 		spr.rotation = ev.rot
 		var base := 0.62 if ed[3] == 0 else 0.42
 		spr.scale = Vector2.ONE * base * (1.0 + 0.09 * sin(t * 9.0 + id))
-		var c := Color(2.6, 0.2, 0.5) if ed[3] == 0 else Color(1.2, 0.3, 2.6)
+		var c := Color(1.15, 0.35, 0.62) if ed[3] == 0 else Color(0.62, 0.38, 1.1)
 		if ed[5] > 0.0:
 			c = Color(3, 3, 3)
 		spr.modulate = c
