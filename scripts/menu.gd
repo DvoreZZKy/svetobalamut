@@ -8,6 +8,8 @@ const VectorLogo = preload("res://scripts/vector_logo.gd")
 var t := 0.0
 var bg_shards: Array[Polygon2D] = []
 var bg_orbs: Array[Node2D] = []
+var bg_dots: Array[Polygon2D] = []
+var bg_dot_velocities: Array[Vector2] = []
 var title: Control
 var boxes := {}
 var status: Label
@@ -29,6 +31,7 @@ var profile_hat_btn: Button
 
 
 func _ready() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(G.make_env())
 	var bg := ColorRect.new()
@@ -203,6 +206,15 @@ func _process(dt: float) -> void:
 		var wave := 1.0 + 0.10 * sin(t * 0.8 + float(i) * 1.7)
 		orb.scale = Vector2.ONE * wave
 		orb.position.y += sin(t * 0.25 + float(i)) * dt * 3.0
+	for i in bg_dots.size():
+		var dot := bg_dots[i]
+		dot.position += bg_dot_velocities[i] * dt
+		dot.rotation += dt * (0.8 if i % 2 == 0 else -0.65)
+		if dot.position.x < -30.0 or dot.position.x > 1310.0:
+			bg_dot_velocities[i].x *= -1.0
+		if dot.position.y < -30.0 or dot.position.y > 750.0:
+			bg_dot_velocities[i].y *= -1.0
+		dot.modulate.a = 0.35 + 0.3 * (0.5 + 0.5 * sin(t * 2.0 + float(i)))
 	title.modulate = G.hdr(Color.from_hsv(fmod(t * 0.08 + 0.5, 1.0), 0.6, 1.0), 1.45 + 0.22 * sin(t * 2.2))
 
 
@@ -244,6 +256,20 @@ func _build_particles() -> void:
 		orb.add_child(ring)
 		add_child(orb)
 		bg_orbs.append(orb)
+	for i in 34:
+		var dot := Polygon2D.new()
+		var r := randf_range(2.0, 5.0)
+		dot.polygon = PackedVector2Array([
+			Vector2(0, -r * 1.8), Vector2(r, -r * 0.35),
+			Vector2(r * 0.65, r), Vector2(-r * 0.65, r),
+			Vector2(-r, -r * 0.35)
+		])
+		dot.position = Vector2(randf_range(0.0, 1280.0), randf_range(0.0, 720.0))
+		dot.color = [Color("#43dff4"), Color("#a78bfa"), Color("#7cf7d4")][i % 3]
+		dot.modulate.a = randf_range(0.25, 0.7)
+		add_child(dot)
+		bg_dots.append(dot)
+		bg_dot_velocities.append(Vector2.from_angle(randf_range(0.0, TAU)) * randf_range(18.0, 68.0))
 
 func _box(key: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
