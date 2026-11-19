@@ -107,8 +107,7 @@ func _ready() -> void:
 		Net.peer_left.connect(_on_peer_left)
 		view = sim.snapshot()
 	if G.tutorial_active:
-		var tutorial_controller := Node.new()
-		tutorial_controller.set_script(ArenaTutorial)
+		var tutorial_controller := ArenaTutorial.new()
 		add_child(tutorial_controller)
 	Sfx.play_music()
 
