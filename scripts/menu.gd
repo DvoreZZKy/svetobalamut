@@ -154,13 +154,13 @@ func _ready() -> void:
 	lobby.add_child(lobby_actions)
 	_btn("ПРОЙТИ ТУТОРИАЛ", lobby_actions, _open_lobby_tutorial)
 	start_btn = _btn("СТАРТ", lobby_actions, func(): Net.start_match())
-	_btn("ВЫЙТИ", lobby_actions, func(): Net.leave(); _show("main"))
+	_btn("ВЫЙТИ", lobby_actions, func(): G.save_settings(); Net.leave(); _show("main"))
 
 	Net.lobby_changed.connect(_on_lobby_changed)
 	Net.join_failed.connect(func(): status.text = "Не удалось подключиться"; _show("join"))
 	Net.disconnected.connect(func(): _show("main"))
 	Net.match_started.connect(func(): get_tree().change_scene_to_file("res://scenes/arena.tscn"))
-	_show("main")
+	_show("lobby" if Net.online else "main")
 	Sfx.play_music()
 
 
