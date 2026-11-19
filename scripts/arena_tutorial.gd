@@ -19,7 +19,8 @@ const CONTROL_STEPS := [
 	{"title":"ПЕРЕДВИЖЕНИЕ","body":"Используй WASD, чтобы двигаться по арене. Попробуй переместиться — обучение продолжится автоматически.","kind":"move"},
 	{"title":"РЫВОК","body":"Рывок резко ускоряет персонажа и на короткое время помогает избежать попаданий. Нажми ПРОБЕЛ.","kind":"dash"},
 	{"title":"ОСОБАЯ СПОСОБНОСТЬ","body":"У каждого класса своя способность. Нажми Q, чтобы применить способность своего персонажа.","kind":"ability"},
-	{"title":"АТАКА","body":"Наведи указатель на соперника и нажми левую кнопку мыши. Попробуй выстрелить.","kind":"fire"}
+	{"title":"АТАКА","body":"Наведи указатель на соперника и нажми левую кнопку мыши. Попробуй выстрелить.","kind":"fire"},
+	{"title":"ВСЕЛЕНИЕ","body":"Подойди к живому игроку и нажми ПКМ или E. У тебя будет 2 секунды, чтобы управлять им и вернуться в бой.","kind":"possess"}
 ]
 
 var arena: Node2D
@@ -44,6 +45,7 @@ var focus_rect := Rect2()
 var pulse := 0.0
 var finished := false
 var completion_return_to_lobby := false
+var shadow_explanation := false
 
 
 func _ready() -> void:
@@ -63,6 +65,8 @@ func _process(_dt: float) -> void:
 				_show_ui_step(ui_index)
 			elif transition_target == "control":
 				_show_control_step(control_index)
+			elif transition_target == "shadow":
+				_show_shadow_explanation()
 		return
 	if stage == "ui_fade" or stage == "control_fade":
 		var fade_duration := 650.0 if stage == "ui_fade" else 420.0
@@ -84,7 +88,10 @@ func _process(_dt: float) -> void:
 	elif stage == "control":
 		_update_pointer()
 		if _current_control_done():
-			_begin_transition("control", control_index + 1)
+			if str(CONTROL_STEPS[control_index].kind) == "fire":
+				_begin_transition("shadow", 0)
+			else:
+				_begin_transition("control", control_index + 1)
 	elif stage == "completion":
 		_update_completion_pulse()
 
@@ -142,11 +149,11 @@ func _build_overlay() -> void:
 	skip_button = FacetButton.new()
 	skip_button.text = "ПРОПУСТИТЬ ОБУЧЕНИЕ"
 	skip_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	skip_button.offset_left = -245
-	skip_button.offset_top = -54
+	skip_button.offset_left = -355
+	skip_button.offset_top = -58
 	skip_button.offset_right = -16
 	skip_button.offset_bottom = -14
-	skip_button.add_theme_font_size_override("font_size", 13)
+	skip_button.add_theme_font_size_override("font_size", 12)
 	skip_button.pressed.connect(_show_completion)
 	layer.add_child(skip_button)
 	_hide_shade()
@@ -274,6 +281,7 @@ func _show_control_step(index: int) -> void:
 		"dash": _set_keys(["ПРОБЕЛ"])
 		"ability": _set_keys(["Q"])
 		"fire": _set_keys(["ЛКМ"])
+		"possess": _set_keys(["ПКМ", "E"])
 	next_button.visible = false
 	panel.visible = true
 	panel.modulate.a = 0.0
@@ -311,7 +319,32 @@ func _current_control_done() -> bool:
 		"dash": return Input.is_action_just_pressed("dash")
 		"ability": return Input.is_action_just_pressed("ability")
 		"fire": return Input.is_action_just_pressed("fire")
+		"possess":
+			var me := arena.sim.players.get(arena.local_id, {})
+			return not me.is_empty() and int(me.get("poss_target", 0)) != 0
 	return false
+
+
+
+func _show_shadow_explanation() -> void:
+	var me: Dictionary = arena.sim.players.get(arena.local_id, {})
+	if me.is_empty():
+		_show_completion()
+		return
+	arena.sim._make_shadow(me, 0, true)
+	arena.view = arena.sim.snapshot()
+	stage = "ui"
+	shadow_explanation = true
+	Engine.time_scale = 0.0
+	pointer_target = "help"
+	title_label.text = "ТЫ СТАЛ ТЕНЬЮ"
+	body_label.text = "Когда запас света заканчивается, ты превращаешься в Тень. Ты быстрее Светляков, можешь проходить сквозь арену и вселяться в живых игроков. Ищи ближайшего соперника — вернись в бой!"
+	_set_keys([])
+	next_button.visible = true
+	next_button.text = "ПОПРОБОВАТЬ ВСЕЛЕНИЕ"
+	panel.visible = true
+	panel.modulate.a = 1.0
+	_update_focus()
 
 
 func _begin_transition(next_stage: String, next_index: int) -> void:
@@ -329,6 +362,10 @@ func _begin_transition(next_stage: String, next_index: int) -> void:
 
 func _on_next() -> void:
 	if stage != "ui":
+		return
+	if shadow_explanation:
+		shadow_explanation = false
+		_begin_transition("control", control_index + 1)
 		return
 	ui_index += 1
 	# UI explanations are a continuous sequence: no gameplay-speed gap between them.
@@ -475,12 +512,12 @@ func _complete_and_exit() -> void:
 	var back_to_lobby := G.tutorial_return_to_lobby
 	Engine.time_scale = NORMAL_SPEED
 	G.tutorial_active = false
+	G.tutorial_return_to_lobby = false
 	if back_to_lobby:
 		G.mode = G.tutorial_previous_mode
-		G.tutorial_return_to_lobby = false
-		get_tree().change_scene_to_file("res://scenes/menu.tscn")
 	else:
-		G.start_single_game()
+		G.mode = "single"
+	get_tree().change_scene_to_file("res://scenes/menu.tscn")
 
 
 func _restart_tutorial() -> void:
