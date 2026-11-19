@@ -28,6 +28,8 @@ var profile_color_btn: Button
 var profile_kind_btn: Button
 var profile_outfit_btn: Button
 var profile_hat_btn: Button
+var lobby_frame_data: Array[Dictionary] = []
+var lobby_root: VBoxContainer
 
 
 func _ready() -> void:
@@ -54,7 +56,7 @@ func _ready() -> void:
 	_btn("Выход", main, func(): get_tree().quit())
 
 	var join := _box("join")
-	_title(join, "IP хоста")
+	_title(join, "АДРЕС КОМНАТЫ (IP:ПОРТ)")
 	ip_edit = LineEdit.new()
 	ip_edit.text = "127.0.0.1"
 	ip_edit.custom_minimum_size = Vector2(380, 50)
@@ -124,12 +126,16 @@ func _ready() -> void:
 	_btn("Назад", st, func(): G.save_settings(); _show("main"))
 
 	var lobby := _box("lobby")
+	lobby_root = lobby
 	_title(lobby, "КОМНАТА")
-	_add_facet_panel(lobby, Vector2(0, 82), Vector2(550, 475), Color("#10283a"), Color("#287e91"))
-	_add_facet_panel(lobby, Vector2(572, 82), Vector2(608, 475), Color("#1b1b3b"), Color("#51458c"))
 	lobby_info = Label.new()
+	lobby_info.custom_minimum_size = Vector2(0, 58)
+	lobby_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lobby_info.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lobby_info.add_theme_font_size_override("font_size", 17)
+	lobby_info.add_theme_color_override("font_color", Color("#a9efff"))
 	lobby_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lobby.add_child(lobby_info)
 	var lobby_columns := HBoxContainer.new()
 	lobby_columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	lobby_columns.add_theme_constant_override("separation", 22)
@@ -139,6 +145,7 @@ func _ready() -> void:
 	players_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	players_panel.size_flags_stretch_ratio = 0.48
 	lobby_columns.add_child(players_panel)
+	_add_facet_panel(lobby, players_panel, Color("#10283a"), Color("#287e91"))
 	var players_heading := _title(players_panel, "УЧАСТНИКИ")
 	players_heading.custom_minimum_size.y = 42
 	players_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -157,6 +164,7 @@ func _ready() -> void:
 	editor_panel.size_flags_stretch_ratio = 0.52
 	editor_panel.add_theme_constant_override("separation", 4)
 	lobby_columns.add_child(editor_panel)
+	_add_facet_panel(lobby, editor_panel, Color("#1b1b3b"), Color("#51458c"))
 	var editor_heading := _title(editor_panel, "ВАШ ПЕРСОНАЖ")
 	editor_heading.custom_minimum_size.y = 42
 	editor_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -193,6 +201,7 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	t += dt
+	_update_lobby_frames()
 	for i in bg_shards.size():
 		var shard := bg_shards[i]
 		shard.rotation += dt * (0.16 if i % 2 == 0 else -0.12)
@@ -313,25 +322,42 @@ func _refresh_profile() -> void:
 	profile_info.text = "%s\n%s\n%s • %s" % [kinds[G.profile_kind], class_notes[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
 
 
-func _add_facet_panel(parent: Node, pos: Vector2, panel_size: Vector2, fill: Color, edge: Color) -> void:
+func _add_facet_panel(parent: Control, target: Control, fill: Color, edge: Color) -> void:
 	var shape := Polygon2D.new()
-	shape.position = pos
-	shape.z_index = 0
-	shape.polygon = PackedVector2Array([
-		Vector2(18, 0), Vector2(panel_size.x - 18, 0), Vector2(panel_size.x, 18),
-		Vector2(panel_size.x, panel_size.y - 18), Vector2(panel_size.x - 18, panel_size.y),
-		Vector2(18, panel_size.y), Vector2(0, panel_size.y - 18), Vector2(0, 18)
-	])
+	shape.z_index = -1
 	shape.color = fill
 	parent.add_child(shape)
 	var outline := Line2D.new()
-	outline.position = pos
-	outline.z_index = 0
+	outline.z_index = -1
 	outline.width = 2.0
 	outline.default_color = edge
 	outline.closed = true
-	outline.points = shape.polygon
 	parent.add_child(outline)
+	lobby_frame_data.append({"target": target, "shape": shape, "outline": outline})
+
+
+func _update_lobby_frames() -> void:
+	if not is_instance_valid(lobby_root) or not boxes.get("lobby", null).visible:
+		return
+	for frame in lobby_frame_data:
+		var target: Control = frame.target
+		if not is_instance_valid(target):
+			continue
+		var rect := target.get_global_rect().grow(7.0)
+		var pos := rect.position - lobby_root.global_position
+		var size := rect.size
+		var cut := minf(22.0, minf(size.x, size.y) * 0.12)
+		var points := PackedVector2Array([
+			Vector2(cut, 0), Vector2(size.x - cut, 0), Vector2(size.x, cut),
+			Vector2(size.x, size.y - cut), Vector2(size.x - cut, size.y),
+			Vector2(cut, size.y), Vector2(0, size.y - cut), Vector2(0, cut)
+		])
+		var shape: Polygon2D = frame.shape
+		shape.position = pos
+		shape.polygon = points
+		var outline: Line2D = frame.outline
+		outline.position = pos
+		outline.points = points
 
 
 func _make_player_portrait(parent: Node, kind: int, color: int, outfit: int, hat: int) -> SubViewportContainer:
@@ -491,11 +517,23 @@ func _on_lobby_changed() -> void:
 		role_label.add_theme_font_size_override("font_size", 13)
 		role_label.modulate = Color("#9bb4ce")
 		details.add_child(role_label)
+		if Net.is_host and int(id) != 1:
+			var kick_btn := FacetButton.new()
+			kick_btn.text = "КИК"
+			kick_btn.custom_minimum_size = Vector2(76, 38)
+			kick_btn.add_theme_font_size_override("font_size", 14)
+			var kicked_id := int(id)
+			kick_btn.pressed.connect(func(): Net.kick_peer(kicked_id))
+			row.add_child(kick_btn)
 	if Net.is_host:
 		var ips := G.local_ips()
-		lobby_info.text = "Адрес для друзей: %s : %d\nИгроков: %d / %d (до 6 добьём ботами)" % [
-			", ".join(ips) if not ips.is_empty() else "твой IP", Net.PORT, Net.names.size(), Net.MAX_PLAYERS]
+		var room_addresses: Array[String] = []
+		for ip in ips:
+			room_addresses.append(ip + ":" + str(Net.PORT))
+		lobby_info.text = "КОД КОМНАТЫ — ПЕРЕДАЙ ДРУЗЬЯМ\n%s\nИГРОКИ  %d / %d" % [
+			"   •   ".join(room_addresses) if not room_addresses.is_empty() else "IP этого компьютера : " + str(Net.PORT),
+			Net.names.size(), Net.MAX_PLAYERS]
 		start_btn.visible = true
 	else:
-		lobby_info.text = "Ждём, пока хост нажмёт СТАРТ…"
+		lobby_info.text = "ОЖИДАНИЕ ХОСТА • ПОДКЛЮЧЕНИЕ ПО IP:ПОРТ"
 		start_btn.visible = false
