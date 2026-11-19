@@ -21,6 +21,8 @@ var profiles := {}         # peer_id -> внешний вид
 var inputs := {}           # на хосте: peer_id -> dict ввода
 var latest_snap := {}
 var snap_seq := 0
+var room_mode := "chaos"
+var tribe_inputs := {}
 
 
 func _ready() -> void:
@@ -32,6 +34,8 @@ func _ready() -> void:
 
 
 func host() -> int:
+	room_mode = "chaos"
+	tribe_inputs.clear()
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(PORT, MAX_PLAYERS - 1)
 	if err != OK:
@@ -94,6 +98,8 @@ func room_code_for_ip(ip: String) -> String:
 
 
 func leave() -> void:
+	tribe_inputs.clear()
+	room_mode = "chaos"
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
@@ -171,6 +177,41 @@ func _names(d: Dictionary, p: Dictionary) -> void:
 
 
 ## Хост: собрать конфиг (люди + боты до MIN_FILL) и запустить у всех.
+func set_room_mode(value: String) -> void:
+	if not is_host:
+		return
+	room_mode = "tribe" if value == "tribe" else "chaos"
+	_room_mode.rpc(room_mode)
+
+
+@rpc("authority", "call_local", "reliable")
+func _room_mode(value: String) -> void:
+	room_mode = "tribe" if value == "tribe" else "chaos"
+	lobby_changed.emit()
+
+
+func send_tribe_input(data: Dictionary) -> void:
+	if online and not is_host:
+		_tribe_input.rpc_id(1, data)
+
+
+@rpc("any_peer", "unreliable_ordered")
+func _tribe_input(data: Dictionary) -> void:
+	if is_host:
+		tribe_inputs[multiplayer.get_remote_sender_id()] = data
+
+
+func broadcast_tribe_snapshot(data: Dictionary) -> void:
+	if online and is_host:
+		_tribe_snapshot.rpc(data)
+
+
+@rpc("authority", "unreliable_ordered")
+func _tribe_snapshot(data: Dictionary) -> void:
+	latest_snap = data
+	snap_seq += 1
+
+
 func start_match() -> void:
 	if not is_host:
 		return
@@ -184,12 +225,14 @@ func start_match() -> void:
 	while cfg.size() < MIN_FILL:
 		cfg.append({"id": -(i + 1), "name": G.BOT_NAMES[i % G.BOT_NAMES.size()], "human": false})
 		i += 1
-	_start.rpc(cfg)
+	_start.rpc(cfg, room_mode)
 
 
 @rpc("authority", "call_local", "reliable")
-func _start(cfg: Array) -> void:
+func _start(cfg: Array, selected_mode: String) -> void:
 	G.cfg = cfg
+	G.game_mode = "tribe" if selected_mode == "tribe" else "chaos"
+	G.tutorial_active = false if G.game_mode == "tribe" else G.tutorial_active
 	match_started.emit()
 
 
