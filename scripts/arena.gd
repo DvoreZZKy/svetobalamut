@@ -1216,12 +1216,12 @@ func _update_hud(dt: float) -> void:
 		heal_rank.sort_custom(func(a, b): return float(a.get("hl", 0.0)) > float(b.get("hl", 0.0)))
 		kill_rank.sort_custom(func(a, b): return int(a.ki) > int(b.ki))
 		chaos_rank.sort_custom(func(a, b): return int(a.pt) > int(b.pt))
-		var report := "[center][color=#74edff][b]◈ ИТОГИ МАТЧА ◈[/b][/color]\n"
-		report += "[font_size=24][color=#ffe28a][b]ПОБЕДИТЕЛЬ: %s[/b][/color][/font_size][/center]\n\n" % wn
-		report += "[color=#ff9d75][b]ТОП ПО УРОНУ[/b][/color]\n%s\n\n" % _rank_line(damage_rank, "dm")
-		report += "[color=#7df0bb][b]ТОП ПО ХИЛУ[/b][/color]\n%s\n\n" % _rank_line(heal_rank, "hl")
-		report += "[color=#f4e08a][b]ТОП ПО УБИЙСТВАМ[/b][/color]\n%s\n\n" % _rank_line(kill_rank, "ki")
-		report += "[color=#c3a0ff][b]ТОП ПО ХАОСУ[/b][/color]\n%s[/center]" % _rank_line(chaos_rank, "pt")
+		var report := "◈ ИТОГИ МАТЧА ◈\n\n"
+		report += "ПОБЕДИТЕЛЬ: %s\n\n" % wn
+		report += "ТОП ПО УРОНУ\n%s\n\n" % _rank_line(damage_rank, "dm")
+		report += "ТОП ПО ХИЛУ\n%s\n\n" % _rank_line(heal_rank, "hl")
+		report += "ТОП ПО УБИЙСТВАМ\n%s\n\n" % _rank_line(kill_rank, "ki")
+		report += "ТОП ПО ХАОСУ\n%s" % _rank_line(chaos_rank, "pt")
 		over_lbl.text = report
 		over_lbl.modulate = Color(1.1, 1.35, 1.65)
 		_layout_game_over()
