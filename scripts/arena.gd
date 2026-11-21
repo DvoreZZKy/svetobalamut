@@ -308,8 +308,8 @@ func _build_hud() -> void:
 	timer_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	timer_lbl.anchor_left = 1.0
 	timer_lbl.anchor_right = 1.0
-	timer_lbl.offset_left = -358
-	timer_lbl.offset_right = -28
+	timer_lbl.offset_left = -383
+	timer_lbl.offset_right = -53
 	timer_lbl.offset_top = 12
 	timer_lbl.offset_bottom = 270
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -331,17 +331,17 @@ func _build_hud() -> void:
 	banner.modulate.a = 0.0
 	score_lbl = RichTextLabel.new()
 	score_lbl.bbcode_enabled = true
-	score_lbl.fit_content = true
+	score_lbl.fit_content = false
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(24, 10)
-	score_lbl.size = Vector2(330, 230)
+	score_lbl.position = Vector2(42, 10)
+	score_lbl.size = Vector2(390, 214)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	score_lbl.add_theme_font_size_override("normal_font_size", 10)
 	score_lbl.add_theme_font_override("normal_font", _bold_hud_font())
 	score_lbl.add_theme_font_override("bold_font", _bold_hud_font())
-	score_lbl.add_theme_constant_override("table_h_separation", 5)
-	score_lbl.add_theme_constant_override("table_v_separation", 2)
+	score_lbl.add_theme_constant_override("table_h_separation", 8)
+	score_lbl.add_theme_constant_override("table_v_separation", 1)
 	score_lbl.add_theme_color_override("default_color", Color("#eaf6ff"))
 	var board_style := StyleBoxFlat.new()
 	board_style.bg_color = Color("#071321", 0.88)
@@ -487,8 +487,17 @@ func _build_hud() -> void:
 	over_outline.closed = true
 	over_outline.visible = false
 	cl.add_child(over_outline)
-	over_lbl = _label("", 38, Vector2.ZERO, Vector2(720, 150), cl, true)
-	over_lbl.add_theme_color_override("font_color", Color("#f0fbff"))
+	over_lbl = RichTextLabel.new()
+	over_lbl.bbcode_enabled = true
+	over_lbl.fit_content = false
+	over_lbl.scroll_active = false
+	over_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	over_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	over_lbl.add_theme_font_override("normal_font", _bold_hud_font())
+	over_lbl.add_theme_font_override("bold_font", _bold_hud_font())
+	over_lbl.add_theme_font_size_override("normal_font_size", 20)
+	over_lbl.add_theme_color_override("default_color", Color("#f0fbff"))
+	cl.add_child(over_lbl)
 	over_lbl.visible = false
 	over_restart_btn = FacetButton.new()
 	over_restart_btn.text = "РЕВАНШ"
@@ -1185,7 +1194,11 @@ func _update_hud(dt: float) -> void:
 		var pd: Dictionary = rows[rank_i]
 		var hex: String = G.col(pd.c).to_html(false)
 		var state_text := "ТЕНЬ" if pd.s else "%d HP" % int(pd.l)
-		var display_name: String = str(pd.n) + (" [бот]" if bool(pd.get("bot", false)) else "")
+		var display_name: String = str(pd.n)
+		if bool(pd.get("bot", false)):
+			display_name += " [Б]"
+		if display_name.length() > 13:
+			display_name = display_name.substr(0, 12) + "…"
 		var rank_color := "#ffd76a" if rank_i == 0 else ("#b9c9dc" if rank_i == 1 else "#8c9db2")
 		var chaos_color := "#ffbd58" if int(pd.pt) > 0 else "#91a4b9"
 		var current_marker := "▶ " if pd.i == local_id else ""
@@ -1244,14 +1257,19 @@ func _update_hud(dt: float) -> void:
 		heal_rank.sort_custom(func(a, b): return float(a.get("hl", 0.0)) > float(b.get("hl", 0.0)))
 		kill_rank.sort_custom(func(a, b): return int(a.ki) > int(b.ki))
 		chaos_rank.sort_custom(func(a, b): return int(a.pt) > int(b.pt))
-		var report := "◈ ИТОГИ МАТЧА ◈\n\n"
-		report += "ПОБЕДИТЕЛЬ: %s\n\n" % wn
-		report += "ТОП ПО УРОНУ\n%s\n\n" % _rank_line(damage_rank, "dm")
-		report += "ТОП ПО ХИЛУ\n%s\n\n" % _rank_line(heal_rank, "hl")
-		report += "ТОП ПО УБИЙСТВАМ\n%s\n\n" % _rank_line(kill_rank, "ki")
-		report += "ТОП ПО ХАОСУ\n%s" % _rank_line(chaos_rank, "pt")
+		var report := "[center][font_size=30][b][color=#68edff]◈  ИТОГИ МАТЧА  ◈[/color][/b][/font_size]\n"
+		report += "[font_size=24][color=#ffffff]ПОБЕДИТЕЛЬ[/color]  [color=#ffd76a]%s[/color][/font_size]\n" % wn
+		report += "[color=#52718e]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/color]\n"
+		report += "[font_size=18][b][color=#ff8d83]⚔  УРОН[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(damage_rank, "dm")
+		report += "[font_size=18][b][color=#69e9bd]✚  ВОССТАНОВЛЕНИЕ[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(heal_rank, "hl")
+		report += "[font_size=18][b][color=#c5a0ff]✦  УБИЙСТВА[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(kill_rank, "ki")
+		report += "[font_size=18][b][color=#ffd76a]☄  ХАОС[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size][/center]" % _rank_line(chaos_rank, "pt")
 		over_lbl.text = report
-		over_lbl.modulate = Color(1.1, 1.35, 1.65)
+		over_lbl.modulate = Color.WHITE
 		_layout_game_over()
 	else:
 		over_rect.visible = false
@@ -1293,9 +1311,9 @@ func _style_result_button(button: Button, accent: Color) -> void:
 
 func _layout_game_over() -> void:
 	var vp := get_viewport().get_visible_rect().size
-	var panel_size := Vector2(minf(900.0, vp.x - 48.0), 430.0)
+	var panel_size := Vector2(minf(1040.0, vp.x - 56.0), minf(700.0, vp.y - 48.0))
 	var pos := (vp - panel_size) * 0.5
-	var cut := 22.0
+	var cut := 28.0
 	var points := PackedVector2Array([
 		Vector2(pos.x + cut, pos.y), Vector2(pos.x + panel_size.x - cut, pos.y),
 		Vector2(pos.x + panel_size.x, pos.y + cut), Vector2(pos.x + panel_size.x, pos.y + panel_size.y - cut),
@@ -1304,12 +1322,13 @@ func _layout_game_over() -> void:
 	])
 	over_shape.polygon = points
 	over_outline.points = points
-	over_lbl.position = Vector2(pos.x + 28.0, pos.y + 34.0)
-	over_lbl.size = Vector2(panel_size.x - 56.0, 340.0)
-	over_lbl.add_theme_font_size_override("font_size", 14)
-	var buttons_y := pos.y + panel_size.y - 70.0
-	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 222.0, buttons_y)
-	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 12.0, buttons_y)
+	over_lbl.position = Vector2(pos.x + 52.0, pos.y + 38.0)
+	over_lbl.size = Vector2(panel_size.x - 104.0, panel_size.y - 150.0)
+	over_lbl.add_theme_font_size_override("normal_font_size", 20)
+	over_lbl.add_theme_constant_override("line_separation", 5)
+	var buttons_y := pos.y + panel_size.y - 82.0
+	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
+	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 22.0, buttons_y)
 
 
 func _restart_match() -> void:
