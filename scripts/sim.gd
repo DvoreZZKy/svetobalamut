@@ -101,6 +101,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
+		"wave_ammo": 4, "wave_reload_t": 0.0,
 		"pts": 0, "kills": 0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
@@ -218,14 +219,23 @@ func _update_player(p: Dictionary, dt: float) -> void:
 
 	var shot_cost: float = SHOT_COST
 	if p.kind == 1:
-		if want_fire:
+		# Four stored shockwaves; recharge one charge at a time.
+		if int(p.wave_ammo) < 4:
+			p.wave_reload_t = maxf(0.0, float(p.wave_reload_t) - dt)
+			if p.wave_reload_t <= 0.0:
+				p.wave_ammo = int(p.wave_ammo) + 1
+				p.wave_reload_t = 2.4 if int(p.wave_ammo) < 4 else 0.0
+		if want_fire and int(p.wave_ammo) > 0:
 			p.wave_charge = minf(CAPSULE_WAVE_CHARGE_TIME, float(p.wave_charge) + dt)
 			p.wave_released = false
 		elif p.fire_was_down:
 			p.wave_released = true
-		if p.wave_released and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
+		if p.wave_released and int(p.wave_ammo) > 0 and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
 			var charge_ratio := clampf(float(p.wave_charge) / CAPSULE_WAVE_CHARGE_TIME, 0.0, 1.0)
 			_capsule_shockwave(p, charge_ratio)
+			p.wave_ammo = int(p.wave_ammo) - 1
+			if float(p.wave_reload_t) <= 0.0:
+				p.wave_reload_t = 2.4
 			p.wave_charge = 0.0
 			p.wave_released = false
 		p.fire_was_down = want_fire
@@ -883,7 +893,7 @@ func snapshot() -> Dictionary:
 	for p in players.values():
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
-			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": clampf(float(p.wave_charge) / CAPSULE_WAVE_CHARGE_TIME, 0.0, 1.0),
+			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": clampf(float(p.wave_charge) / CAPSULE_WAVE_CHARGE_TIME, 0.0, 1.0), "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
 			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var bl: Array = []
