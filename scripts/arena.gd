@@ -999,15 +999,35 @@ func _update_eaters(dt: float) -> void:
 			halo.material = add_mat
 			root.add_child(halo)
 			var spr := Polygon2D.new()
+			var detail := Node2D.new()
 			if int(ed[3]) == 0:
-				spr.polygon = PackedVector2Array([Vector2(-24,-15),Vector2(-10,-27),Vector2(16,-24),Vector2(29,-7),Vector2(20,19),Vector2(-8,25),Vector2(-27,8)])
+				# Crawler: squat armored body, hooked legs and a jagged maw.
+				spr.polygon = PackedVector2Array([Vector2(-29,-12),Vector2(-21,-25),Vector2(-5,-29),Vector2(12,-24),Vector2(29,-9),Vector2(25,12),Vector2(10,25),Vector2(-12,24),Vector2(-29,9)])
 				spr.color = Color("#b84b72")
+				_add_eater_line(detail, PackedVector2Array([Vector2(-13,-8),Vector2(-31,-23),Vector2(-39,-20)]), Color("#71334f"), 5.0)
+				_add_eater_line(detail, PackedVector2Array([Vector2(12,-8),Vector2(30,-24),Vector2(39,-20)]), Color("#71334f"), 5.0)
+				_add_eater_line(detail, PackedVector2Array([Vector2(-15,9),Vector2(-32,23),Vector2(-39,20)]), Color("#71334f"), 5.0)
+				_add_eater_line(detail, PackedVector2Array([Vector2(14,9),Vector2(31,23),Vector2(39,20)]), Color("#71334f"), 5.0)
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-19,-16),Vector2(-12,-31),Vector2(-5,-17)]), Color("#e58aa0"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(2,-20),Vector2(13,-32),Vector2(17,-12)]), Color("#e58aa0"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(9,3),Vector2(25,-2),Vector2(20,14),Vector2(5,17)]), Color("#54283f"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(10,5),Vector2(15,12),Vector2(18,4)]), Color("#f6c5b4"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-7,-12),Vector2(1,-19),Vector2(8,-11),Vector2(2,-3)]), Color("#ffe27a"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(0,-11),Vector2(4,-16),Vector2(7,-10),Vector2(3,-5)]), Color("#321e38"))
 			else:
-				spr.polygon = PackedVector2Array([Vector2(0,-29),Vector2(22,-5),Vector2(17,20),Vector2(0,29),Vector2(-17,20),Vector2(-22,-5)])
+				# Flyer: angular manta-like body with torn wings, tail and glowing eyes.
+				spr.polygon = PackedVector2Array([Vector2(-4,-30),Vector2(12,-19),Vector2(34,-12),Vector2(21,2),Vector2(16,21),Vector2(0,14),Vector2(-16,21),Vector2(-21,2),Vector2(-34,-12),Vector2(-12,-19)])
 				spr.color = Color("#8051b8")
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-12,-17),Vector2(-35,-25),Vector2(-25,-5),Vector2(-38,5),Vector2(-15,2)]), Color("#59347f"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(12,-17),Vector2(35,-25),Vector2(25,-5),Vector2(38,5),Vector2(15,2)]), Color("#59347f"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-5,10),Vector2(0,18),Vector2(5,10),Vector2(0,34)]), Color("#b68be0"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-11,-10),Vector2(-3,-14),Vector2(-2,-5),Vector2(-9,-3)]), Color("#a9f7ff"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(3,-14),Vector2(11,-10),Vector2(9,-3),Vector2(2,-5)]), Color("#a9f7ff"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-8,3),Vector2(0,8),Vector2(8,3),Vector2(0,13)]), Color("#321e48"))
 			root.add_child(spr)
+			root.add_child(detail)
 			ent_layer.add_child(root)
-			ev = {"root": root, "spr": spr, "halo": halo, "pos": ed[1], "rot": 0.0}
+			ev = {"root": root, "spr": spr, "detail": detail, "halo": halo, "pos": ed[1], "rot": 0.0}
 			eviews[id] = ev
 		var vel: Vector2 = ed[2]
 		var tpos: Vector2 = ed[1] + vel * snap_age
@@ -1020,6 +1040,8 @@ func _update_eaters(dt: float) -> void:
 		if vel.length() > 5.0:
 			ev.rot = lerp_angle(ev.rot, vel.angle(), minf(1.0, 12.0 * dt))
 		spr.rotation = ev.rot
+		var detail: Node2D = ev.detail
+		detail.rotation = ev.rot
 		var base := 0.62 if ed[3] == 0 else 0.42
 		spr.scale = Vector2.ONE * base * (1.0 + 0.09 * sin(t * 9.0 + id))
 		var c := Color(1.15, 0.35, 0.62) if ed[3] == 0 else Color(0.62, 0.38, 1.1)
@@ -1034,6 +1056,23 @@ func _update_eaters(dt: float) -> void:
 		if not seen.has(id):
 			eviews[id].root.queue_free()
 			eviews.erase(id)
+
+
+func _add_eater_poly(parent: Node2D, points: PackedVector2Array, tint: Color) -> void:
+	var part := Polygon2D.new()
+	part.polygon = points
+	part.color = tint
+	parent.add_child(part)
+
+
+func _add_eater_line(parent: Node2D, points: PackedVector2Array, tint: Color, thickness: float) -> void:
+	var part := Line2D.new()
+	part.points = points
+	part.width = thickness
+	part.default_color = tint
+	part.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	part.end_cap_mode = Line2D.LINE_CAP_ROUND
+	parent.add_child(part)
 
 
 func _update_fx(dt: float) -> void:
