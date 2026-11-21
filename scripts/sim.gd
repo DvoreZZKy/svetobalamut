@@ -85,8 +85,9 @@ func reset(cfg: Array) -> void:
 		var pos := A / 2.0 + Vector2(cos(ang) * 620.0, sin(ang) * 330.0)
 		var ci: int = int(c.get("color", shuffled[i])) if c.human else shuffled[i] % G.PROFILE_COLORS.size()
 		var kind: int = int(c.get("kind", ci % 4)) if c.human else ci % 4
+		var bot_hat := rng.randi_range(1, 4) if not c.human else int(c.get("hat", 0))
 		players[c.id] = _new_player(c.id, c.name, c.human, kind, ci, pos,
-			int(c.get("hat", 0)), int(c.get("outfit", 0)))
+			bot_hat, int(c.get("outfit", 0)))
 
 
 func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: Vector2, hat: int = 0, outfit: int = 0) -> Dictionary:
@@ -103,7 +104,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"pts": 0, "kills": 0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
-		"bot": {"t": 0.0, "strafe": 1.0, "want": 350.0},
+		"bot": {"t": 0.0, "strafe": 1.0, "want": 350.0, "skill": 0.08},
 	}
 
 
@@ -742,6 +743,9 @@ func _bomb_tick(dt: float) -> void:
 func _bot_think(p: Dictionary, dt: float) -> void:
 	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false, "ability": false}
 	var b: Dictionary = p.bot
+	# Bots begin clumsy and improve gradually as the match goes on.
+	b.skill = minf(0.88, float(b.get("skill", 0.08)) + dt * 0.0032)
+	var skill: float = float(b.skill)
 	b.t -= dt
 	if p.shadow:
 		var target := _nearest(p, false)
@@ -750,14 +754,14 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 			var distance := to.length()
 			inp.mv = to.normalized()
 			inp.poss = distance < 145.0
-			if distance > 190.0 and p.dash_cd <= 0.0 and rng.randf() < 0.055:
+			if distance > 190.0 and p.dash_cd <= 0.0 and rng.randf() < lerpf(0.025, 0.11, skill):
 				inp.dash = true
 		inputs[p.id] = inp
 		return
 	if b.t <= 0.0:
-		b.t = rng.randf_range(0.25, 0.7)
+		b.t = lerpf(0.72, 0.20, skill) * rng.randf_range(0.8, 1.2)
 		b.strafe = -1.0 if rng.randf() < 0.5 else 1.0
-		b.want = rng.randf_range(260.0, 480.0)
+		b.want = lerpf(390.0, 300.0, skill) + rng.randf_range(-70.0, 70.0)
 	var mv := Vector2.ZERO
 	for ghost in players.values():
 		if ghost.id == p.id or not ghost.shadow:
@@ -770,18 +774,25 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 	if not tgt.is_empty():
 		var to: Vector2 = tgt.pos - p.pos
 		var d := to.length()
-		if p.ability_cd <= 0.0 and rng.randf() < dt * 0.72:
+		if p.ability_cd <= 0.0 and rng.randf() < dt * lerpf(0.38, 0.85, skill):
 			inp.ability = true
 		var dirv := to / maxf(d, 1.0)
-		mv += dirv.orthogonal() * b.strafe * 0.9
+		mv += dirv.orthogonal() * b.strafe * lerpf(0.65, 1.0, skill)
 		if d > b.want + 60.0:
 			mv += dirv
 		elif d < b.want - 80.0:
 			mv -= dirv
-		var lead: Vector2 = tgt.pos + tgt.vel * (d / BULLET_SPEED) * 0.8
-		lead += Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * 38.0
+		var lead: Vector2 = tgt.pos + tgt.vel * (d / BULLET_SPEED) * lerpf(0.45, 0.95, skill)
+		var aim_error := lerpf(76.0, 9.0, skill)
+		lead += Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * aim_error
 		inp.aim = lead
 		inp.fire = d < 820.0 and p.light > 14.0
+		if p.kind == 1:
+			var desired_charge := lerpf(0.32, 0.88, skill)
+			if p.wave_charge > 0.0:
+				inp.fire = p.wave_charge / CAPSULE_WAVE_CHARGE_TIME < desired_charge
+			else:
+				inp.fire = d < lerpf(235.0, 360.0, skill) and p.light > 14.0
 	if p.light < 32.0:
 		var bz := Vector2(ZONES[0].x, ZONES[0].y)
 		var bdz := 1e18
@@ -800,7 +811,8 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 			mv += (p.pos - e.pos).normalized() * 1.6
 			if de < 380.0 and p.light > 14.0:
 				inp.aim = e.pos
-				inp.fire = true
+				if p.kind != 1:
+					inp.fire = true
 	if p.pos.x < 120.0: mv.x += 1.0
 	if p.pos.x > A.x - 120.0: mv.x -= 1.0
 	if p.pos.y < 120.0: mv.y += 1.0
@@ -810,17 +822,17 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 			if bl.owner == p.id:
 				continue
 			var rel: Vector2 = p.pos - bl.pos
-			if rel.length() < 150.0 and rel.normalized().dot(bl.vel.normalized()) > 0.85:
-				inp.dash = true
-				mv = bl.vel.normalized().orthogonal() * b.strafe
+			var dodge_range := lerpf(92.0, 210.0, skill)
+			if rel.length() < dodge_range and rel.length() > 0.01 and rel.normalized().dot(bl.vel.normalized()) > lerpf(0.93, 0.78, skill):
+				inp.dash = rng.randf() < lerpf(0.18, 0.82, skill)
+				mv += bl.vel.normalized().orthogonal() * b.strafe * lerpf(0.35, 1.0, skill)
 				break
-		if not inp.dash and rng.randf() < 0.004:
+		if not inp.dash and rng.randf() < lerpf(0.001, 0.008, skill):
 			inp.dash = true
 	inp.mv = mv.limit_length(1.0)
+	if effects.has("reverse"):
+		inp.mv = -inp.mv
 	inputs[p.id] = inp
-
-
-# --------------------------------------------------------------- финал ---
 func _check_end() -> void:
 	var lit: Array = []
 	var real: Array = []
