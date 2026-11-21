@@ -129,7 +129,7 @@ func step(dt: float) -> void:
 	if phase != "play":
 		return
 	if not endless:
-		time_left -= dt
+		time_left += dt
 	if chaos_enabled:
 		_chaos_tick(dt)
 	for k in effects.keys():
@@ -817,7 +817,11 @@ func _chaos_tick(dt: float) -> void:
 		return
 	chaos_timer = 14.0 + rng.randf_range(-3.0, 3.0)
 	trigger(CHAOS[rng.randi() % CHAOS.size()])
-	if time_left < MATCH_TIME * 0.4 and rng.randf() < 0.12:
+	var living_count := 0
+	for p in players.values():
+		if not p.shadow and not p.decoy:
+			living_count += 1
+	if living_count <= 3 and rng.randf() < 0.12:
 		trigger(CHAOS[rng.randi() % CHAOS.size()])
 
 
