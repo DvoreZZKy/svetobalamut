@@ -309,10 +309,21 @@ func _build_hud() -> void:
 	score_lbl.fit_content = true
 	score_lbl.scroll_active = false
 	score_lbl.position = Vector2(16, 12)
-	score_lbl.size = Vector2(330, 340)
+	score_lbl.size = Vector2(410, 370)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	score_lbl.add_theme_font_size_override("normal_font_size", 17)
+	score_lbl.add_theme_font_size_override("normal_font_size", 15)
+	score_lbl.add_theme_color_override("default_color", Color("#eaf6ff"))
+	var board_style := StyleBoxFlat.new()
+	board_style.bg_color = Color("#071321", 0.88)
+	board_style.border_color = Color("#42d9ed", 0.72)
+	board_style.set_border_width_all(1)
+	board_style.set_corner_radius_all(0)
+	board_style.content_margin_left = 12
+	board_style.content_margin_right = 12
+	board_style.content_margin_top = 10
+	board_style.content_margin_bottom = 10
+	score_lbl.add_theme_stylebox_override("normal", board_style)
 	cl.add_child(score_lbl)
 	help_lbl = _label("", 15, Vector2.ZERO, Vector2(500, 112), cl)
 	help_lbl.anchor_left = 1.0
@@ -1037,13 +1048,20 @@ func _update_hud(dt: float) -> void:
 			me = pd
 		if not pd.d:
 			rows.append(pd)
-	rows.sort_custom(func(a, b): return a.l > b.l if a.l != b.l else a.pt > b.pt)
-	var txt := ""
-	for pd in rows:
+	# Leaderboard follows the actual match objective: chaos first, then remaining light.
+	rows.sort_custom(func(a, b): return a.pt > b.pt if a.pt != b.pt else a.l > b.l)
+	var txt := "[font_size=19][color=#74edff][b]◈  ТАБЛИЦА ХАОСА[/b][/color][/font_size]\n"
+	txt += "[color=#718ba5]#     ИГРОК                         СОСТОЯНИЕ       ХАОС[/color]\n"
+	txt += "[color=#29445c]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/color]\n"
+	for rank_i in rows.size():
+		var pd: Dictionary = rows[rank_i]
 		var hex: String = G.col(pd.c).to_html(false)
-		var st := "ТЕНЬ" if pd.s else str(int(pd.l))
-		var display_name: String = str(pd.n) + (" (бот)" if bool(pd.get("bot", false)) else "")
-		txt += "[color=#%s]%s%s[/color]  %s  [color=#8890aa]хаос %d[/color]\n" % [hex, "> " if pd.i == local_id else "", display_name, st, pd.pt]
+		var state_text := "ТЕНЬ" if pd.s else "%d HP" % int(pd.l)
+		var display_name: String = str(pd.n) + (" [бот]" if bool(pd.get("bot", false)) else "")
+		var rank_color := "#ffd76a" if rank_i == 0 else ("#b9c9dc" if rank_i == 1 else "#8c9db2")
+		var marker := "▶" if pd.i == local_id else " "
+		var chaos_color := "#ffbd58" if int(pd.pt) > 0 else "#91a4b9"
+		txt += "[color=%s]%s%02d[/color]  [color=#%s]%s%s[/color]  [color=#9aacc0]%s[/color]  [color=%s][b]%d[/b][/color]\n" % [rank_color, marker, rank_i + 1, hex, display_name, "  ◀" if pd.i == local_id else "", state_text, chaos_color, int(pd.pt)]
 	if txt != last_score_text:  # re-parsing BBCode every frame was needless work
 		last_score_text = txt
 		score_lbl.text = txt
