@@ -1043,7 +1043,9 @@ func _update_eaters(dt: float) -> void:
 		var detail: Node2D = ev.detail
 		detail.rotation = ev.rot
 		var base := 0.62 if ed[3] == 0 else 0.42
-		spr.scale = Vector2.ONE * base * (1.0 + 0.09 * sin(t * 9.0 + id))
+		var pulse := 1.0 + 0.09 * sin(t * 9.0 + id)
+		spr.scale = Vector2.ONE * base * pulse
+		detail.scale = Vector2.ONE * base * pulse
 		var c := Color(1.15, 0.35, 0.62) if ed[3] == 0 else Color(0.62, 0.38, 1.1)
 		if ed[5] > 0.0:
 			c = Color(3, 3, 3)
