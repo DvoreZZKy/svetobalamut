@@ -6,10 +6,10 @@ extends RefCounted
 const A := Vector2(1600, 900)
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
-	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.18, "ability": "Перегрузка"},
-	{"name": "Капсула", "hp": 155.0, "def": 0.72, "atk": 1.45, "speed": 0.78, "rate": 0.62, "ability": "Энергощит"},
-	{"name": "Призрак", "hp": 100.0, "def": 1.12, "atk": 0.68, "speed": 1.38, "rate": 0.18, "ability": "Фазовый скачок"},
-	{"name": "Кристалл", "hp": 112.0, "def": 0.92, "atk": 1.9, "speed": 0.88, "rate": 0.82, "ability": "Звёздный залп"}
+	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.22, "ability": "Перегрузка"},
+	{"name": "Капсула", "hp": 155.0, "def": 0.72, "atk": 1.35, "speed": 0.78, "rate": 0.56, "ability": "Энергощит"},
+	{"name": "Призрак", "hp": 125.0, "def": 0.90, "atk": 0.95, "speed": 1.25, "rate": 0.26, "ability": "Фазовый скачок"},
+	{"name": "Кристалл", "hp": 120.0, "def": 0.92, "atk": 1.65, "speed": 0.88, "rate": 0.68, "ability": "Звёздный залп"}
 ]
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
@@ -19,7 +19,7 @@ const DASH_CD := 1.5
 const FIRE_CD := 0.1
 const BULLET_SPEED := 1300.0
 const BULLET_DMG := 9.0
-const SHOT_COST := 1.5
+const SHOT_COST := 1.0
 const MOVE_COST := 1.8
 const DASH_COST := 4.0
 const REGEN_STILL := 10.0
@@ -208,20 +208,21 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.pos += p.vel * dt
 	_wall_bounce(p)
 
-	if want_fire and p.fire_cd <= 0.0 and p.light > SHOT_COST + 0.5:
+	var shot_cost: float = 1.5 if p.kind == 0 else SHOT_COST
+	if want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
 		var spread_count := 3 if p.kind == 0 else 1
 		for shot_i in spread_count:
 			var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
 			var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
 			var dir := Vector2.from_angle(ang)
 			var bolt_speed := 880.0 if p.kind == 1 else (960.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED))
-			var bolt_radius := 11.0 if p.kind == 3 else (10.0 if p.kind == 1 else (4.0 if p.kind == 2 else 6.0))
+			var bolt_radius := 11.0 if p.kind == 3 else (10.0 if p.kind == 1 else 6.0)
 			var damage_mult := 0.42 if p.kind == 0 else 1.0
 			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
 				"owner": p.id, "life": 1.4, "bn": 0, "dmg": BULLET_DMG * p.attack * damage_mult,
 				"radius": bolt_radius})
 			next_id += 1
-		p.light -= SHOT_COST
+		p.light -= shot_cost
 		var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
 		p.fire_cd = p.fire_rate * haste
 		p.vel -= p.aim * 55.0
@@ -252,14 +253,14 @@ func _use_ability(p: Dictionary) -> void:
 			p.ability_t = 2.8
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 1})
 		2:
-			p.pos = (p.pos + p.aim * 270.0).clamp(Vector2(40, 40), A - Vector2(40, 40))
+			p.pos = (p.pos + p.aim * 320.0).clamp(Vector2(40, 40), A - Vector2(40, 40))
 			p.inv = 0.65
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 2})
 		3:
 			for i in 10:
 				var dir := Vector2.from_angle(TAU * float(i) / 10.0)
 				bullets.append({"id": next_id, "pos": p.pos + dir * 40.0, "vel": dir * 760.0,
-					"owner": p.id, "life": 1.1, "bn": 0, "dmg": BULLET_DMG * p.attack * 0.72, "radius": 9.0})
+					"owner": p.id, "life": 1.1, "bn": 0, "dmg": BULLET_DMG * p.attack * 0.62, "radius": 9.0})
 				next_id += 1
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
 
