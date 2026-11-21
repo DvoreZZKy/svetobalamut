@@ -1331,7 +1331,7 @@ func _build_hud() -> void:
 						portrait_actor.setup(int(leader.k), G.col(int(leader.c)), int(leader.get("outfit", 0)), int(leader.get("hat", 0)))
 						card.add_child(portrait)
 						card.set_meta("portrait_ready", true)
-			card.visible = true
+				card.visible = true
 			_layout_game_over()
 	else:
 		over_rect.visible = false
@@ -1346,7 +1346,7 @@ func _build_hud() -> void:
 
 func _open_result_category(category: String) -> void:
 	result_detail_open = true
-	var key := {"УРОН":"dm", "ХИЛ":"hl", "УБИЙСТВА":"ki", "ХАОС":"pt"}.get(category, "pt")
+	var key: String = str({"УРОН":"dm", "ХИЛ":"hl", "УБИЙСТВА":"ki", "ХАОС":"pt"}.get(category, "pt"))
 	var rows: Array = []
 	for pd in view.get("pl", []): rows.append(pd)
 	rows.sort_custom(func(a, b): return float(a.get(key, 0.0)) > float(b.get(key, 0.0)))
