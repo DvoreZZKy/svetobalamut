@@ -1331,8 +1331,8 @@ func _update_hud(dt: float) -> void:
 					card.text = "%s\n%s\n%s" % [category_names[i], str(leader.n), str(int(leader.get(stat_keys[i], 0)))]
 					if not card.has_meta("portrait_ready"):
 						var portrait := SubViewportContainer.new()
-						portrait.position = Vector2(7, 8)
-						portrait.size = Vector2(72, 76)
+						portrait.position = Vector2(card.size.x * 0.5 - 66.0, 38.0)
+						portrait.size = Vector2(132, 142)
 						portrait.stretch = true
 						portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 						var portrait_vp := SubViewport.new()
@@ -1347,6 +1347,40 @@ func _update_hud(dt: float) -> void:
 						portrait_actor.setup(int(leader.k), G.col(int(leader.c)), int(leader.get("outfit", 0)), int(leader.get("hat", 0)))
 						card.add_child(portrait)
 						card.set_meta("portrait_ready", true)
+						var category_label := Label.new()
+						category_label.name = "CategoryTitle"
+						category_label.position = Vector2(8, 8)
+						category_label.size = Vector2(card.size.x - 16, 30)
+						category_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+						category_label.add_theme_font_size_override("font_size", 21)
+						category_label.add_theme_color_override("font_color", Color("#6cecff"))
+						category_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+						card.add_child(category_label)
+						var nick_label := Label.new()
+						nick_label.name = "LeaderNick"
+						nick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+						nick_label.position = Vector2(8, card.size.y - 88)
+						nick_label.size = Vector2(card.size.x - 16, 32)
+						nick_label.add_theme_font_size_override("font_size", 19)
+						nick_label.add_theme_color_override("font_color", Color("#f0f8ff"))
+						nick_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+						card.add_child(nick_label)
+						var value_label := Label.new()
+						value_label.name = "LeaderValue"
+						value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+						value_label.position = Vector2(8, card.size.y - 52)
+						value_label.size = Vector2(card.size.x - 16, 36)
+						value_label.add_theme_font_size_override("font_size", 25)
+						value_label.add_theme_color_override("font_color", Color("#ffd477"))
+						value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+						card.add_child(value_label)
+					card.text = ""
+				var category_label := card.get_node_or_null("CategoryTitle") as Label
+				var nick_label := card.get_node_or_null("LeaderNick") as Label
+				var value_label := card.get_node_or_null("LeaderValue") as Label
+				if category_label: category_label.text = category_names[i]
+				if nick_label: nick_label.text = str(leader.n) if not ranking.is_empty() else "—"
+				if value_label: value_label.text = str(int(leader.get(stat_keys[i], 0))) if not ranking.is_empty() else "0"
 				card.visible = true
 			_layout_game_over()
 	else:
