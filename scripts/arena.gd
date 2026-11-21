@@ -100,10 +100,6 @@ var capsule_ammo_lbl: Label
 var capsule_reload_bar: ProgressBar
 var cursor_layer: CanvasLayer
 var cursor_canvas: Control
-var aim_screen_pos := Vector2.ZERO
-var stopwatch_lbl: Label
-var result_cards: Array[Button] = []
-var result_detail_open := false
 var banner: Label
 var score_lbl: RichTextLabel
 var help_lbl: Label
@@ -312,10 +308,10 @@ func _build_hud() -> void:
 	timer_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	timer_lbl.anchor_left = 1.0
 	timer_lbl.anchor_right = 1.0
-	timer_lbl.offset_left = -430
-	timer_lbl.offset_right = -100
-	timer_lbl.offset_top = 74
-	timer_lbl.offset_bottom = 332
+	timer_lbl.offset_left = -383
+	timer_lbl.offset_right = -53
+	timer_lbl.offset_top = 12
+	timer_lbl.offset_bottom = 270
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	timer_lbl.add_theme_font_size_override("normal_font_size", 11)
 	timer_lbl.add_theme_font_override("normal_font", _bold_hud_font())
@@ -324,14 +320,6 @@ func _build_hud() -> void:
 	timer_lbl.add_theme_constant_override("table_v_separation", 1)
 	timer_lbl.modulate = Color("#a9efff")
 	cl.add_child(timer_lbl)
-	stopwatch_lbl = _label("00:00", 20, Vector2.ZERO, Vector2(160, 34), cl, true)
-	stopwatch_lbl.anchor_left = 0.5
-	stopwatch_lbl.anchor_right = 0.5
-	stopwatch_lbl.offset_left = -80
-	stopwatch_lbl.offset_right = 80
-	stopwatch_lbl.offset_top = 14
-	stopwatch_lbl.offset_bottom = 48
-	stopwatch_lbl.add_theme_color_override("font_color", Color("#b7f7ff"))
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
 	banner.anchor_left = 0.5
 	banner.anchor_right = 0.5
@@ -345,7 +333,7 @@ func _build_hud() -> void:
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = false
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(52, 74)
+	score_lbl.position = Vector2(42, 30)
 	score_lbl.size = Vector2(280, 150)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -518,864 +506,778 @@ func _build_hud() -> void:
 	over_restart_btn.pressed.connect(_restart_match)
 	cl.add_child(over_restart_btn)
 	over_menu_btn = FacetButton.new()
-		if not result_detail_open:
-		over_menu_btn.text = "В МЕНЮ"
-		over_menu_btn.custom_minimum_size = Vector2(210, 48)
-		_style_result_button(over_menu_btn, Color("#b58aff"))
-		over_menu_btn.pressed.connect(_to_menu)
-		cl.add_child(over_menu_btn)
-		over_restart_btn.visible = false
-		over_menu_btn.visible = false
-		for category in ["УРОН", "ХИЛ", "УБИЙСТВА", "ХАОС"]:
-			var card := FacetButton.new()
-			card.text = category
-			card.custom_minimum_size = Vector2(190, 118)
-			card.visible = false
-			_style_result_button(card, Color("#64eaff"))
-			card.pressed.connect(_open_result_category.bind(category))
-			cl.add_child(card)
-			result_cards.append(card)
-	
-	
-	# -------------------------------------------------------------- рисование --
-	func _draw() -> void:
-		draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.012, 0.012, 0.035))
-		if _is_potato():
-			# Keep the arena's gameplay zones visible, but draw them as cheap outlines:
-			# no filled polygons, inner decoration, ticks, or background grid.
-			for z in Sim.ZONES:
-				var center := Vector2(z.x, z.y)
-				draw_arc(center, z.z, 0.0, TAU, 48, Color(0.30, 0.34, 0.46, 0.78), 2.0, true)
-			var simple_border := PackedVector2Array([
-				Vector2(24, 0), Vector2(ARENA.x - 24, 0), Vector2(ARENA.x, 24),
-				Vector2(ARENA.x, ARENA.y - 24), Vector2(ARENA.x - 24, ARENA.y),
-				Vector2(24, ARENA.y), Vector2(0, ARENA.y - 24), Vector2(0, 24), Vector2(24, 0)
-			])
-			draw_polyline(simple_border, Color(0.22, 0.25, 0.34, 0.8), 2.0, true)
-			return
-		var gc := Color(0.12, 0.28, 0.48, 0.14)
-		for x in range(0, 1601, 100):
-			draw_line(Vector2(x, 0), Vector2(x, ARENA.y), gc, 1.5)
-		for y in range(0, 901, 100):
-			draw_line(Vector2(0, y), Vector2(ARENA.x, y), gc, 1.5)
+	over_menu_btn.text = "В МЕНЮ"
+	over_menu_btn.custom_minimum_size = Vector2(210, 48)
+	_style_result_button(over_menu_btn, Color("#b58aff"))
+	over_menu_btn.pressed.connect(_to_menu)
+	cl.add_child(over_menu_btn)
+	over_restart_btn.visible = false
+	over_menu_btn.visible = false
+
+
+# -------------------------------------------------------------- рисование --
+func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.012, 0.012, 0.035))
+	if _is_potato():
+		# Keep the arena's gameplay zones visible, but draw them as cheap outlines:
+		# no filled polygons, inner decoration, ticks, or background grid.
 		for z in Sim.ZONES:
-			var c := Vector2(z.x, z.y)
-			var zone_poly := PackedVector2Array()
-			var inner_ring := PackedVector2Array()
-			for i in 24:
-				var direction := Vector2.from_angle(TAU * float(i) / 24.0)
-				zone_poly.append(c + direction * z.z)
-				inner_ring.append(c + direction * z.z * 0.72)
-			draw_colored_polygon(zone_poly, Color(0.015, 0.01, 0.035, 0.55))
-			var zone_outline := zone_poly.duplicate()
-			zone_outline.append(zone_poly[0])
-			draw_polyline(zone_outline, Color(0.36, 0.22, 0.72, 0.55), 2.2, true)
-			inner_ring.append(inner_ring[0])
-			draw_polyline(inner_ring, Color(0.24, 0.62, 0.92, 0.16), 1.2, true)
-			for tick in 4:
-				var axis := Vector2.from_angle(TAU * float(tick) / 4.0)
-				draw_line(c + axis * z.z * 0.82, c + axis * z.z * 0.94, Color(0.52, 0.34, 0.92, 0.38), 2.0, true)
-		var border := PackedVector2Array([
-			Vector2(24,0), Vector2(ARENA.x-24,0), Vector2(ARENA.x,24),
-			Vector2(ARENA.x,ARENA.y-24), Vector2(ARENA.x-24,ARENA.y),
-			Vector2(24,ARENA.y), Vector2(0,ARENA.y-24), Vector2(0,24)
+			var center := Vector2(z.x, z.y)
+			draw_arc(center, z.z, 0.0, TAU, 48, Color(0.30, 0.34, 0.46, 0.78), 2.0, true)
+		var simple_border := PackedVector2Array([
+			Vector2(24, 0), Vector2(ARENA.x - 24, 0), Vector2(ARENA.x, 24),
+			Vector2(ARENA.x, ARENA.y - 24), Vector2(ARENA.x - 24, ARENA.y),
+			Vector2(24, ARENA.y), Vector2(0, ARENA.y - 24), Vector2(0, 24), Vector2(24, 0)
 		])
-		border.append(border[0])
-		draw_polyline(border, Color(0.48, 0.2, 0.72), 3.0, true)
-	
-	
-	func _seed_ambient() -> void:
-		var rng := RandomNumberGenerator.new()
-		rng.randomize()
-		var mote_count: int = [22, 12, 5, 0][G.graphics_quality]
-		for i in mote_count:
-			ambient_motes.append({
-				"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
-				"v": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(7.0, 20.0),
-				"r": rng.randf_range(2.0, 4.5),
-				"phase": rng.randf_range(0.0, TAU),
-				"tone": i % 3
-			})
-	
-	
-	func _update_ambient(dt: float) -> void:
-		if _is_potato() or dt <= 0.0:
-			return
-		var mote_count: int = [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
-		for i in mote_count:
-			var mote: Dictionary = ambient_motes[i]
-			mote.p += mote.v * dt
-			if mote.p.x < 20.0 or mote.p.x > ARENA.x - 20.0:
-				mote.v.x *= -1.0
-			if mote.p.y < 20.0 or mote.p.y > ARENA.y - 20.0:
-				mote.v.y *= -1.0
-		ambient_layer.queue_redraw()
-	
-	
-	# Unit geometry is allocated once; each mote only changes its draw transform.
-	var ambient_diamond := PackedVector2Array([
-		Vector2(0, -2), Vector2(1, 0), Vector2(0, 2), Vector2(-1, 0)
+		draw_polyline(simple_border, Color(0.22, 0.25, 0.34, 0.8), 2.0, true)
+		return
+	var gc := Color(0.12, 0.28, 0.48, 0.14)
+	for x in range(0, 1601, 100):
+		draw_line(Vector2(x, 0), Vector2(x, ARENA.y), gc, 1.5)
+	for y in range(0, 901, 100):
+		draw_line(Vector2(0, y), Vector2(ARENA.x, y), gc, 1.5)
+	for z in Sim.ZONES:
+		var c := Vector2(z.x, z.y)
+		var zone_poly := PackedVector2Array()
+		var inner_ring := PackedVector2Array()
+		for i in 24:
+			var direction := Vector2.from_angle(TAU * float(i) / 24.0)
+			zone_poly.append(c + direction * z.z)
+			inner_ring.append(c + direction * z.z * 0.72)
+		draw_colored_polygon(zone_poly, Color(0.015, 0.01, 0.035, 0.55))
+		var zone_outline := zone_poly.duplicate()
+		zone_outline.append(zone_poly[0])
+		draw_polyline(zone_outline, Color(0.36, 0.22, 0.72, 0.55), 2.2, true)
+		inner_ring.append(inner_ring[0])
+		draw_polyline(inner_ring, Color(0.24, 0.62, 0.92, 0.16), 1.2, true)
+		for tick in 4:
+			var axis := Vector2.from_angle(TAU * float(tick) / 4.0)
+			draw_line(c + axis * z.z * 0.82, c + axis * z.z * 0.94, Color(0.52, 0.34, 0.92, 0.38), 2.0, true)
+	var border := PackedVector2Array([
+		Vector2(24,0), Vector2(ARENA.x-24,0), Vector2(ARENA.x,24),
+		Vector2(ARENA.x,ARENA.y-24), Vector2(ARENA.x-24,ARENA.y),
+		Vector2(24,ARENA.y), Vector2(0,ARENA.y-24), Vector2(0,24)
 	])
-	var ambient_h_line := PackedVector2Array([Vector2(-3, 0), Vector2(3, 0)])
-	var ambient_v_line := PackedVector2Array([Vector2(0, -3), Vector2(0, 3)])
-	var ambient_palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
-	
-	
-	func _draw_ambient() -> void:
-		var mote_count: int = [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
-		for i in mote_count:
-			var mote: Dictionary = ambient_motes[i]
-			var r: float = mote.r
-			var pulse := 0.45 + 0.35 * sin(t * 1.7 + float(mote.phase))
-			var color: Color = ambient_palette[int(mote.tone)]
-			ambient_layer.draw_set_transform(mote.p, 0.0, Vector2(r, r))
-			ambient_layer.draw_colored_polygon(ambient_diamond, Color(color, pulse * 0.32))
-			ambient_layer.draw_polyline(ambient_h_line, Color(color, pulse * 0.22), 1.0, true)
-			ambient_layer.draw_polyline(ambient_v_line, Color(color, pulse * 0.22), 1.0, true)
-		ambient_layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	
-	
-	func _draw_bullets() -> void:
-		for pickup in view.get("pu", []):
-			var pickup_pos: Vector2 = pickup[0]
-			var pickup_kind: String = str(pickup[1])
-			var pickup_color: Color = {"swift": Color("#64eaff"), "overdrive": Color("#ff8b67"), "shield": Color("#a78bfa"), "battery": Color("#7cf7b2")}.get(pickup_kind, Color.WHITE)
-			var points := PackedVector2Array()
-			for side in 6:
-				points.append(pickup_pos + Vector2.from_angle(TAU * float(side) / 6.0) * 17.0)
-			bullet_layer.draw_colored_polygon(points, pickup_color * Color(1, 1, 1, 0.85))
-			bullet_layer.draw_polyline(points, Color.WHITE, 2.0, true)
-			bullet_layer.draw_arc(pickup_pos, 25.0 + 2.0 * sin(t * 5.0), 0.0, TAU, 32, pickup_color, 2.0, true)
-		for meteor in view.get("mt", []):
-			var center: Vector2 = meteor[0]
-			var remaining: float = float(meteor[1])
-			var progress := clampf(1.0 - remaining / 1.15, 0.0, 1.0)
-			var pulse := 0.72 + 0.28 * sin(t * 22.0)
-			var warning_color := Color(1.0, 0.24, 0.12, 0.72 * pulse)
-			bullet_layer.draw_arc(center, 138.0, 0.0, TAU, 64, warning_color, 4.0, true)
-			bullet_layer.draw_arc(center, 126.0 + 7.0 * pulse, 0.0, TAU, 64, Color(1.0, 0.62, 0.18, 0.4), 2.0, true)
-			var meteor_pos := center + Vector2(-150.0, -430.0).lerp(Vector2.ZERO, progress)
-			if _is_potato():
-				bullet_layer.draw_line(meteor_pos - Vector2(0, 90), meteor_pos, Color(1.0, 0.38, 0.12), 7.0, false)
-				bullet_layer.draw_circle(meteor_pos, 15.0, Color(1.0, 0.72, 0.28))
-			else:
-				bullet_layer.draw_line(meteor_pos - Vector2(0, 105), meteor_pos, Color(1.0, 0.24, 0.08, 0.5), 30.0, true)
-				bullet_layer.draw_circle(meteor_pos, 20.0, Color(3.2, 0.72, 0.18))
-				bullet_layer.draw_circle(meteor_pos, 9.0, Color(4.0, 2.4, 0.8))
-		for b in view.get("bl", []):
-			var vel: Vector2 = b[2]
-			var pos: Vector2 = b[1] + vel * snap_age
-			var col: Color = G.col(cis.get(b[3], 0))
-			if b[4] > 0:
-				col = Color(1, 1, 1)
-			if _is_potato():
-				bullet_layer.draw_line(pos - vel * 0.035, pos, col, 3.0, false)
-				bullet_layer.draw_circle(pos, 4.0, col)
-				continue
-			var tail := pos - vel * 0.075
-			var glow := G.hdr(col, 1.6)
-			glow.a = 0.35
-			var radius: float = float(b[6]) if b.size() > 6 else 6.0
-			var width := 8.0 + radius * 0.8
-			bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
-			bullet_layer.draw_line(tail, pos, G.hdr(col, 2.0), width * 0.4, true)
-			bullet_layer.draw_circle(pos, 6.0, Color(4, 4, 4))
-	
-	
-	# ----------------------------------------------------------------- цикл ---
-	
-	func _build_aim_cursor() -> void:
-		cursor_layer = CanvasLayer.new()
-		cursor_layer.layer = 100
-		cursor_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-		add_child(cursor_layer)
-		cursor_canvas = Control.new()
-		cursor_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cursor_canvas.size = Vector2(48, 48)
-		cursor_canvas.z_index = 100
-		cursor_canvas.draw.connect(_draw_aim_cursor)
-		cursor_layer.add_child(cursor_canvas)
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		aim_screen_pos = get_viewport().get_visible_rect().size * 0.5
-	
-	
-	func _draw_aim_cursor() -> void:
-		if not is_instance_valid(cursor_canvas):
-			return
-		var center := Vector2(24, 24)
-		var color := Color("#8df6ff")
-		cursor_canvas.draw_arc(center, 13.0, 0.0, TAU, 32, Color.BLACK, 5.0, true)
-		cursor_canvas.draw_arc(center, 13.0, 0.0, TAU, 32, Color(color, 1.0), 2.8, true)
-		cursor_canvas.draw_line(Vector2(24, 0), Vector2(24, 9), Color.BLACK, 5.0, true)
-		cursor_canvas.draw_line(Vector2(24, 39), Vector2(24, 48), Color.BLACK, 5.0, true)
-		cursor_canvas.draw_line(Vector2(0, 24), Vector2(9, 24), Color.BLACK, 5.0, true)
-		cursor_canvas.draw_line(Vector2(39, 24), Vector2(48, 24), Color.BLACK, 5.0, true)
-		cursor_canvas.draw_line(Vector2(24, 0), Vector2(24, 9), color, 2.2, true)
-		cursor_canvas.draw_line(Vector2(24, 39), Vector2(24, 48), color, 2.2, true)
-		cursor_canvas.draw_line(Vector2(0, 24), Vector2(9, 24), color, 2.2, true)
-		cursor_canvas.draw_line(Vector2(39, 24), Vector2(48, 24), color, 2.2, true)
-		cursor_canvas.draw_circle(center, 3.0, Color.WHITE)
-	
-	
-	func _read_input() -> Dictionary:
-		return {
-			"mv": Input.get_vector("left", "right", "up", "down"),
-			"aim": get_canvas_transform().affine_inverse() * aim_screen_pos,
-			"fire": Input.is_action_pressed("fire"),
-			"dash": Input.is_action_pressed("dash"),
-			"poss": Input.is_action_pressed("possess") or (bool(view.get("pl", []).filter(func(p): return int(p.i) == local_id and p.s).size() > 0) and Input.is_action_pressed("fire")),
-			"ability": Input.is_action_just_pressed("ability"),
-		}
-	
-	
-	func _input(event: InputEvent) -> void:
-		if event is InputEventMouseMotion and not pause_open:
-			var sensitivity := G.mouse_sensitivity if G.match_mouse_sensitivity else 1.0
-			aim_screen_pos += event.relative * sensitivity
-			aim_screen_pos = aim_screen_pos.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
-	
-	
-	func _process(dt: float) -> void:
-		if not G.tutorial_active and Input.is_action_just_pressed("ui_cancel") and view.get("ph", "play") != "over":
-			_toggle_pause()
-		if pause_open and (not Net.online or G.tutorial_active):
-			# The scene and UI keep processing, but the offline match does not advance.
-			return
-		t += dt
-		_update_ambient(dt)
-		var inp := _read_input()
-		# Inputs travel over an unreliable channel: stretch the one-frame ability press over ~0.18 s
-		# so a dropped or overwritten packet can't eat it. The ability cooldown makes repeats harmless.
-		if Input.is_action_just_pressed("ability"):
-			ability_latch = 0.18
-		ability_latch = maxf(0.0, ability_latch - dt)
-		inp["ability"] = ability_latch > 0.0
-		if pause_open:
-			inp = {"mv": Vector2.ZERO, "aim": get_canvas_transform().affine_inverse() * aim_screen_pos,
-				"fire": false, "dash": false, "poss": false, "ability": false}
-		if not is_client:
-			sim.inputs[local_id] = inp
-			if not G.tutorial_active:
-				for pid in Net.inputs:
-					sim.inputs[pid] = Net.inputs[pid]
-			if not (G.tutorial_active and Engine.time_scale <= 0.001):
-				sim.step(minf(dt, 0.05))
-			sim.shake_req = 0.0
-			view = sim.snapshot()
-			var ev: Array = sim.events
-			sim.events = []
-			_handle_events(ev)
-			net_ev.append_array(ev)
-			snap_timer -= dt
-			if Net.online and not G.tutorial_active:
-				if snap_timer <= 0.0:
-					snap_timer = 0.05
-					Net.broadcast_snap(view)
-					Net.broadcast_events(net_ev)  # reliable channel, batched at snapshot rate
-					net_ev = []
-			else:
-				net_ev.clear()  # solo/tutorial: nobody consumes the batch, don't let it grow forever
+	border.append(border[0])
+	draw_polyline(border, Color(0.48, 0.2, 0.72), 3.0, true)
+
+
+func _seed_ambient() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var mote_count: int = [22, 12, 5, 0][G.graphics_quality]
+	for i in mote_count:
+		ambient_motes.append({
+			"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
+			"v": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(7.0, 20.0),
+			"r": rng.randf_range(2.0, 4.5),
+			"phase": rng.randf_range(0.0, TAU),
+			"tone": i % 3
+		})
+
+
+func _update_ambient(dt: float) -> void:
+	if _is_potato() or dt <= 0.0:
+		return
+	var mote_count: int = [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
+	for i in mote_count:
+		var mote: Dictionary = ambient_motes[i]
+		mote.p += mote.v * dt
+		if mote.p.x < 20.0 or mote.p.x > ARENA.x - 20.0:
+			mote.v.x *= -1.0
+		if mote.p.y < 20.0 or mote.p.y > ARENA.y - 20.0:
+			mote.v.y *= -1.0
+	ambient_layer.queue_redraw()
+
+
+# Unit geometry is allocated once; each mote only changes its draw transform.
+var ambient_diamond := PackedVector2Array([
+	Vector2(0, -2), Vector2(1, 0), Vector2(0, 2), Vector2(-1, 0)
+])
+var ambient_h_line := PackedVector2Array([Vector2(-3, 0), Vector2(3, 0)])
+var ambient_v_line := PackedVector2Array([Vector2(0, -3), Vector2(0, 3)])
+var ambient_palette := [Color("#39dff5"), Color("#a77bff"), Color("#62f5d0")]
+
+
+func _draw_ambient() -> void:
+	var mote_count: int = [ambient_motes.size(), 12, 5, 0][G.graphics_quality]
+	for i in mote_count:
+		var mote: Dictionary = ambient_motes[i]
+		var r: float = mote.r
+		var pulse := 0.45 + 0.35 * sin(t * 1.7 + float(mote.phase))
+		var color: Color = ambient_palette[int(mote.tone)]
+		ambient_layer.draw_set_transform(mote.p, 0.0, Vector2(r, r))
+		ambient_layer.draw_colored_polygon(ambient_diamond, Color(color, pulse * 0.32))
+		ambient_layer.draw_polyline(ambient_h_line, Color(color, pulse * 0.22), 1.0, true)
+		ambient_layer.draw_polyline(ambient_v_line, Color(color, pulse * 0.22), 1.0, true)
+	ambient_layer.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _draw_bullets() -> void:
+	for pickup in view.get("pu", []):
+		var pickup_pos: Vector2 = pickup[0]
+		var pickup_kind: String = str(pickup[1])
+		var pickup_color: Color = {"swift": Color("#64eaff"), "overdrive": Color("#ff8b67"), "shield": Color("#a78bfa"), "battery": Color("#7cf7b2")}.get(pickup_kind, Color.WHITE)
+		var points := PackedVector2Array()
+		for side in 6:
+			points.append(pickup_pos + Vector2.from_angle(TAU * float(side) / 6.0) * 17.0)
+		bullet_layer.draw_colored_polygon(points, pickup_color * Color(1, 1, 1, 0.85))
+		bullet_layer.draw_polyline(points, Color.WHITE, 2.0, true)
+		bullet_layer.draw_arc(pickup_pos, 25.0 + 2.0 * sin(t * 5.0), 0.0, TAU, 32, pickup_color, 2.0, true)
+	for meteor in view.get("mt", []):
+		var center: Vector2 = meteor[0]
+		var remaining: float = float(meteor[1])
+		var progress := clampf(1.0 - remaining / 1.15, 0.0, 1.0)
+		var pulse := 0.72 + 0.28 * sin(t * 22.0)
+		var warning_color := Color(1.0, 0.24, 0.12, 0.72 * pulse)
+		bullet_layer.draw_arc(center, 138.0, 0.0, TAU, 64, warning_color, 4.0, true)
+		bullet_layer.draw_arc(center, 126.0 + 7.0 * pulse, 0.0, TAU, 64, Color(1.0, 0.62, 0.18, 0.4), 2.0, true)
+		var meteor_pos := center + Vector2(-150.0, -430.0).lerp(Vector2.ZERO, progress)
+		if _is_potato():
+			bullet_layer.draw_line(meteor_pos - Vector2(0, 90), meteor_pos, Color(1.0, 0.38, 0.12), 7.0, false)
+			bullet_layer.draw_circle(meteor_pos, 15.0, Color(1.0, 0.72, 0.28))
+		else:
+			bullet_layer.draw_line(meteor_pos - Vector2(0, 105), meteor_pos, Color(1.0, 0.24, 0.08, 0.5), 30.0, true)
+			bullet_layer.draw_circle(meteor_pos, 20.0, Color(3.2, 0.72, 0.18))
+			bullet_layer.draw_circle(meteor_pos, 9.0, Color(4.0, 2.4, 0.8))
+	for b in view.get("bl", []):
+		var vel: Vector2 = b[2]
+		var pos: Vector2 = b[1] + vel * snap_age
+		var col: Color = G.col(cis.get(b[3], 0))
+		if b[4] > 0:
+			col = Color(1, 1, 1)
+		if _is_potato():
+			bullet_layer.draw_line(pos - vel * 0.035, pos, col, 3.0, false)
+			bullet_layer.draw_circle(pos, 4.0, col)
+			continue
+		var tail := pos - vel * 0.075
+		var glow := G.hdr(col, 1.6)
+		glow.a = 0.35
+		var radius: float = float(b[6]) if b.size() > 6 else 6.0
+		var width := 8.0 + radius * 0.8
+		bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
+		bullet_layer.draw_line(tail, pos, G.hdr(col, 2.0), width * 0.4, true)
+		bullet_layer.draw_circle(pos, 6.0, Color(4, 4, 4))
+
+
+# ----------------------------------------------------------------- цикл ---
+
+func _build_aim_cursor() -> void:
+	cursor_layer = CanvasLayer.new()
+	cursor_layer.layer = 100
+	cursor_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(cursor_layer)
+	cursor_canvas = Control.new()
+	cursor_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cursor_canvas.size = Vector2(38, 38)
+	cursor_canvas.z_index = 100
+	cursor_canvas.draw.connect(_draw_aim_cursor)
+	cursor_layer.add_child(cursor_canvas)
+	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
+
+func _draw_aim_cursor() -> void:
+	if not is_instance_valid(cursor_canvas):
+		return
+	var center := Vector2(19, 19)
+	var color := Color("#8df6ff")
+	cursor_canvas.draw_arc(center, 10.0, 0.0, TAU, 32, Color(color, 0.9), 1.6, true)
+	cursor_canvas.draw_line(Vector2(19, 1), Vector2(19, 8), color, 2.0, true)
+	cursor_canvas.draw_line(Vector2(19, 30), Vector2(19, 37), color, 2.0, true)
+	cursor_canvas.draw_line(Vector2(1, 19), Vector2(8, 19), color, 2.0, true)
+	cursor_canvas.draw_line(Vector2(30, 19), Vector2(37, 19), color, 2.0, true)
+	cursor_canvas.draw_circle(center, 2.0, Color.WHITE)
+
+
+func _read_input() -> Dictionary:
+	return {
+		"mv": Input.get_vector("left", "right", "up", "down"),
+		"aim": get_global_mouse_position(),
+		"fire": Input.is_action_pressed("fire"),
+		"dash": Input.is_action_pressed("dash"),
+		"poss": Input.is_action_pressed("possess"),
+		"ability": Input.is_action_just_pressed("ability"),
+	}
+
+
+func _process(dt: float) -> void:
+	if not G.tutorial_active and Input.is_action_just_pressed("ui_cancel") and view.get("ph", "play") != "over":
+		_toggle_pause()
+	if pause_open and (not Net.online or G.tutorial_active):
+		# The scene and UI keep processing, but the offline match does not advance.
+		return
+	t += dt
+	_update_ambient(dt)
+	var inp := _read_input()
+	# Inputs travel over an unreliable channel: stretch the one-frame ability press over ~0.18 s
+	# so a dropped or overwritten packet can't eat it. The ability cooldown makes repeats harmless.
+	if Input.is_action_just_pressed("ability"):
+		ability_latch = 0.18
+	ability_latch = maxf(0.0, ability_latch - dt)
+	inp["ability"] = ability_latch > 0.0
+	if pause_open:
+		inp = {"mv": Vector2.ZERO, "aim": get_global_mouse_position(),
+			"fire": false, "dash": false, "poss": false, "ability": false}
+	if not is_client:
+		sim.inputs[local_id] = inp
+		if not G.tutorial_active:
+			for pid in Net.inputs:
+				sim.inputs[pid] = Net.inputs[pid]
+		if not (G.tutorial_active and Engine.time_scale <= 0.001):
+			sim.step(minf(dt, 0.05))
+		sim.shake_req = 0.0
+		view = sim.snapshot()
+		var ev: Array = sim.events
+		sim.events = []
+		_handle_events(ev)
+		net_ev.append_array(ev)
+		snap_timer -= dt
+		if Net.online and not G.tutorial_active:
+			if snap_timer <= 0.0:
+				snap_timer = 0.05
+				Net.broadcast_snap(view)
+				Net.broadcast_events(net_ev)  # reliable channel, batched at snapshot rate
+				net_ev = []
+		else:
+			net_ev.clear()  # solo/tutorial: nobody consumes the batch, don't let it grow forever
+		snap_age = 0.0
+		if Input.is_action_just_pressed("restart") and view.ph == "over":
+			sim.reset(G.cfg)
+			_clear_views()
+	else:
+		Net.send_input(inp)
+		if Net.snap_seq != last_seq:
+			last_seq = Net.snap_seq
+			view = Net.latest_snap
 			snap_age = 0.0
-			if Input.is_action_just_pressed("restart") and view.ph == "over":
-				sim.reset(G.cfg)
-				_clear_views()
 		else:
-			Net.send_input(inp)
-			if Net.snap_seq != last_seq:
-				last_seq = Net.snap_seq
-				view = Net.latest_snap
-				snap_age = 0.0
-			else:
-				snap_age = minf(snap_age + dt, 0.12)
-			_handle_events(Net.take_events())
-			wait_lbl.visible = view.is_empty()
-		if not view.is_empty():
-			_update_views(dt)
-			_update_fx(dt)
-			_update_hud(dt)
-		var bullet_count: int = view.get("bl", []).size()
-		if bullet_count > 0 or bullet_count != last_bullet_count:
-			bullet_layer.queue_redraw()
-		last_bullet_count = bullet_count
-		if is_instance_valid(cursor_canvas):
-			cursor_canvas.position = aim_screen_pos - cursor_canvas.size * 0.5
-			cursor_canvas.queue_redraw()
-		shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
-		var s: float = shake if G.shake_on else 0.0
-		if s > 0.05:
-			cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * s
-			cam.rotation = randf_range(-1, 1) * s * 0.0006
-		else:
-			cam.offset = Vector2.ZERO
-			cam.rotation = 0.0
-	
-	
-	
-	
-	func _build_pause_menu() -> void:
-		pause_layer = CanvasLayer.new()
-		pause_layer.layer = 40
-		pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-		add_child(pause_layer)
-		pause_shade = ColorRect.new()
-		pause_shade.color = Color(0.002, 0.004, 0.018, 0.78)
-		pause_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		pause_shade.mouse_filter = Control.MOUSE_FILTER_STOP
-		pause_layer.add_child(pause_shade)
-		pause_shape = Polygon2D.new()
-		pause_shape.color = Color("#101b32")
-		pause_layer.add_child(pause_shape)
-		pause_outline = Line2D.new()
-		pause_outline.width = 3.0
-		pause_outline.default_color = Color("#42eaff")
-		pause_outline.closed = true
-		pause_layer.add_child(pause_outline)
-		pause_title = _label("ПАУЗА", 38, Vector2.ZERO, Vector2(620, 64), pause_layer, true)
-		pause_title.add_theme_color_override("font_color", Color("#eafaff"))
-		pause_resume_btn = FacetButton.new()
-		pause_resume_btn.text = "ПРОДОЛЖИТЬ"
-		pause_resume_btn.custom_minimum_size = Vector2(300, 54)
-		pause_resume_btn.pressed.connect(_toggle_pause)
-		pause_layer.add_child(pause_resume_btn)
-		pause_menu_btn = FacetButton.new()
-		pause_menu_btn.text = "ВЫЙТИ В МЕНЮ"
-		pause_menu_btn.custom_minimum_size = Vector2(300, 54)
-		pause_menu_btn.pressed.connect(_to_menu)
-		pause_layer.add_child(pause_menu_btn)
-		pause_layer.visible = false
+			snap_age = minf(snap_age + dt, 0.12)
+		_handle_events(Net.take_events())
+		wait_lbl.visible = view.is_empty()
+	if not view.is_empty():
+		_update_views(dt)
+		_update_fx(dt)
+		_update_hud(dt)
+	var bullet_count: int = view.get("bl", []).size()
+	if bullet_count > 0 or bullet_count != last_bullet_count:
+		bullet_layer.queue_redraw()
+	last_bullet_count = bullet_count
+	if is_instance_valid(cursor_canvas):
+		cursor_canvas.position = get_viewport().get_mouse_position() - cursor_canvas.size * 0.5
+		cursor_canvas.queue_redraw()
+	shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
+	var s: float = shake if G.shake_on else 0.0
+	if s > 0.05:
+		cam.offset = Vector2(randf_range(-1, 1), randf_range(-1, 1)) * s
+		cam.rotation = randf_range(-1, 1) * s * 0.0006
+	else:
+		cam.offset = Vector2.ZERO
+		cam.rotation = 0.0
+
+
+
+
+func _build_pause_menu() -> void:
+	pause_layer = CanvasLayer.new()
+	pause_layer.layer = 40
+	pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(pause_layer)
+	pause_shade = ColorRect.new()
+	pause_shade.color = Color(0.002, 0.004, 0.018, 0.78)
+	pause_shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	pause_shade.mouse_filter = Control.MOUSE_FILTER_STOP
+	pause_layer.add_child(pause_shade)
+	pause_shape = Polygon2D.new()
+	pause_shape.color = Color("#101b32")
+	pause_layer.add_child(pause_shape)
+	pause_outline = Line2D.new()
+	pause_outline.width = 3.0
+	pause_outline.default_color = Color("#42eaff")
+	pause_outline.closed = true
+	pause_layer.add_child(pause_outline)
+	pause_title = _label("ПАУЗА", 38, Vector2.ZERO, Vector2(620, 64), pause_layer, true)
+	pause_title.add_theme_color_override("font_color", Color("#eafaff"))
+	pause_resume_btn = FacetButton.new()
+	pause_resume_btn.text = "ПРОДОЛЖИТЬ"
+	pause_resume_btn.custom_minimum_size = Vector2(300, 54)
+	pause_resume_btn.pressed.connect(_toggle_pause)
+	pause_layer.add_child(pause_resume_btn)
+	pause_menu_btn = FacetButton.new()
+	pause_menu_btn.text = "ВЫЙТИ В МЕНЮ"
+	pause_menu_btn.custom_minimum_size = Vector2(300, 54)
+	pause_menu_btn.pressed.connect(_to_menu)
+	pause_layer.add_child(pause_menu_btn)
+	pause_layer.visible = false
+	_layout_pause_menu()
+
+
+func _layout_pause_menu() -> void:
+	if not is_instance_valid(pause_layer):
+		return
+	var vp := get_viewport().get_visible_rect().size
+	var w := minf(650.0, vp.x - 40.0)
+	var h := 310.0
+	var pos := (vp - Vector2(w, h)) * 0.5
+	var cut := 22.0
+	var pts := PackedVector2Array([
+		pos + Vector2(cut, 0), pos + Vector2(w - cut, 0),
+		pos + Vector2(w, cut), pos + Vector2(w, h - cut),
+		pos + Vector2(w - cut, h), pos + Vector2(cut, h),
+		pos + Vector2(0, h - cut), pos + Vector2(0, cut)
+	])
+	pause_shape.polygon = pts
+	pause_outline.points = pts
+	pause_title.position = Vector2(pos.x + 15, pos.y + 38)
+	pause_resume_btn.position = Vector2((vp.x - 300.0) * 0.5, pos.y + 135)
+	pause_menu_btn.position = Vector2((vp.x - 300.0) * 0.5, pos.y + 205)
+
+
+func _toggle_pause() -> void:
+	pause_open = not pause_open
+	pause_layer.visible = pause_open
+	if pause_open:
+		shake = 0.0  # don't freeze the camera mid-shake behind the pause panel
+		cam.offset = Vector2.ZERO
+		cam.rotation = 0.0
+	if is_instance_valid(cursor_canvas):
+		cursor_canvas.visible = not pause_open
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if pause_open else Input.MOUSE_MODE_HIDDEN
+	if pause_open:
+		pause_title.text = "ПАУЗА" if (not Net.online or G.tutorial_active) else "МЕНЮ МАТЧА"
+		pause_menu_btn.text = "ВЫЙТИ ИЗ МАТЧА"
 		_layout_pause_menu()
-	
-	
-	func _layout_pause_menu() -> void:
-		if not is_instance_valid(pause_layer):
-			return
-		var vp := get_viewport().get_visible_rect().size
-		var w := minf(650.0, vp.x - 40.0)
-		var h := 310.0
-		var pos := (vp - Vector2(w, h)) * 0.5
-		var cut := 22.0
-		var pts := PackedVector2Array([
-			pos + Vector2(cut, 0), pos + Vector2(w - cut, 0),
-			pos + Vector2(w, cut), pos + Vector2(w, h - cut),
-			pos + Vector2(w - cut, h), pos + Vector2(cut, h),
-			pos + Vector2(0, h - cut), pos + Vector2(0, cut)
-		])
-		pause_shape.polygon = pts
-		pause_outline.points = pts
-		pause_title.position = Vector2(pos.x + 15, pos.y + 38)
-		pause_resume_btn.position = Vector2((vp.x - 300.0) * 0.5, pos.y + 135)
-		pause_menu_btn.position = Vector2((vp.x - 300.0) * 0.5, pos.y + 205)
-	
-	
-	func _toggle_pause() -> void:
-		pause_open = not pause_open
-		pause_layer.visible = pause_open
-		if pause_open:
-			shake = 0.0  # don't freeze the camera mid-shake behind the pause panel
-			cam.offset = Vector2.ZERO
-			cam.rotation = 0.0
-		if is_instance_valid(cursor_canvas):
-			cursor_canvas.visible = not pause_open
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if pause_open else Input.MOUSE_MODE_CAPTURED
-		if pause_open:
-			pause_title.text = "ПАУЗА" if (not Net.online or G.tutorial_active) else "МЕНЮ МАТЧА"
-			pause_menu_btn.text = "ВЫЙТИ ИЗ МАТЧА"
-			_layout_pause_menu()
-	
-	
-	func _clear_views() -> void:
-		for pv in pviews.values():
-			pv.root.queue_free()
-			pv.line.queue_free()
-		for ev in eviews.values():
-			ev.root.queue_free()
-		pviews.clear()
-		eviews.clear()
-	
-	
-	# ------------------------------------------------------------- рендер ----
-	func _make_pv(pd: Dictionary) -> Dictionary:
-		var root := Node2D.new()
-		ent_layer.add_child(root)
-		var halo := Sprite2D.new()
+
+
+func _clear_views() -> void:
+	for pv in pviews.values():
+		pv.root.queue_free()
+		pv.line.queue_free()
+	for ev in eviews.values():
+		ev.root.queue_free()
+	pviews.clear()
+	eviews.clear()
+
+
+# ------------------------------------------------------------- рендер ----
+func _make_pv(pd: Dictionary) -> Dictionary:
+	var root := Node2D.new()
+	ent_layer.add_child(root)
+	var halo := Sprite2D.new()
+	halo.visible = not _is_potato()
+	halo.texture = halo_tex
+	halo.material = add_mat
+	root.add_child(halo)
+	var actor := VectorActor.new()
+	actor.setup(int(pd.k), G.col(int(pd.c)), int(pd.get("outfit", 0)), int(pd.get("hat", 0)))
+	root.add_child(actor)
+	var local_ring := Line2D.new()
+	local_ring.width = 5.0
+	local_ring.default_color = Color(0.25, 0.95, 1.0, 0.95)
+	local_ring.closed = true
+	for i in 12:
+		local_ring.add_point(Vector2.from_angle(TAU * float(i) / 12.0) * 49.0)
+	local_ring.visible = false
+	local_ring.z_index = 5
+	root.add_child(local_ring)
+	# Ring that shows an active class ability (Светляк overdrive / Капсула shield).
+	var ability_ring := Line2D.new()
+	ability_ring.width = 3.0
+	ability_ring.closed = true
+	for i in 20:
+		ability_ring.add_point(Vector2.from_angle(TAU * float(i) / 20.0) * 38.0)
+	ability_ring.visible = false
+	ability_ring.z_index = 4
+	root.add_child(ability_ring)
+	var lbl := Label.new()
+	lbl.position = Vector2(-70, -66)
+	lbl.size = Vector2(140, 22)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.add_theme_font_size_override("font_size", 14)
+	root.add_child(lbl)
+	var line := Line2D.new()
+	line.width = 28.0
+	line.width_curve = trail_curve
+	line.gradient = trail_grad
+	line.joint_mode = Line2D.LINE_JOINT_BEVEL
+	line.begin_cap_mode = Line2D.LINE_CAP_NONE
+	var sm: ShaderMaterial = null
+	if not _is_potato():
+		sm = ShaderMaterial.new()
+		sm.shader = trail_shader
+		line.material = sm
+	else:
+		line.visible = false
+	trail_layer.add_child(line)
+	return {"root": root, "halo": halo, "actor": actor, "lbl": lbl, "line": line, "mat": sm,
+		"local_ring": local_ring, "ability_ring": ability_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle() + PI * 0.5,
+		"kick": 0.0, "kind": pd.k, "ci": pd.c}
+
+
+func _update_views(dt: float) -> void:
+	var pl: Array = view.get("pl", [])
+	var local_shadow := false
+	var ci_name := {}
+	for pd in pl:
+		if pd.i == local_id:
+			local_shadow = pd.s
+		if not pd.d:
+			ci_name[pd.c] = pd.n
+	var bomb_id: int = view.get("bomb", 0)
+	var bomb_t: float = view.get("bt", 0.0)
+	var seen := {}
+	for pd in pl:
+		var id: int = pd.i
+		seen[id] = true
+		cis[id] = pd.c
+		var pv: Dictionary = pviews.get(id, {})
+		if pv.is_empty():
+			pv = _make_pv(pd)
+			pviews[id] = pv
+		var vel: Vector2 = pd.v
+		var tpos: Vector2 = pd.p + vel * snap_age
+		var line: Line2D = pv.line
+		if is_client:
+			pv.pos = pv.pos.lerp(tpos, minf(1.0, 24.0 * dt))
+		else:
+			pv.pos = tpos
+		if line.get_point_count() > 0 and (line.get_point_position(line.get_point_count() - 1) - pv.pos).length() > 350.0:
+			line.clear_points()
+		var shadow: bool = pd.s
+		var vis: bool = (not shadow) or local_shadow or id == local_id
+		# Light fraction relative to THIS class's maximum (classes have 100..155 max light).
+		var lf: float = clampf(float(pd.l) / maxf(float(pd.get("hpmax", 100.0)), 1.0), 0.0, 1.0) * 1.1
+		var col: Color = G.col(pd.c)
+		var root: Node2D = pv.root
+		var actor = pv.actor
+		var halo: Sprite2D = pv.halo
+		var local_ring: Line2D = pv.local_ring
+		var new_outfit := int(pd.get("outfit", 0))
+		var new_hat := int(pd.get("hat", 0))
+		if pv.kind != int(pd.k) or pv.ci != int(pd.c) or int(pv.get("outfit", -1)) != new_outfit or int(pv.get("hat", -1)) != new_hat:
+			actor.setup(int(pd.k), G.col(int(pd.c)), new_outfit, new_hat)
+			pv.kind = int(pd.k)
+			pv.ci = int(pd.c)
+			pv.outfit = new_outfit
+			pv.hat = new_hat
+		var lbl: Label = pv.lbl
+		root.visible = vis
+		local_ring.visible = (id == local_id and not shadow and not _is_potato())
+		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
+		capsule_charge_ring.visible = false
+		var ability_ring: Line2D = pv.ability_ring
+		var ability_on: bool = float(pd.get("ab", 0.0)) > 0.0 and not shadow and (int(pd.k) == 0 or int(pd.k) == 1)
+		ability_ring.visible = ability_on and not _is_potato()
+		if ability_on:
+			var ring_color := Color(0.35, 1.7, 2.2) if int(pd.k) == 0 else Color(2.2, 1.6, 0.5)
+			ring_color.a = 0.55 + 0.35 * sin(t * 16.0)
+			ability_ring.default_color = ring_color
+			ability_ring.scale = Vector2.ONE * (1.0 + 0.08 * sin(t * 12.0))
+		line.visible = vis and not _is_potato()
+		root.position = pv.pos
+		# The character artwork's forward side (and hat) points upward in local space.
+		# Rotate that top edge toward the aim vector instead of aligning its X axis.
+		var aim_rotation := (pd.a as Vector2).angle() + PI * 0.5
+		pv.rot = lerp_angle(pv.rot, aim_rotation, minf(1.0, 30.0 * dt))
+		actor.rotation = pv.rot
+		pv.kick = maxf(0.0, pv.kick - dt * 7.0)
+		var pulse := 1.0 + 0.07 * sin(t * 11.0 + id)
+		actor.scale = Vector2.ONE * (0.92 + 0.18 * lf) if _is_potato() else Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
 		halo.visible = not _is_potato()
-		halo.texture = halo_tex
-		halo.material = add_mat
-		root.add_child(halo)
-		var actor := VectorActor.new()
-		actor.setup(int(pd.k), G.col(int(pd.c)), int(pd.get("outfit", 0)), int(pd.get("hat", 0)))
-		root.add_child(actor)
-		var local_ring := Line2D.new()
-		local_ring.width = 5.0
-		local_ring.default_color = Color(0.25, 0.95, 1.0, 0.95)
-		local_ring.closed = true
-		for i in 12:
-			local_ring.add_point(Vector2.from_angle(TAU * float(i) / 12.0) * 49.0)
-		local_ring.visible = false
-		local_ring.z_index = 5
-		root.add_child(local_ring)
-		# Ring that shows an active class ability (Светляк overdrive / Капсула shield).
-		var ability_ring := Line2D.new()
-		ability_ring.width = 3.0
-		ability_ring.closed = true
-		for i in 20:
-			ability_ring.add_point(Vector2.from_angle(TAU * float(i) / 20.0) * 38.0)
-		ability_ring.visible = false
-		ability_ring.z_index = 4
-		root.add_child(ability_ring)
-		var lbl := Label.new()
-		lbl.position = Vector2(-70, -66)
-		lbl.size = Vector2(140, 22)
-		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		lbl.add_theme_font_size_override("font_size", 14)
-		root.add_child(lbl)
-		var line := Line2D.new()
-		line.width = 28.0
-		line.width_curve = trail_curve
-		line.gradient = trail_grad
-		line.joint_mode = Line2D.LINE_JOINT_BEVEL
-		line.begin_cap_mode = Line2D.LINE_CAP_NONE
-		var sm: ShaderMaterial = null
 		if not _is_potato():
-			sm = ShaderMaterial.new()
-			sm.shader = trail_shader
-			line.material = sm
-		else:
-			line.visible = false
-		trail_layer.add_child(line)
-		return {"root": root, "halo": halo, "actor": actor, "lbl": lbl, "line": line, "mat": sm,
-			"local_ring": local_ring, "ability_ring": ability_ring, "pos": pd.p, "rot": (pd.a as Vector2).angle() + PI * 0.5,
-			"kick": 0.0, "kind": pd.k, "ci": pd.c}
-	
-	
-	func _update_views(dt: float) -> void:
-		var pl: Array = view.get("pl", [])
-		var local_shadow := false
-		var ci_name := {}
-		for pd in pl:
-			if pd.i == local_id:
-				local_shadow = pd.s
-			if not pd.d:
-				ci_name[pd.c] = pd.n
-		var bomb_id: int = view.get("bomb", 0)
-		var bomb_t: float = view.get("bt", 0.0)
-		var seen := {}
-		for pd in pl:
-			var id: int = pd.i
-			seen[id] = true
-			cis[id] = pd.c
-			var pv: Dictionary = pviews.get(id, {})
-			if pv.is_empty():
-				pv = _make_pv(pd)
-				pviews[id] = pv
-			var vel: Vector2 = pd.v
-			var tpos: Vector2 = pd.p + vel * snap_age
-			var line: Line2D = pv.line
-			if is_client:
-				pv.pos = pv.pos.lerp(tpos, minf(1.0, 24.0 * dt))
-			else:
-				pv.pos = tpos
-			if line.get_point_count() > 0 and (line.get_point_position(line.get_point_count() - 1) - pv.pos).length() > 350.0:
-				line.clear_points()
-			var shadow: bool = pd.s
-			var vis: bool = (not shadow) or local_shadow or id == local_id
-			# Light fraction relative to THIS class's maximum (classes have 100..155 max light).
-			var lf: float = clampf(float(pd.l) / maxf(float(pd.get("hpmax", 100.0)), 1.0), 0.0, 1.0) * 1.1
-			var col: Color = G.col(pd.c)
-			var root: Node2D = pv.root
-			var actor = pv.actor
-			var halo: Sprite2D = pv.halo
-			var local_ring: Line2D = pv.local_ring
-			var new_outfit := int(pd.get("outfit", 0))
-			var new_hat := int(pd.get("hat", 0))
-			if pv.kind != int(pd.k) or pv.ci != int(pd.c) or int(pv.get("outfit", -1)) != new_outfit or int(pv.get("hat", -1)) != new_hat:
-				actor.setup(int(pd.k), G.col(int(pd.c)), new_outfit, new_hat)
-				pv.kind = int(pd.k)
-				pv.ci = int(pd.c)
-				pv.outfit = new_outfit
-				pv.hat = new_hat
-			var lbl: Label = pv.lbl
-			root.visible = vis
-			local_ring.visible = (id == local_id and not shadow) or float(pd.get("dr", 0.0)) > 0.0
-			local_ring.default_color = Color("#ffdc70") if float(pd.get("dr", 0.0)) > 0.0 else Color("#8df6ff")
-			local_ring.width = 5.0 + 2.0 * (0.5 + 0.5 * sin(t * 7.0))
-			capsule_charge_ring.visible = false
-			var ability_ring: Line2D = pv.ability_ring
-			var ability_on: bool = float(pd.get("ab", 0.0)) > 0.0 and not shadow and (int(pd.k) == 0 or int(pd.k) == 1)
-			ability_ring.visible = ability_on and not _is_potato()
-			if ability_on:
-				var ring_color := Color(0.35, 1.7, 2.2) if int(pd.k) == 0 else Color(2.2, 1.6, 0.5)
-				ring_color.a = 0.55 + 0.35 * sin(t * 16.0)
-				ability_ring.default_color = ring_color
-				ability_ring.scale = Vector2.ONE * (1.0 + 0.08 * sin(t * 12.0))
-			line.visible = vis and not _is_potato()
-			root.position = pv.pos
-			# The character artwork's forward side (and hat) points upward in local space.
-			# Rotate that top edge toward the aim vector instead of aligning its X axis.
-			var aim_rotation := (pd.a as Vector2).angle() + PI * 0.5
-			pv.rot = lerp_angle(pv.rot, aim_rotation, minf(1.0, 30.0 * dt))
-			actor.rotation = pv.rot
-			pv.kick = maxf(0.0, pv.kick - dt * 7.0)
-			var pulse := 1.0 + 0.07 * sin(t * 11.0 + id)
-			actor.scale = Vector2.ONE * (0.92 + 0.18 * lf) if _is_potato() else Vector2.ONE * (0.92 + 0.18 * lf) * pulse * (1.0 + pv.kick * 0.35)
-			halo.visible = not _is_potato()
+			halo.scale = Vector2.ONE * (0.55 + 0.75 * lf)
+		if shadow:
+			var ghost_alpha := 0.66 + 0.10 * sin(t * 3.6 + float(id))
+			actor.modulate = Color(0.20, 0.11, 0.38, ghost_alpha) if not _is_potato() else Color(0.38, 0.32, 0.52, 0.9)
+			halo.modulate = Color(0.48, 0.12, 1.35, 0.42 + 0.10 * sin(t * 2.8 + float(id)))
 			if not _is_potato():
-				halo.scale = Vector2.ONE * (0.55 + 0.75 * lf)
-			if shadow:
-				var ghost_alpha := 0.66 + 0.10 * sin(t * 3.6 + float(id))
-				actor.modulate = Color(0.20, 0.11, 0.38, ghost_alpha) if not _is_potato() else Color(0.38, 0.32, 0.52, 0.9)
-				halo.modulate = Color(0.48, 0.12, 1.35, 0.42 + 0.10 * sin(t * 2.8 + float(id)))
-				if not _is_potato():
-					actor.scale = Vector2.ONE * 0.62 * (1.0 + 0.025 * sin(t * 4.0 + float(id)))
-			else:
-				var c := col if _is_potato() else G.hdr(col, 1.0 + 0.55 * lf)
-				if pd.h > 0.0:
-					c = Color.WHITE if _is_potato() else Color(3.2, 3.2, 3.2)
-				if pd.iv > 0.0 and not _is_potato():
-					c.a = 0.45 + 0.4 * sin(t * 70.0)
-				if bomb_id == id:
-					c = (Color("#ff654d") if sin(t * (9.0 + (4.0 - bomb_t) * 7.0)) > 0.0 else Color.WHITE) if _is_potato() else (Color(3.4, 0.5, 0.3) if sin(t * (9.0 + (4.0 - bomb_t) * 7.0)) > 0.0 else Color(3.4, 3.4, 3.4))
-				if pd.dr > 0.0 and not _is_potato():
-					c = Color(2.4, 0.4, 2.8) if int(t * 14.0) % 2 == 0 else Color(0.6, 2.0, 2.4)
-					root.position += Vector2(randf_range(-6, 6), randf_range(-6, 6))
-				actor.modulate = c
-				var hc := G.hdr(col, 0.12 + 0.28 * lf)
-				hc.a = 0.20 + 0.32 * lf
-				halo.modulate = hc
-			lbl.visible = vis and not shadow
-			var nm: String = pd.n
-			if pd.d:
-				nm = ci_name.get(pd.c, "?")
-			if bool(pd.get("bot", false)):
-				nm += " (бот)"
-			lbl.text = ("> " + nm) if id == local_id else nm
+				actor.scale = Vector2.ONE * 0.62 * (1.0 + 0.025 * sin(t * 4.0 + float(id)))
+		else:
+			var c := col if _is_potato() else G.hdr(col, 0.78 + 0.42 * lf)
+			if pd.h > 0.0:
+				c = Color.WHITE if _is_potato() else Color(3.2, 3.2, 3.2)
+			if pd.iv > 0.0 and not _is_potato():
+				c.a = 0.45 + 0.4 * sin(t * 70.0)
 			if bomb_id == id:
-				lbl.text = "БОМБА %.1f" % maxf(bomb_t, 0.0)
-			lbl.modulate = Color(1, 1, 1, 0.85)
-			# Potato mode removes trails completely, including their point updates.
-			if _is_potato():
-				if line.get_point_count() > 0:
-					line.clear_points()
-				continue
-			# трейл
-			var moving: bool = vel.length() > 60.0 or pd.dt
-			if moving:
-				var point_count := line.get_point_count()
-				if point_count == 0 or line.get_point_position(point_count - 1).distance_squared_to(pv.pos) >= 81.0 or pd.dt:
-					line.add_point(pv.pos)
-				var maxp := 30 if pd.dt else 20
-				while line.get_point_count() > maxp:
-					line.remove_point(0)
-			elif line.get_point_count() > 0:
+				c = (Color("#ff654d") if sin(t * (9.0 + (4.0 - bomb_t) * 7.0)) > 0.0 else Color.WHITE) if _is_potato() else (Color(3.4, 0.5, 0.3) if sin(t * (9.0 + (4.0 - bomb_t) * 7.0)) > 0.0 else Color(3.4, 3.4, 3.4))
+			if pd.dr > 0.0 and not _is_potato():
+				c = Color(2.4, 0.4, 2.8) if int(t * 14.0) % 2 == 0 else Color(0.6, 2.0, 2.4)
+				root.position += Vector2(randf_range(-6, 6), randf_range(-6, 6))
+			actor.modulate = c
+			var hc := G.hdr(col, 0.12 + 0.28 * lf)
+			hc.a = 0.12 + 0.22 * lf
+			halo.modulate = hc
+		lbl.visible = vis and not shadow
+		var nm: String = pd.n
+		if pd.d:
+			nm = ci_name.get(pd.c, "?")
+		if bool(pd.get("bot", false)):
+			nm += " (бот)"
+		lbl.text = ("> " + nm) if id == local_id else nm
+		if bomb_id == id:
+			lbl.text = "БОМБА %.1f" % maxf(bomb_t, 0.0)
+		lbl.modulate = Color(1, 1, 1, 0.85)
+		# Potato mode removes trails completely, including their point updates.
+		if _is_potato():
+			if line.get_point_count() > 0:
+				line.clear_points()
+			continue
+		# трейл
+		var moving: bool = vel.length() > 60.0 or pd.dt
+		if moving:
+			var point_count := line.get_point_count()
+			if point_count == 0 or line.get_point_position(point_count - 1).distance_squared_to(pv.pos) >= 81.0 or pd.dt:
+				line.add_point(pv.pos)
+			var maxp := 30 if pd.dt else 20
+			while line.get_point_count() > maxp:
 				line.remove_point(0)
-			var sm: ShaderMaterial = pv.mat
-			sm.set_shader_parameter("tint", Color(0.6, 0.2, 1.0) if shadow else col)
-			sm.set_shader_parameter("hdr", 1.7 if shadow else (5.0 if pd.dt else 2.2 + 1.6 * lf))
-		for id in pviews.keys():
-			if not seen.has(id):
-				pviews[id].root.queue_free()
-				pviews[id].line.queue_free()
-				pviews.erase(id)
-		_update_eaters(dt)
-	
-	
-	func _update_eaters(dt: float) -> void:
-		var seen := {}
-		for ed in view.get("ea", []):
-			var id: int = ed[0]
-			seen[id] = true
-			var ev: Dictionary = eviews.get(id, {})
-			if ev.is_empty():
-				var root := Node2D.new()
-				var halo := Sprite2D.new()
-				halo.texture = halo_tex
-				halo.material = add_mat
-				root.add_child(halo)
-				var spr := Polygon2D.new()
-				var detail := Node2D.new()
-				if int(ed[3]) == 0:
-					# Crawler: squat armored body, hooked legs and a jagged maw.
-					spr.polygon = PackedVector2Array([Vector2(-29,-12),Vector2(-21,-25),Vector2(-5,-29),Vector2(12,-24),Vector2(29,-9),Vector2(25,12),Vector2(10,25),Vector2(-12,24),Vector2(-29,9)])
-					spr.color = Color("#b84b72")
-					_add_eater_line(detail, PackedVector2Array([Vector2(-13,-8),Vector2(-31,-23),Vector2(-39,-20)]), Color("#71334f"), 5.0)
-					_add_eater_line(detail, PackedVector2Array([Vector2(12,-8),Vector2(30,-24),Vector2(39,-20)]), Color("#71334f"), 5.0)
-					_add_eater_line(detail, PackedVector2Array([Vector2(-15,9),Vector2(-32,23),Vector2(-39,20)]), Color("#71334f"), 5.0)
-					_add_eater_line(detail, PackedVector2Array([Vector2(14,9),Vector2(31,23),Vector2(39,20)]), Color("#71334f"), 5.0)
-					_add_eater_poly(detail, PackedVector2Array([Vector2(-19,-16),Vector2(-12,-31),Vector2(-5,-17)]), Color("#e58aa0"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(2,-20),Vector2(13,-32),Vector2(17,-12)]), Color("#e58aa0"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(9,3),Vector2(25,-2),Vector2(20,14),Vector2(5,17)]), Color("#54283f"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(10,5),Vector2(15,12),Vector2(18,4)]), Color("#f6c5b4"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(-7,-12),Vector2(1,-19),Vector2(8,-11),Vector2(2,-3)]), Color("#ffe27a"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(0,-11),Vector2(4,-16),Vector2(7,-10),Vector2(3,-5)]), Color("#321e38"))
-				else:
-					# Flyer: angular manta-like body with torn wings, tail and glowing eyes.
-					spr.polygon = PackedVector2Array([Vector2(-4,-30),Vector2(12,-19),Vector2(34,-12),Vector2(21,2),Vector2(16,21),Vector2(0,14),Vector2(-16,21),Vector2(-21,2),Vector2(-34,-12),Vector2(-12,-19)])
-					spr.color = Color("#8051b8")
-					_add_eater_poly(detail, PackedVector2Array([Vector2(-12,-17),Vector2(-35,-25),Vector2(-25,-5),Vector2(-38,5),Vector2(-15,2)]), Color("#59347f"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(12,-17),Vector2(35,-25),Vector2(25,-5),Vector2(38,5),Vector2(15,2)]), Color("#59347f"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(-5,10),Vector2(0,18),Vector2(5,10),Vector2(0,34)]), Color("#b68be0"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(-11,-10),Vector2(-3,-14),Vector2(-2,-5),Vector2(-9,-3)]), Color("#a9f7ff"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(3,-14),Vector2(11,-10),Vector2(9,-3),Vector2(2,-5)]), Color("#a9f7ff"))
-					_add_eater_poly(detail, PackedVector2Array([Vector2(-8,3),Vector2(0,8),Vector2(8,3),Vector2(0,13)]), Color("#321e48"))
-				root.add_child(spr)
-				root.add_child(detail)
-				ent_layer.add_child(root)
-				ev = {"root": root, "spr": spr, "detail": detail, "halo": halo, "pos": ed[1], "rot": 0.0}
-				eviews[id] = ev
-			var vel: Vector2 = ed[2]
-			var tpos: Vector2 = ed[1] + vel * snap_age
-			ev.pos = ev.pos.lerp(tpos, minf(1.0, 24.0 * dt)) if is_client else tpos
-			var root: Node2D = ev.root
-			var spr: Polygon2D = ev.spr
-			var halo: Sprite2D = ev.halo
-			halo.visible = not _is_potato()
-			root.position = ev.pos
-			if vel.length() > 5.0:
-				ev.rot = lerp_angle(ev.rot, vel.angle(), minf(1.0, 12.0 * dt))
-			spr.rotation = ev.rot
-			var detail: Node2D = ev.detail
-			detail.rotation = ev.rot
-			var base := 0.62 if ed[3] == 0 else 0.42
-			var pulse := 1.0 + 0.09 * sin(t * 9.0 + id)
-			spr.scale = Vector2.ONE * base * pulse
-			detail.scale = Vector2.ONE * base * pulse
-			var c := Color(1.15, 0.35, 0.62) if ed[3] == 0 else Color(0.62, 0.38, 1.1)
-			if ed[5] > 0.0:
-				c = Color(3, 3, 3)
-			spr.modulate = c if not _is_potato() else Color(c.r, c.g, c.b, 1.0)
-			halo.visible = not _is_potato()
-			if not _is_potato():
-				halo.scale = Vector2.ONE * (1.3 if ed[3] == 0 else 0.9)
-				halo.modulate = Color(c.r * 0.5, c.g * 0.3, c.b * 0.5, 0.45)
-		for id in eviews.keys():
-			if not seen.has(id):
-				eviews[id].root.queue_free()
-				eviews.erase(id)
-	
-	
-	func _add_eater_poly(parent: Node2D, points: PackedVector2Array, tint: Color) -> void:
-		var part := Polygon2D.new()
-		part.polygon = points
-		part.color = tint
-		parent.add_child(part)
-	
-	
-	func _add_eater_line(parent: Node2D, points: PackedVector2Array, tint: Color, thickness: float) -> void:
-		var part := Line2D.new()
-		part.points = points
-		part.width = thickness
-		part.default_color = tint
-		part.begin_cap_mode = Line2D.LINE_CAP_ROUND
-		part.end_cap_mode = Line2D.LINE_CAP_ROUND
-		parent.add_child(part)
-	
-	
-	func _update_fx(dt: float) -> void:
-		if _is_potato() or not is_instance_valid(fx_mat):
-			return
-		var fx: Dictionary = view.get("fx", {})
-		invert_cur = move_toward(invert_cur, 1.0 if fx.has("invert") else 0.0, dt * 5.0)
-		blind_cur = move_toward(blind_cur, 1.0 if fx.has("blind") else 0.0, dt * 4.0)
-		fx_mat.set_shader_parameter("invert", invert_cur)
-		fx_mat.set_shader_parameter("blind", blind_cur)
-		var ws := Vector2(get_window().size)
-		var sc := minf(ws.x / 1280.0, ws.y / 720.0)
-		var wp: Vector2 = pviews[local_id].pos if pviews.has(local_id) else ARENA / 2.0
-		var px: Vector2 = ws / 2.0 + (wp - ARENA / 2.0) * cam.zoom.x * sc
-		fx_mat.set_shader_parameter("center", px / ws)
-		fx_mat.set_shader_parameter("aspect", ws.x / ws.y)
-		fx_mat.set_shader_parameter("radius", 200.0 * cam.zoom.x * sc / ws.y)
-	
-	
-	func _update_hud(dt: float) -> void:
-		if pause_open:
-			_layout_pause_menu()
-		var over: bool = view.get("ph", "play") == "over"
-		var elapsed := int(float(view.get("elapsed", 0.0)))
-		stopwatch_lbl.text = "%02d:%02d" % [elapsed / 60, elapsed % 60]
-		var active_chaos: Array[String] = []
-		var fx: Dictionary = view.get("fx", {})
-		for chaos_key in fx.keys():
-			if float(fx[chaos_key]) > 0.0 and CHAOS_RU.has(chaos_key):
-				active_chaos.append(str(CHAOS_RU[chaos_key]))
-		if int(view.get("bomb", 0)) != 0:
-			active_chaos.append("НЕОНОВАЯ БОМБА")
-		var chaos_text := "[font_size=11][b][color=#74edff]АКТИВНЫЙ ХАОС[/color][/b][/font_size]\n[table=1]"
-		if active_chaos.is_empty():
-			chaos_text += "[cell][b][color=#a9efff]СЕЙЧАС ТИХО[/color][/b][/cell]"
-		else:
-			active_chaos.sort()
-			for chaos_name in active_chaos:
-				chaos_text += "[cell][b][color=#ffd47a]◆  %s[/color][/b][/cell]" % chaos_name
-		if float(view.get("tl", 0.0)) > 75.0:
-			chaos_text += "[cell][b][color=#ff9d72]СВЕТ АРЕНЫ УГАСАЕТ[/color][/b][/cell]"
-		chaos_text += "[/table]"
-		if timer_lbl.text != chaos_text:
-			timer_lbl.text = chaos_text
-		timer_lbl.modulate = Color.WHITE
-		var rows: Array = []
-		var me: Dictionary = {}
+		elif line.get_point_count() > 0:
+			line.remove_point(0)
+		var sm: ShaderMaterial = pv.mat
+		sm.set_shader_parameter("tint", Color(0.6, 0.2, 1.0) if shadow else col)
+		sm.set_shader_parameter("hdr", 1.7 if shadow else (5.0 if pd.dt else 2.2 + 1.6 * lf))
+	for id in pviews.keys():
+		if not seen.has(id):
+			pviews[id].root.queue_free()
+			pviews[id].line.queue_free()
+			pviews.erase(id)
+	_update_eaters(dt)
+
+
+func _update_eaters(dt: float) -> void:
+	var seen := {}
+	for ed in view.get("ea", []):
+		var id: int = ed[0]
+		seen[id] = true
+		var ev: Dictionary = eviews.get(id, {})
+		if ev.is_empty():
+			var root := Node2D.new()
+			var halo := Sprite2D.new()
+			halo.texture = halo_tex
+			halo.material = add_mat
+			root.add_child(halo)
+			var spr := Polygon2D.new()
+			var detail := Node2D.new()
+			if int(ed[3]) == 0:
+				# Crawler: squat armored body, hooked legs and a jagged maw.
+				spr.polygon = PackedVector2Array([Vector2(-29,-12),Vector2(-21,-25),Vector2(-5,-29),Vector2(12,-24),Vector2(29,-9),Vector2(25,12),Vector2(10,25),Vector2(-12,24),Vector2(-29,9)])
+				spr.color = Color("#b84b72")
+				_add_eater_line(detail, PackedVector2Array([Vector2(-13,-8),Vector2(-31,-23),Vector2(-39,-20)]), Color("#71334f"), 5.0)
+				_add_eater_line(detail, PackedVector2Array([Vector2(12,-8),Vector2(30,-24),Vector2(39,-20)]), Color("#71334f"), 5.0)
+				_add_eater_line(detail, PackedVector2Array([Vector2(-15,9),Vector2(-32,23),Vector2(-39,20)]), Color("#71334f"), 5.0)
+				_add_eater_line(detail, PackedVector2Array([Vector2(14,9),Vector2(31,23),Vector2(39,20)]), Color("#71334f"), 5.0)
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-19,-16),Vector2(-12,-31),Vector2(-5,-17)]), Color("#e58aa0"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(2,-20),Vector2(13,-32),Vector2(17,-12)]), Color("#e58aa0"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(9,3),Vector2(25,-2),Vector2(20,14),Vector2(5,17)]), Color("#54283f"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(10,5),Vector2(15,12),Vector2(18,4)]), Color("#f6c5b4"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-7,-12),Vector2(1,-19),Vector2(8,-11),Vector2(2,-3)]), Color("#ffe27a"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(0,-11),Vector2(4,-16),Vector2(7,-10),Vector2(3,-5)]), Color("#321e38"))
+			else:
+				# Flyer: angular manta-like body with torn wings, tail and glowing eyes.
+				spr.polygon = PackedVector2Array([Vector2(-4,-30),Vector2(12,-19),Vector2(34,-12),Vector2(21,2),Vector2(16,21),Vector2(0,14),Vector2(-16,21),Vector2(-21,2),Vector2(-34,-12),Vector2(-12,-19)])
+				spr.color = Color("#8051b8")
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-12,-17),Vector2(-35,-25),Vector2(-25,-5),Vector2(-38,5),Vector2(-15,2)]), Color("#59347f"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(12,-17),Vector2(35,-25),Vector2(25,-5),Vector2(38,5),Vector2(15,2)]), Color("#59347f"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-5,10),Vector2(0,18),Vector2(5,10),Vector2(0,34)]), Color("#b68be0"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-11,-10),Vector2(-3,-14),Vector2(-2,-5),Vector2(-9,-3)]), Color("#a9f7ff"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(3,-14),Vector2(11,-10),Vector2(9,-3),Vector2(2,-5)]), Color("#a9f7ff"))
+				_add_eater_poly(detail, PackedVector2Array([Vector2(-8,3),Vector2(0,8),Vector2(8,3),Vector2(0,13)]), Color("#321e48"))
+			root.add_child(spr)
+			root.add_child(detail)
+			ent_layer.add_child(root)
+			ev = {"root": root, "spr": spr, "detail": detail, "halo": halo, "pos": ed[1], "rot": 0.0}
+			eviews[id] = ev
+		var vel: Vector2 = ed[2]
+		var tpos: Vector2 = ed[1] + vel * snap_age
+		ev.pos = ev.pos.lerp(tpos, minf(1.0, 24.0 * dt)) if is_client else tpos
+		var root: Node2D = ev.root
+		var spr: Polygon2D = ev.spr
+		var halo: Sprite2D = ev.halo
+		halo.visible = not _is_potato()
+		root.position = ev.pos
+		if vel.length() > 5.0:
+			ev.rot = lerp_angle(ev.rot, vel.angle(), minf(1.0, 12.0 * dt))
+		spr.rotation = ev.rot
+		var detail: Node2D = ev.detail
+		detail.rotation = ev.rot
+		var base := 0.62 if ed[3] == 0 else 0.42
+		var pulse := 1.0 + 0.09 * sin(t * 9.0 + id)
+		spr.scale = Vector2.ONE * base * pulse
+		detail.scale = Vector2.ONE * base * pulse
+		var c := Color(1.15, 0.35, 0.62) if ed[3] == 0 else Color(0.62, 0.38, 1.1)
+		if ed[5] > 0.0:
+			c = Color(3, 3, 3)
+		spr.modulate = c if not _is_potato() else Color(c.r, c.g, c.b, 1.0)
+		halo.visible = not _is_potato()
+		if not _is_potato():
+			halo.scale = Vector2.ONE * (1.3 if ed[3] == 0 else 0.9)
+			halo.modulate = Color(c.r * 0.5, c.g * 0.3, c.b * 0.5, 0.45)
+	for id in eviews.keys():
+		if not seen.has(id):
+			eviews[id].root.queue_free()
+			eviews.erase(id)
+
+
+func _add_eater_poly(parent: Node2D, points: PackedVector2Array, tint: Color) -> void:
+	var part := Polygon2D.new()
+	part.polygon = points
+	part.color = tint
+	parent.add_child(part)
+
+
+func _add_eater_line(parent: Node2D, points: PackedVector2Array, tint: Color, thickness: float) -> void:
+	var part := Line2D.new()
+	part.points = points
+	part.width = thickness
+	part.default_color = tint
+	part.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	part.end_cap_mode = Line2D.LINE_CAP_ROUND
+	parent.add_child(part)
+
+
+func _update_fx(dt: float) -> void:
+	if _is_potato() or not is_instance_valid(fx_mat):
+		return
+	var fx: Dictionary = view.get("fx", {})
+	invert_cur = move_toward(invert_cur, 1.0 if fx.has("invert") else 0.0, dt * 5.0)
+	blind_cur = move_toward(blind_cur, 1.0 if fx.has("blind") else 0.0, dt * 4.0)
+	fx_mat.set_shader_parameter("invert", invert_cur)
+	fx_mat.set_shader_parameter("blind", blind_cur)
+	var ws := Vector2(get_window().size)
+	var sc := minf(ws.x / 1280.0, ws.y / 720.0)
+	var wp: Vector2 = pviews[local_id].pos if pviews.has(local_id) else ARENA / 2.0
+	var px: Vector2 = ws / 2.0 + (wp - ARENA / 2.0) * cam.zoom.x * sc
+	fx_mat.set_shader_parameter("center", px / ws)
+	fx_mat.set_shader_parameter("aspect", ws.x / ws.y)
+	fx_mat.set_shader_parameter("radius", 200.0 * cam.zoom.x * sc / ws.y)
+
+
+func _update_hud(dt: float) -> void:
+	if pause_open:
+		_layout_pause_menu()
+	var over: bool = view.get("ph", "play") == "over"
+	var active_chaos: Array[String] = []
+	var fx: Dictionary = view.get("fx", {})
+	for chaos_key in fx.keys():
+		if float(fx[chaos_key]) > 0.0 and CHAOS_RU.has(chaos_key):
+			active_chaos.append(str(CHAOS_RU[chaos_key]))
+	if int(view.get("bomb", 0)) != 0:
+		active_chaos.append("НЕОНОВАЯ БОМБА")
+	var chaos_text := "[font_size=11][b][color=#74edff]АКТИВНЫЙ ХАОС[/color][/b][/font_size]\n[table=1]"
+	if active_chaos.is_empty():
+		chaos_text += "[cell][b][color=#a9efff]СЕЙЧАС ТИХО[/color][/b][/cell]"
+	else:
+		active_chaos.sort()
+		for chaos_name in active_chaos:
+			chaos_text += "[cell][b][color=#ffd47a]◆  %s[/color][/b][/cell]" % chaos_name
+	if float(view.get("tl", 0.0)) > 75.0:
+		chaos_text += "[cell][b][color=#ff9d72]СВЕТ АРЕНЫ УГАСАЕТ[/color][/b][/cell]"
+	chaos_text += "[/table]"
+	if timer_lbl.text != chaos_text:
+		timer_lbl.text = chaos_text
+	timer_lbl.modulate = Color.WHITE
+	var rows: Array = []
+	var me: Dictionary = {}
+	for pd in view.get("pl", []):
+		if pd.i == local_id:
+			me = pd
+		if not pd.d:
+			rows.append(pd)
+	# Leaderboard follows the actual match objective: chaos first, then remaining light.
+	rows.sort_custom(func(a, b): return a.pt > b.pt if a.pt != b.pt else a.l > b.l)
+	var txt := "[font_size=12][color=#74edff][b]◈  РЕЙТИНГ МАТЧА[/b][/color][/font_size]\n"
+	txt += "[table=4]"
+	txt += "[cell][color=#718ba5]#[/color][/cell]"
+	txt += "[cell][color=#718ba5]ИГРОК[/color][/cell]"
+	txt += "[cell][color=#718ba5]СВЕТ[/color][/cell]"
+	txt += "[cell][color=#718ba5]ХАОС[/color][/cell]"
+	for rank_i in rows.size():
+		var pd: Dictionary = rows[rank_i]
+		var hex: String = G.col(pd.c).to_html(false)
+		var state_text := "ТЕНЬ" if pd.s else "%d HP" % int(pd.l)
+		var display_name: String = str(pd.n)
+		if bool(pd.get("bot", false)):
+			display_name += " [Б]"
+		if display_name.length() > 13:
+			display_name = display_name.substr(0, 12) + "…"
+		var rank_color := "#ffd76a" if rank_i == 0 else ("#b9c9dc" if rank_i == 1 else "#8c9db2")
+		var chaos_color := "#ffbd58" if int(pd.pt) > 0 else "#91a4b9"
+		var current_marker := "▶ " if pd.i == local_id else ""
+		txt += "[cell][color=%s]%s%02d[/color][/cell]" % [rank_color, current_marker, rank_i + 1]
+		txt += "[cell][color=#%s]%s[/color][/cell]" % [hex, display_name]
+		txt += "[cell][color=#9aacc0]%s[/color][/cell]" % state_text
+		txt += "[cell][color=%s][b]%d[/b][/color][/cell]" % [chaos_color, int(pd.pt)]
+	txt += "[/table]"
+	if txt != last_score_text:  # re-parsing BBCode every frame was needless work
+		last_score_text = txt
+		score_lbl.text = txt
+	if not me.is_empty():
+		light_bar.max_value = me.hpmax
+		light_bar.value = me.l
+		dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
+		ability_bar.value = 100.0 * (1.0 - clampf(me.acd / 9.0, 0.0, 1.0))
+		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
+		capsule_ammo_lbl.visible = is_capsule
+		capsule_reload_bar.visible = is_capsule
+		if is_capsule:
+			var ammo := clampi(int(me.get("wa", 4)), 0, 4)
+			var ammo_text := ""
+			for charge_i in 4:
+				ammo_text += "◆ " if charge_i < ammo else "◇ "
+			capsule_ammo_lbl.text = "ВОЛНЫ  " + ammo_text + ("  +" + ("%.1f" % float(me.get("wr", 0.0))) + "с" if ammo < 4 else "  ГОТОВО")
+			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 1.5)
+			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 1.5) if ammo < 4 else 100.0
+		var buff_names := {"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕННЫЙ УРОН", "shield": "ЗАЩИТА", "battery": "БАТАРЕЯ"}
+		if str(me.get("buff", "")) != "" and float(me.get("buff_t", 0.0)) > 0.0:
+			timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
+		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
+		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
+		help_lbl.text = "%s  /  %s\nСПОСОБНОСТЬ [Q]: %s" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
+		if me.s:
+			help_lbl.text = "ТЫ — ТЕНЬ\nПКМ / E рядом с игроком — вселение"
+	if over:
+		over_rect.visible = true
+		over_shape.visible = true
+		over_outline.visible = true
+		over_lbl.visible = true
+		over_restart_btn.visible = not is_client
+		over_menu_btn.visible = true
+		var wn := "никто"
 		for pd in view.get("pl", []):
-			if pd.i == local_id:
-				me = pd
+			if pd.i == view.get("wn", 0):
+				wn = pd.n
+		var final_rows: Array = []
+		for pd in view.get("pl", []):
 			if not pd.d:
-				rows.append(pd)
-		# Leaderboard follows the actual match objective: chaos first, then remaining light.
-		rows.sort_custom(func(a, b): return a.pt > b.pt if a.pt != b.pt else a.l > b.l)
-		var txt := "[font_size=12][color=#74edff][b]◈  РЕЙТИНГ МАТЧА[/b][/color][/font_size]\n"
-		txt += "[table=4]"
-		txt += "[cell][color=#718ba5]#[/color][/cell]"
-		txt += "[cell][color=#718ba5]ИГРОК[/color][/cell]"
-		txt += "[cell][color=#718ba5]СВЕТ[/color][/cell]"
-		txt += "[cell][color=#718ba5]ХАОС[/color][/cell]"
-		for rank_i in rows.size():
-			var pd: Dictionary = rows[rank_i]
-			var hex: String = G.col(pd.c).to_html(false)
-			var state_text := "ТЕНЬ" if pd.s else "%d HP" % int(pd.l)
-			var display_name: String = str(pd.n)
-			if bool(pd.get("bot", false)):
-				display_name += " [Б]"
-			if display_name.length() > 13:
-				display_name = display_name.substr(0, 12) + "…"
-			var rank_color := "#ffd76a" if rank_i == 0 else ("#b9c9dc" if rank_i == 1 else "#8c9db2")
-			var chaos_color := "#ffbd58" if int(pd.pt) > 0 else "#91a4b9"
-			var current_marker := "▶ " if pd.i == local_id else ""
-			txt += "[cell][color=%s]%s%02d[/color][/cell]" % [rank_color, current_marker, rank_i + 1]
-			txt += "[cell][color=#%s]%s[/color][/cell]" % [hex, display_name]
-			txt += "[cell][color=#9aacc0]%s[/color][/cell]" % state_text
-			txt += "[cell][color=%s][b]%d[/b][/color][/cell]" % [chaos_color, int(pd.pt)]
-		txt += "[/table]"
-		if txt != last_score_text:  # re-parsing BBCode every frame was needless work
-			last_score_text = txt
-			score_lbl.text = txt
-		if not me.is_empty():
-			light_bar.max_value = me.hpmax
-			light_bar.value = me.l
-			dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
-			ability_bar.value = 100.0 * (1.0 - clampf(me.acd / 9.0, 0.0, 1.0))
-			var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
-			capsule_ammo_lbl.visible = is_capsule
-			capsule_reload_bar.visible = is_capsule
-			if is_capsule:
-				var ammo := clampi(int(me.get("wa", 4)), 0, 4)
-				var ammo_text := ""
-				for charge_i in 4:
-					ammo_text += "◆ " if charge_i < ammo else "◇ "
-				capsule_ammo_lbl.text = "ВОЛНЫ  " + ammo_text + ("  +" + ("%.1f" % float(me.get("wr", 0.0))) + "с" if ammo < 4 else "  ГОТОВО")
-				var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 1.5)
-				capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 1.5) if ammo < 4 else 100.0
-			var buff_names := {"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕННЫЙ УРОН", "shield": "ЗАЩИТА", "battery": "БАТАРЕЯ"}
-			if str(me.get("buff", "")) != "" and float(me.get("buff_t", 0.0)) > 0.0:
-				timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
-			var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
-			var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
-			help_lbl.text = "%s  /  %s\nСПОСОБНОСТЬ [Q]: %s" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
-			if me.s:
-				help_lbl.text = "ТЫ — ТЕНЬ\nПКМ / E рядом с игроком — вселение"
-		if over:
-			over_rect.visible = true
-			over_shape.visible = true
-			over_outline.visible = true
-			over_lbl.visible = true
-			over_restart_btn.visible = not is_client
-			over_menu_btn.visible = true
-			over_menu_btn.text = "В МЕНЮ"
-			if not over_menu_btn.pressed.is_connected(_to_menu):
-				over_menu_btn.pressed.connect(_to_menu)
-			var wn := "никто"
-			for pd in view.get("pl", []):
-				if pd.i == view.get("wn", 0):
-					wn = pd.n
-			var final_rows: Array = []
-			for pd in view.get("pl", []):
-				if not pd.d:
-					final_rows.append(pd)
-			var damage_rank := final_rows.duplicate()
-			var heal_rank := final_rows.duplicate()
-			var kill_rank := final_rows.duplicate()
-			var chaos_rank := final_rows.duplicate()
-			damage_rank.sort_custom(func(a, b): return float(a.get("dm", 0.0)) > float(b.get("dm", 0.0)))
-			heal_rank.sort_custom(func(a, b): return float(a.get("hl", 0.0)) > float(b.get("hl", 0.0)))
-			kill_rank.sort_custom(func(a, b): return int(a.ki) > int(b.ki))
-			chaos_rank.sort_custom(func(a, b): return int(a.pt) > int(b.pt))
-			var report := "[center][font_size=30][b][color=#68edff]◈  ИТОГИ МАТЧА  ◈[/color][/b][/font_size]\n"
-			report += "[font_size=22][color=#ffffff]ПОБЕДИТЕЛЬ[/color]  [color=#ffd76a]%s[/color]\n" % wn
-			report += "[font_size=16][color=#9ab8d4]ВРЕМЯ МАТЧА  %02d:%02d[/color][/font_size][/center]" % [int(float(view.get("elapsed", 0.0))) / 60, int(float(view.get("elapsed", 0.0))) % 60]
-			over_lbl.text = report
-			over_lbl.modulate = Color.WHITE
-			result_detail_open = false
-			var category_ranks := [damage_rank, heal_rank, kill_rank, chaos_rank]
-			var category_names := ["УРОН", "ХИЛ", "УБИЙСТВА", "ХАОС"]
-			var stat_keys := ["dm", "hl", "ki", "pt"]
-			for i in result_cards.size():
-				var card := result_cards[i]
-				var ranking: Array = category_ranks[i]
-				if not ranking.is_empty():
-					var leader: Dictionary = ranking[0]
-					card.text = "%s\n%s\n%s" % [category_names[i], str(leader.n), str(int(leader.get(stat_keys[i], 0)))]
-					if not card.has_meta("portrait_ready"):
-						var portrait := SubViewportContainer.new()
-						portrait.position = Vector2(7, 8)
-						portrait.size = Vector2(72, 76)
-						portrait.stretch = true
-						portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-						var portrait_vp := SubViewport.new()
-						portrait_vp.size = Vector2i(120, 120)
-						portrait_vp.transparent_bg = true
-						portrait_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-						portrait.add_child(portrait_vp)
-						var portrait_actor := VectorActor.new()
-						portrait_actor.position = Vector2(60, 66)
-						portrait_actor.scale = Vector2.ONE * 0.82
-						portrait_vp.add_child(portrait_actor)
-						portrait_actor.setup(int(leader.k), G.col(int(leader.c)), int(leader.get("outfit", 0)), int(leader.get("hat", 0)))
-						card.add_child(portrait)
-						card.set_meta("portrait_ready", true)
-				card.visible = true
-			_layout_game_over()
+				final_rows.append(pd)
+		var damage_rank := final_rows.duplicate()
+		var heal_rank := final_rows.duplicate()
+		var kill_rank := final_rows.duplicate()
+		var chaos_rank := final_rows.duplicate()
+		damage_rank.sort_custom(func(a, b): return float(a.get("dm", 0.0)) > float(b.get("dm", 0.0)))
+		heal_rank.sort_custom(func(a, b): return float(a.get("hl", 0.0)) > float(b.get("hl", 0.0)))
+		kill_rank.sort_custom(func(a, b): return int(a.ki) > int(b.ki))
+		chaos_rank.sort_custom(func(a, b): return int(a.pt) > int(b.pt))
+		var report := "[center][font_size=30][b][color=#68edff]◈  ИТОГИ МАТЧА  ◈[/color][/b][/font_size]\n"
+		report += "[font_size=24][color=#ffffff]ПОБЕДИТЕЛЬ[/color]  [color=#ffd76a]%s[/color][/font_size]\n" % wn
+		report += "[color=#52718e]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/color]\n"
+		report += "[font_size=18][b][color=#ff8d83]⚔  УРОН[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(damage_rank, "dm")
+		report += "[font_size=18][b][color=#69e9bd]✚  ВОССТАНОВЛЕНИЕ[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(heal_rank, "hl")
+		report += "[font_size=18][b][color=#c5a0ff]✦  УБИЙСТВА[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(kill_rank, "ki")
+		report += "[font_size=18][b][color=#ffd76a]☄  ХАОС[/color][/b][/font_size]\n"
+		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size][/center]" % _rank_line(chaos_rank, "pt")
+		over_lbl.text = report
+		over_lbl.modulate = Color.WHITE
+		_layout_game_over()
 	else:
 		over_rect.visible = false
 		over_shape.visible = false
 		over_outline.visible = false
 		over_lbl.visible = false
-		for card in result_cards: card.visible = false
-		result_detail_open = false
 		over_restart_btn.visible = false
 		over_menu_btn.visible = false
-
-
-func _open_result_category(category: String) -> void:
-	result_detail_open = true
-	var key: String = str({"УРОН":"dm", "ХИЛ":"hl", "УБИЙСТВА":"ki", "ХАОС":"pt"}.get(category, "pt"))
-	var rows: Array = []
-	for pd in view.get("pl", []): rows.append(pd)
-	rows.sort_custom(func(a, b): return float(a.get(key, 0.0)) > float(b.get(key, 0.0)))
-	var lines := "[center][font_size=26][b][color=#70eaff]%s[/color][/b][/font_size]\n" % category
-	for i in rows.size():
-		var p: Dictionary = rows[i]
-		lines += "%02d   %s   •   %s\n" % [i + 1, str(p.n), str(int(p.get(key, 0)))]
-	lines += "[/center]"
-	over_lbl.text = lines
-	for card in result_cards: card.visible = false
-	over_restart_btn.visible = false
-	over_menu_btn.text = "ВЕРНУТЬСЯ"
-	over_menu_btn.pressed.disconnect(_to_menu)
-	over_menu_btn.pressed.connect(_close_result_category, CONNECT_ONE_SHOT)
-	var tween := create_tween()
-	over_lbl.modulate.a = 0.0
-	tween.tween_property(over_lbl, "modulate:a", 1.0, 0.35)
-
-
-func _close_result_category() -> void:
-	result_detail_open = false
-	over_menu_btn.text = "В МЕНЮ"
-	if over_menu_btn.pressed.is_connected(_close_result_category):
-		over_menu_btn.pressed.disconnect(_close_result_category)
-	over_menu_btn.pressed.connect(_to_menu)
-	for card in result_cards: card.visible = true
-	over_restart_btn.visible = not is_client
-	over_lbl.modulate.a = 1.0
-	_update_hud(0.0)
 
 
 func _rank_line(rank: Array, key: String) -> String:
@@ -1424,11 +1326,6 @@ func _layout_game_over() -> void:
 	over_lbl.size = Vector2(panel_size.x - 104.0, panel_size.y - 150.0)
 	over_lbl.add_theme_font_size_override("normal_font_size", 20)
 	over_lbl.add_theme_constant_override("line_separation", 5)
-	var cards_y := pos.y + 148.0
-	for i in result_cards.size():
-		var card := result_cards[i]
-		card.position = Vector2(pos.x + 55.0 + float(i) * 220.0, cards_y)
-		card.size = Vector2(190, 150)
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 22.0, buttons_y)
