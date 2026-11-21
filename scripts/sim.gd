@@ -40,6 +40,8 @@ const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog
 var players := {}
 var bullets: Array = []
 var eaters: Array = []
+var pickups: Array = []
+var pickup_timer := 9.0
 var meteors: Array = []
 var obstacles: Array = []
 var meteor_burst_left := 0
@@ -69,6 +71,8 @@ func reset(cfg: Array) -> void:
 	players.clear()
 	bullets.clear()
 	eaters.clear()
+	pickups.clear()
+	pickup_timer = rng.randf_range(8.0, 13.0)
 	meteors.clear()
 	obstacles.clear()
 	meteor_burst_left = 0
@@ -112,7 +116,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
-		"wave_ammo": 4, "wave_reload_t": 0.0,
+		"wave_ammo": 4, "wave_reload_t": 0.0, "buff": "", "buff_t": 0.0,
 		"pts": 0, "kills": 0, "damage_total": 0.0, "healing_total": 0.0, "kill_streak": 0, "kill_streak_t": 0.0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
@@ -145,6 +149,7 @@ func step(dt: float) -> void:
 	_collisions(dt)
 	_update_bullets(dt)
 	_update_eaters(dt)
+	_update_pickups(dt)
 	_meteor_tick(dt)
 	_match_event_tick(dt)
 	_bomb_tick(dt)
@@ -234,6 +239,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	else:
 		var k := 0.9 if effects.has("zerog") else 15.0
 		var speed_boost := 1.55 if p.kind == 0 and p.ability_t > 0.0 else 1.0
+		if str(p.get("buff", "")) == "swift":
+			speed_boost *= 1.28
 		p.vel = p.vel.lerp(mv.limit_length(1.0) * SPEED * p.speed_mult * speed_boost, clampf(k * dt, 0.0, 1.0))
 		if want_dash and p.dash_cd <= 0.0 and p.light > DASH_COST:
 			p.dash_dir = mv.normalized() if mv.length() > 0.1 else p.aim
@@ -278,7 +285,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			var bolt_radius := 11.0 if p.kind == 3 else 6.0
 			var damage_mult := 0.42 if p.kind == 0 else 1.0
 			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
-				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3, "dmg": BULLET_DMG * p.attack * damage_mult,
+				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3, "dmg": BULLET_DMG * p.attack * damage_mult * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
 				"radius": bolt_radius})
 			next_id += 1
 		p.light -= shot_cost
@@ -494,6 +501,8 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	if global_state != null and bool(global_state.get("tutorial_active")) and bool(p.get("human", false)):
 		return
 	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.70
+	if str(p.get("buff", "")) == "shield":
+		reduced *= 0.62
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.25
 	p.light -= reduced
@@ -757,6 +766,48 @@ func _update_eaters(dt: float) -> void:
 	eaters = keep
 
 
+# ---------------------------------------------------------- улучшения ----
+func _update_pickups(dt: float) -> void:
+	pickup_timer -= dt
+	if pickup_timer <= 0.0:
+		pickup_timer = rng.randf_range(13.0, 19.0)
+		if pickups.size() < 3:
+			var kinds := ["swift", "overdrive", "shield", "battery"]
+			var kind: String = kinds[rng.randi_range(0, kinds.size() - 1)]
+			var pos := Vector2(rng.randf_range(100.0, A.x - 100.0), rng.randf_range(100.0, A.y - 100.0))
+			pickups.append({"pos": pos, "kind": kind, "t": 13.0})
+	var keep: Array = []
+	for pickup in pickups:
+		pickup.t -= dt
+		if pickup.t <= 0.0:
+			continue
+		var collected := false
+		for p in players.values():
+			if p.shadow or p.decoy:
+				continue
+			if p.pos.distance_squared_to(pickup.pos) > 48.0 * 48.0:
+				continue
+			p.buff = pickup.kind
+			p.buff_t = 9.0
+			if pickup.kind == "battery":
+				var old_light: float = float(p.light)
+				p.light = minf(p.max_light, p.light + 32.0)
+				var healed := float(p.light) - old_light
+				p.healing_total = float(p.get("healing_total", 0.0)) + healed
+				if healed > 0.01:
+					events.append({"t": "heal", "id": p.id, "amount": healed})
+			events.append({"t": "upgrade_pick", "id": p.id, "kind": pickup.kind, "x": p.pos.x, "y": p.pos.y, "c": p.ci})
+			collected = true
+			break
+		if not collected:
+			keep.append(pickup)
+	pickups = keep
+	for p in players.values():
+		p.buff_t = maxf(0.0, float(p.get("buff_t", 0.0)) - dt)
+		if p.buff_t <= 0.0:
+			p.buff = ""
+
+
 # --------------------------------------------------------------- хаос ----
 func _chaos_tick(dt: float) -> void:
 	chaos_timer -= dt
@@ -999,6 +1050,9 @@ func snapshot() -> Dictionary:
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
 			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
+	var pu: Array = []
+	for pickup in pickups:
+		pu.append([pickup.pos, pickup.kind, pickup.t])
 	var mt: Array = []
 	for meteor in meteors:
 		mt.append([meteor.pos, float(meteor.t)])
@@ -1012,4 +1066,4 @@ func snapshot() -> Dictionary:
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
 	return {"pl": pl, "bl": bl, "ea": ea, "fx": effects.duplicate(), "tl": time_left,
-		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob}
+		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu}
