@@ -1097,7 +1097,9 @@ func _update_hud(dt: float) -> void:
 	if int(view.get("bomb", 0)) != 0:
 		active_chaos.append("НЕОНОВАЯ БОМБА")
 	timer_lbl.text = "АКТИВНЫЙ ХАОС\n" + ("  •  ".join(active_chaos) if not active_chaos.is_empty() else "СЕЙЧАС ТИХО")
-	timer_lbl.modulate = Color("#ffd47a") if not active_chaos.is_empty() else Color("#a9efff")
+	if float(view.get("tl", 0.0)) > 75.0:
+		timer_lbl.text += "\nСВЕТ АРЕНЫ УГАСАЕТ"
+	timer_lbl.modulate = Color("#ffd47a") if not active_chaos.is_empty() or float(view.get("tl", 0.0)) > 75.0 else Color("#a9efff")
 	var rows: Array = []
 	var me: Dictionary = {}
 	for pd in view.get("pl", []):
