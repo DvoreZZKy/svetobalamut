@@ -156,7 +156,21 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	var want_ability: bool = inp.get("ability", false)
 	if effects.has("reverse") and not p.decoy:
 		mv = -mv
-	if p.derp_t > 0.0:
+	# A shadow possessing this player directly drives their movement and actions.
+	var possessor: Dictionary = {}
+	for candidate in players.values():
+		if candidate.shadow and int(candidate.get("poss_target", 0)) == p.id:
+			possessor = candidate
+			break
+	if not possessor.is_empty():
+		var control: Dictionary = inputs.get(possessor.id, {})
+		mv = control.get("mv", Vector2.ZERO)
+		aim_pt = control.get("aim", aim_pt)
+		want_fire = bool(control.get("fire", false))
+		want_dash = bool(control.get("dash", false))
+		want_ability = bool(control.get("ability", false))
+		want_poss = false
+	if p.derp_t > 0.0 and possessor.is_empty():
 		p.derp_t -= dt
 		var d: Dictionary = p.derp
 		d.t -= dt
@@ -426,6 +440,7 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 		var k: Dictionary = players[killer]
 		if not k.shadow:
 			k.kills += 1
+		k.pts += 2 # Every confirmed elimination awards chaos.
 		if k.derp_t > 0.0 and players.has(k.derp_by):
 			players[k.derp_by].pts += 2
 	else:
