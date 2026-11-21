@@ -230,22 +230,22 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.fire_was_down = want_fire
 	elif want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
 		var spread_count := 3 if p.kind == 0 else 1
-			for shot_i in spread_count:
-				var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
-				var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
-				var dir := Vector2.from_angle(ang)
-				var bolt_speed := 960.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED)
-				var bolt_radius := 11.0 if p.kind == 3 else 6.0
-				var damage_mult := 0.42 if p.kind == 0 else 1.0
-				bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
-					"owner": p.id, "life": 1.4, "bn": 0, "dmg": BULLET_DMG * p.attack * damage_mult,
-					"radius": bolt_radius})
-				next_id += 1
-			p.light -= shot_cost
-			var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
-			p.fire_cd = p.fire_rate * haste
-			p.vel -= p.aim * 55.0
-			events.append({"t": "shot", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
+		for shot_i in spread_count:
+			var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
+			var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
+			var dir := Vector2.from_angle(ang)
+			var bolt_speed := 960.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED)
+			var bolt_radius := 11.0 if p.kind == 3 else 6.0
+			var damage_mult := 0.42 if p.kind == 0 else 1.0
+			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
+				"owner": p.id, "life": 1.4, "bn": 0, "dmg": BULLET_DMG * p.attack * damage_mult,
+				"radius": bolt_radius})
+			next_id += 1
+		p.light -= shot_cost
+		var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
+		p.fire_cd = p.fire_rate * haste
+		p.vel -= p.aim * 55.0
+		events.append({"t": "shot", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
 
 	var spd_ratio: float = p.vel.length() / SPEED
 	p.light -= MOVE_COST * minf(spd_ratio, 1.2) * dt
