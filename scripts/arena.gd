@@ -287,14 +287,16 @@ func _build_hud() -> void:
 	var cl := CanvasLayer.new()
 	cl.layer = 10
 	add_child(cl)
-	timer_lbl = _label("4:00", 46, Vector2.ZERO, Vector2(220, 58), cl, true)
-	timer_lbl.anchor_left = 0.5
-	timer_lbl.anchor_right = 0.5
-	timer_lbl.offset_left = -110
-	timer_lbl.offset_right = 110
-	timer_lbl.offset_top = 8
-	timer_lbl.offset_bottom = 66
-	timer_lbl.modulate = Color(0.6, 1.8, 2.2)
+	timer_lbl = _label("АКТИВНЫЙ ХАОС", 20, Vector2.ZERO, Vector2(420, 84), cl, true)
+	timer_lbl.anchor_left = 1.0
+	timer_lbl.anchor_right = 1.0
+	timer_lbl.offset_left = -430
+	timer_lbl.offset_right = -16
+	timer_lbl.offset_top = 12
+	timer_lbl.offset_bottom = 96
+	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	timer_lbl.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	timer_lbl.modulate = Color("#a9efff")
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
 	banner.anchor_left = 0.5
 	banner.anchor_right = 0.5
@@ -309,7 +311,7 @@ func _build_hud() -> void:
 	score_lbl.fit_content = true
 	score_lbl.scroll_active = false
 	score_lbl.position = Vector2(16, 12)
-	score_lbl.size = Vector2(390, 300)
+	score_lbl.size = Vector2(520, 390)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	score_lbl.add_theme_font_size_override("normal_font_size", 13)
@@ -337,15 +339,15 @@ func _build_hud() -> void:
 	help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help_lbl.add_theme_font_size_override("font_size", 13)
-	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.75)
+	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.0)
 	timer_shape = Polygon2D.new()
-	timer_shape.position = Vector2(640, 38)
+	timer_shape.position = Vector2(1070, 54)
 	timer_shape.polygon = PackedVector2Array([
 		Vector2(-88, -28), Vector2(88, -28), Vector2(101, -15),
 		Vector2(101, 15), Vector2(88, 28), Vector2(-88, 28),
 		Vector2(-101, 15), Vector2(-101, -15)
 	])
-	timer_shape.color = Color("#0c1d31", 0.92)
+	timer_shape.color = Color("#0c1d31", 0.0)
 	timer_shape.z_index = -1
 	cl.add_child(timer_shape)
 	timer_outline = Line2D.new()
@@ -354,7 +356,7 @@ func _build_hud() -> void:
 	timer_outline.closed = true
 	timer_outline.width = 2.0
 	timer_outline.z_index = -1
-	timer_outline.default_color = Color("#39d9f0", 0.92)
+	timer_outline.default_color = Color("#39d9f0", 0.0)
 	cl.add_child(timer_outline)
 	timer_lbl.size = Vector2(190, 58)
 	timer_lbl.offset_left = -95
@@ -546,27 +548,6 @@ func _draw_ambient() -> void:
 
 
 func _draw_bullets() -> void:
-	for obstacle in view.get("ob", []):
-		var center: Vector2 = obstacle[0]
-		var radius: float = float(obstacle[1])
-		var health: float = float(obstacle[2])
-		var max_health: float = float(obstacle[3])
-		var ratio := clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
-		var points := PackedVector2Array()
-		for side in 9:
-			var angle := TAU * float(side) / 9.0
-			var uneven := radius * (0.88 + 0.12 * sin(float(side) * 7.1 + center.x))
-			points.append(center + Vector2.from_angle(angle) * uneven)
-		var rock_color := Color("#59616d").lerp(Color("#a65d45"), 1.0 - ratio)
-		bullet_layer.draw_colored_polygon(points, rock_color)
-		bullet_layer.draw_polyline(points, Color("#b9c6d4", 0.9), 3.0, true)
-		bullet_layer.draw_line(center + Vector2(-radius * 0.35, -radius * 0.12), center + Vector2(radius * 0.1, radius * 0.3), Color("#343b48"), 3.0, true)
-		bullet_layer.draw_line(center + Vector2(radius * 0.08, -radius * 0.32), center + Vector2(radius * 0.34, radius * 0.02), Color("#343b48"), 2.0, true)
-		if ratio < 0.999:
-			var bar_width := radius * 1.25
-			var bar_y := center.y - radius - 13.0
-			bullet_layer.draw_rect(Rect2(center.x - bar_width * 0.5, bar_y, bar_width, 5.0), Color("#202631"))
-			bullet_layer.draw_rect(Rect2(center.x - bar_width * 0.5, bar_y, bar_width * ratio, 5.0), Color("#ffb45c"))
 	for meteor in view.get("mt", []):
 		var center: Vector2 = meteor[0]
 		var remaining: float = float(meteor[1])
@@ -1098,19 +1079,15 @@ func _update_hud(dt: float) -> void:
 	if pause_open:
 		_layout_pause_menu()
 	var over: bool = view.get("ph", "play") == "over"
-	var secs := maxi(0, int(view.get("tl", Sim.MATCH_TIME)))
-	timer_lbl.text = "%d:%02d" % [secs / 60, secs % 60]
-	timer_lbl.modulate = Color("#ff789b") if secs <= 30 else Color("#b8f8ff")
-	# Chaos messes with the HUD clock (display only; the real match clock is untouched).
-	if not over and Time.get_ticks_msec() < timer_glitch_until:
-		var step := int(Time.get_ticks_msec() / 85)
-		if step != glitch_step:
-			glitch_step = step
-			glitch_text = "%d:%02d" % [randi() % 9, randi() % 60]
-		timer_lbl.text = glitch_text
-		timer_lbl.modulate = Color("#ffd45c")
-	if over:
-		timer_lbl.text = "0:00"
+	var active_chaos: Array[String] = []
+	var fx: Dictionary = view.get("fx", {})
+	for chaos_key in fx.keys():
+		if float(fx[chaos_key]) > 0.0 and CHAOS_RU.has(chaos_key):
+			active_chaos.append(str(CHAOS_RU[chaos_key]))
+	if int(view.get("bomb", 0)) != 0:
+		active_chaos.append("НЕОНОВАЯ БОМБА")
+	timer_lbl.text = "АКТИВНЫЙ ХАОС\n" + ("  •  ".join(active_chaos) if not active_chaos.is_empty() else "СЕЙЧАС ТИХО")
+	timer_lbl.modulate = Color("#ffd47a") if not active_chaos.is_empty() else Color("#a9efff")
 	var rows: Array = []
 	var me: Dictionary = {}
 	for pd in view.get("pl", []):
@@ -1120,11 +1097,14 @@ func _update_hud(dt: float) -> void:
 			rows.append(pd)
 	# Leaderboard follows the actual match objective: chaos first, then remaining light.
 	rows.sort_custom(func(a, b): return a.pt > b.pt if a.pt != b.pt else a.l > b.l)
-	var txt := "[font_size=17][color=#74edff][b]◈  ТАБЛИЦА ХАОСА[/b][/color][/font_size]\n"
-	txt += "[table=4]"
+	var txt := "[font_size=17][color=#74edff][b]◈  РЕЙТИНГ МАТЧА[/b][/color][/font_size]\n"
+	txt += "[table=6]"
 	txt += "[cell][color=#718ba5]#[/color][/cell]"
 	txt += "[cell][color=#718ba5]ИГРОК[/color][/cell]"
-	txt += "[cell][color=#718ba5]СОСТОЯНИЕ[/color][/cell]"
+	txt += "[cell][color=#718ba5]СВЕТ[/color][/cell]"
+	txt += "[cell][color=#718ba5]УРОН[/color][/cell]"
+	txt += "[cell][color=#718ba5]ХИЛ[/color][/cell]"
+	txt += "[cell][color=#718ba5]K[/color][/cell]"
 	txt += "[cell][color=#718ba5]ХАОС[/color][/cell]"
 	for rank_i in rows.size():
 		var pd: Dictionary = rows[rank_i]
@@ -1137,6 +1117,9 @@ func _update_hud(dt: float) -> void:
 		txt += "[cell][color=%s]%s%02d[/color][/cell]" % [rank_color, current_marker, rank_i + 1]
 		txt += "[cell][color=#%s]%s[/color][/cell]" % [hex, display_name]
 		txt += "[cell][color=#9aacc0]%s[/color][/cell]" % state_text
+		txt += "[cell][color=#ff9d75]%d[/color][/cell]" % int(pd.get("dm", 0.0))
+		txt += "[cell][color=#7df0bb]%d[/color][/cell]" % int(pd.get("hl", 0.0))
+		txt += "[cell][color=#f4e08a]%d[/color][/cell]" % int(pd.ki)
 		txt += "[cell][color=%s][b]%d[/b][/color][/cell]" % [chaos_color, int(pd.pt)]
 	txt += "[/table]"
 	if txt != last_score_text:  # re-parsing BBCode every frame was needless work
@@ -1174,7 +1157,22 @@ func _update_hud(dt: float) -> void:
 		for pd in view.get("pl", []):
 			if pd.i == view.get("wn", 0):
 				wn = pd.n
-		over_lbl.text = "ПОБЕДИТЕЛЬ\n%s" % wn
+		var final_rows: Array = []
+		for pd in view.get("pl", []):
+			if not pd.d:
+				final_rows.append(pd)
+		var damage_rank := final_rows.duplicate()
+		var heal_rank := final_rows.duplicate()
+		var kill_rank := final_rows.duplicate()
+		var chaos_rank := final_rows.duplicate()
+		damage_rank.sort_custom(func(a, b): return float(a.get("dm", 0.0)) > float(b.get("dm", 0.0)))
+		heal_rank.sort_custom(func(a, b): return float(a.get("hl", 0.0)) > float(b.get("hl", 0.0)))
+		kill_rank.sort_custom(func(a, b): return int(a.ki) > int(b.ki))
+		chaos_rank.sort_custom(func(a, b): return int(a.pt) > int(b.pt))
+		var report := "ПОБЕДИТЕЛЬ: %s\n\n" % wn
+		report += "УРОН: %s  •  ХИЛ: %s\n" % [_rank_line(damage_rank, "dm"), _rank_line(heal_rank, "hl")]
+		report += "КИЛЛЫ: %s  •  ХАОС: %s" % [_rank_line(kill_rank, "ki"), _rank_line(chaos_rank, "pt")]
+		over_lbl.text = report
 		over_lbl.modulate = Color(1.1, 1.35, 1.65)
 		_layout_game_over()
 	else:
@@ -1184,6 +1182,17 @@ func _update_hud(dt: float) -> void:
 		over_lbl.visible = false
 		over_restart_btn.visible = false
 		over_menu_btn.visible = false
+
+
+func _rank_line(rank: Array, key: String) -> String:
+	if rank.is_empty():
+		return "—"
+	var out: Array[String] = []
+	for i in mini(3, rank.size()):
+		var p: Dictionary = rank[i]
+		var value := int(p.get(key, 0.0))
+		out.append("%s %d" % [str(p.n), value])
+	return " / ".join(out)
 
 
 # -------------------------------------------------------------- эффекты ---
@@ -1206,7 +1215,7 @@ func _style_result_button(button: Button, accent: Color) -> void:
 
 func _layout_game_over() -> void:
 	var vp := get_viewport().get_visible_rect().size
-	var panel_size := Vector2(minf(760.0, vp.x - 48.0), 330.0)
+	var panel_size := Vector2(minf(900.0, vp.x - 48.0), 430.0)
 	var pos := (vp - panel_size) * 0.5
 	var cut := 22.0
 	var points := PackedVector2Array([
@@ -1217,10 +1226,10 @@ func _layout_game_over() -> void:
 	])
 	over_shape.polygon = points
 	over_outline.points = points
-	over_lbl.position = Vector2(pos.x + 20.0, pos.y + 48.0)
-	over_lbl.size = Vector2(panel_size.x - 40.0, 145.0)
-	over_lbl.add_theme_font_size_override("font_size", 38)
-	var buttons_y := pos.y + panel_size.y - 82.0
+	over_lbl.position = Vector2(pos.x + 28.0, pos.y + 34.0)
+	over_lbl.size = Vector2(panel_size.x - 56.0, 300.0)
+	over_lbl.add_theme_font_size_override("font_size", 19)
+	var buttons_y := pos.y + panel_size.y - 70.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 222.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 12.0, buttons_y)
 
