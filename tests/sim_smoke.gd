@@ -82,8 +82,11 @@ func _run() -> void:
 	sim._damage(victim, 10.0, 1, false)
 	sim._damage(victim, 30.0, 2, false)
 	sim._damage(victim, 25.0, 2, false)
-	var expected_a := 80.0 + 10.0 * 0.35 + Sim.KILL_BONUS * (10.0 / 65.0)
-	var expected_b := 80.0 + 55.0 * 0.35 + Sim.KILL_BONUS * (55.0 / 65.0)
+	var damage_a := 10.0 * float(victim.defense)
+	var damage_b := 55.0 * float(victim.defense)
+	var total_damage := damage_a + damage_b
+	var expected_a := 80.0 + damage_a * 0.35 + Sim.KILL_BONUS * (damage_a / total_damage)
+	var expected_b := 80.0 + damage_b * 0.35 + Sim.KILL_BONUS * (damage_b / total_damage)
 	if not victim.shadow or not is_equal_approx(float(attacker_a.light), expected_a) or not is_equal_approx(float(attacker_b.light), expected_b):
 		_fail("kill healing was not split proportionally between damage contributors")
 
