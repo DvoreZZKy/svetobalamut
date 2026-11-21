@@ -1555,8 +1555,25 @@ func _layout_game_over() -> void:
 	var card_width := (panel_size.x - 150.0) / 4.0
 	var card_height := panel_size.y - 310.0
 	for i in result_cards.size():
-		result_cards[i].position = Vector2(pos.x + 55.0 + float(i) * (card_width + 12.0), cards_y)
-		result_cards[i].size = Vector2(card_width, card_height)
+		var card := result_cards[i]
+		card.position = Vector2(pos.x + 55.0 + float(i) * (card_width + 12.0), cards_y)
+		card.size = Vector2(card_width, card_height)
+		var portrait := card.get_child(0) as Control if card.get_child_count() > 0 else null
+		if portrait:
+			portrait.position = Vector2(card_width * 0.5 - 62.0, 48.0)
+			portrait.size = Vector2(124, 132)
+		var category_label := card.get_node_or_null("CategoryTitle") as Label
+		if category_label:
+			category_label.position = Vector2(8, 8)
+			category_label.size = Vector2(card_width - 16, 30)
+		var nick_label := card.get_node_or_null("LeaderNick") as Label
+		if nick_label:
+			nick_label.position = Vector2(8, card_height - 96)
+			nick_label.size = Vector2(card_width - 16, 30)
+		var value_label := card.get_node_or_null("LeaderValue") as Label
+		if value_label:
+			value_label.position = Vector2(8, card_height - 62)
+			value_label.size = Vector2(card_width - 16, 34)
 	over_lbl.size.y = 120.0 if not result_detail_open else panel_size.y - 190.0
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
