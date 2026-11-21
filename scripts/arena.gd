@@ -271,11 +271,16 @@ func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> ProgressBar:
 	b.show_percentage = false
 	b.max_value = 100.0
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.05, 0.05, 0.1, 0.8)
+	bg.bg_color = Color("#06101e", 0.96)
 	bg.set_border_width_all(1)
-	bg.border_color = Color(col.r, col.g, col.b, 0.6)
+	bg.border_color = col.darkened(0.28)
+	bg.shadow_color = Color(col.r, col.g, col.b, 0.22)
+	bg.shadow_size = 2
 	var fl := StyleBoxFlat.new()
-	fl.bg_color = col
+	fl.bg_color = col.lightened(0.12)
+	fl.shadow_color = Color(col.r, col.g, col.b, 0.45)
+	fl.shadow_size = 3
+	fl.set_corner_radius_all(0)
 	b.add_theme_stylebox_override("background", bg)
 	b.add_theme_stylebox_override("fill", fl)
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -297,7 +302,7 @@ func _build_hud() -> void:
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	timer_lbl.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	timer_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	timer_lbl.add_theme_font_size_override("font_size", 12)
+	timer_lbl.add_theme_font_size_override("font_size", 11)
 	timer_lbl.modulate = Color("#a9efff")
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
 	banner.anchor_left = 0.5
@@ -1185,9 +1190,9 @@ func _update_hud(dt: float) -> void:
 			timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
 		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
-		help_lbl.text = "%s • Q: %s (%s)\nЦЕЛЬ: остаться последним светящимся.\nWASD — движение • ЛКМ — атака • ПРОБЕЛ — рывок • ESC — меню" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
+		help_lbl.text = "%s  /  %s\nСПОСОБНОСТЬ [Q]: %s" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
 		if me.s:
-			help_lbl.text = "ТЫ — ТЕНЬ: подойди к живому игроку и нажми ПКМ / E, чтобы вселиться.\nВселение длится 2 секунды — используй их, чтобы вернуться в игру."
+			help_lbl.text = "ТЫ — ТЕНЬ\nПКМ / E рядом с игроком — вселение"
 	if over:
 		over_rect.visible = true
 		over_shape.visible = true
