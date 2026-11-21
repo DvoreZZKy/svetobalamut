@@ -315,8 +315,8 @@ func _build_hud() -> void:
 	timer_lbl.anchor_right = 1.0
 	timer_lbl.offset_left = -430
 	timer_lbl.offset_right = -100
-	timer_lbl.offset_top = 74
-	timer_lbl.offset_bottom = 332
+	timer_lbl.offset_top = 54
+	timer_lbl.offset_bottom = 312
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	timer_lbl.add_theme_font_size_override("normal_font_size", 11)
 	timer_lbl.add_theme_font_override("normal_font", _bold_hud_font())
@@ -346,7 +346,7 @@ func _build_hud() -> void:
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = false
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(52, 74)
+	score_lbl.position = Vector2(52, 54)
 	score_lbl.size = Vector2(280, 150)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -372,8 +372,8 @@ func _build_hud() -> void:
 	help_lbl.anchor_right = 1.0
 	help_lbl.offset_left = -356
 	help_lbl.offset_right = -16
-	help_lbl.offset_top = 94
-	help_lbl.offset_bottom = 170
+	help_lbl.offset_top = 74
+	help_lbl.offset_bottom = 150
 	help_lbl.anchor_top = 0.0
 	help_lbl.anchor_bottom = 0.0
 	help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -487,7 +487,7 @@ func _build_hud() -> void:
 	over_rect = ColorRect.new()
 	over_rect.color = Color(0.003, 0.004, 0.018, 0.84)
 	over_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	over_rect.mouse_filter = Control.MOUSE_FILTER_STOP
+	over_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	over_rect.visible = false
 	cl.add_child(over_rect)
 	over_shape = Polygon2D.new()
@@ -1213,6 +1213,20 @@ func _update_hud(dt: float) -> void:
 	if timer_lbl.text != chaos_text:
 		timer_lbl.text = chaos_text
 	timer_lbl.modulate = Color.WHITE
+	timer_shape.color = Color("#0b1b30", 0.94)
+	timer_outline.default_color = Color("#39d9f0", 0.92)
+	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 190.0)
+	timer_outline.position = timer_shape.position
+	timer_lbl.anchor_top = 0.0
+	timer_lbl.anchor_bottom = 0.0
+	timer_lbl.anchor_left = 1.0
+	timer_lbl.anchor_right = 1.0
+	timer_lbl.offset_left = -420.0
+	timer_lbl.offset_right = -40.0
+	timer_lbl.offset_top = 150.0
+	timer_lbl.offset_bottom = 310.0
+	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	timer_lbl.add_theme_stylebox_override("normal", _chaos_panel_style())
 	var rows: Array = []
 	var me: Dictionary = {}
 	for pd in view.get("pl", []):
@@ -1221,7 +1235,12 @@ func _update_hud(dt: float) -> void:
 		if not pd.d:
 			rows.append(pd)
 	# Leaderboard follows the actual match objective: chaos first, then remaining light.
-	rows.sort_custom(func(a, b): return a.pt > b.pt if a.pt != b.pt else a.l > b.l)
+	rows.sort_custom(func(a, b):
+		if bool(a.s) != bool(b.s):
+			return not bool(a.s)
+		if int(a.pt) != int(b.pt):
+			return int(a.pt) > int(b.pt)
+		return float(a.l) > float(b.l))
 	var txt := "[font_size=12][color=#74edff][b]◈  РЕЙТИНГ МАТЧА[/b][/color][/font_size]\n"
 	txt += "[table=4]"
 	txt += "[cell][color=#718ba5]#[/color][/cell]"
@@ -1245,6 +1264,7 @@ func _update_hud(dt: float) -> void:
 		txt += "[cell][color=#9aacc0]%s[/color][/cell]" % state_text
 		txt += "[cell][color=%s][b]%d[/b][/color][/cell]" % [chaos_color, int(pd.pt)]
 	txt += "[/table]"
+	score_lbl.size.y = 48.0 + float(rows.size()) * 18.0
 	if txt != last_score_text:  # re-parsing BBCode every frame was needless work
 		last_score_text = txt
 		score_lbl.text = txt
@@ -1273,6 +1293,7 @@ func _update_hud(dt: float) -> void:
 		if me.s:
 			help_lbl.text = "ТЫ — ТЕНЬ\nПКМ / E рядом с игроком — вселение"
 	if over:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		over_rect.visible = true
 		over_shape.visible = true
 		over_outline.visible = true
@@ -1340,6 +1361,7 @@ func _update_hud(dt: float) -> void:
 		over_menu_btn.visible = false
 
 func _open_result_category(category: String) -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	result_detail_open = true
 	var key: String = str({"УРОН":"dm", "ХИЛ":"hl", "УБИЙСТВА":"ki", "ХАОС":"pt"}.get(category, "pt"))
 	var rows: Array = []
@@ -1393,6 +1415,19 @@ func _rank_line(rank: Array, key: String) -> String:
 
 
 # -------------------------------------------------------------- эффекты ---
+
+func _chaos_panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#071625", 0.94)
+	style.border_color = Color("#39d9f0", 0.82)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(0)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
+
 func _style_result_button(button: Button, accent: Color) -> void:
 	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
 		var style := StyleBoxFlat.new()
@@ -1427,11 +1462,13 @@ func _layout_game_over() -> void:
 	over_lbl.size = Vector2(panel_size.x - 104.0, panel_size.y - 150.0)
 	over_lbl.add_theme_font_size_override("normal_font_size", 20)
 	over_lbl.add_theme_constant_override("line_separation", 5)
-	var cards_y := pos.y + 150.0
+	var cards_y := pos.y + 168.0
+	var card_width := (panel_size.x - 150.0) / 4.0
+	var card_height := panel_size.y - 310.0
 	for i in result_cards.size():
-		result_cards[i].position = Vector2(pos.x + 55.0 + float(i) * 220.0, cards_y)
-		result_cards[i].size = Vector2(190, 150)
-	over_lbl.size.y = 110.0
+		result_cards[i].position = Vector2(pos.x + 55.0 + float(i) * (card_width + 12.0), cards_y)
+		result_cards[i].size = Vector2(card_width, card_height)
+	over_lbl.size.y = 120.0
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 22.0, buttons_y)
