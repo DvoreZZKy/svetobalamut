@@ -426,7 +426,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	var global_state := (Engine.get_main_loop() as SceneTree).root.get_node_or_null("G")
 	if global_state != null and bool(global_state.get("tutorial_active")) and bool(p.get("human", false)):
 		return
-	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.85
+	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.70
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.25
 	p.light -= reduced
