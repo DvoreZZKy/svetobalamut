@@ -53,7 +53,7 @@ var blind_cur := 0.0
 var edge_feedback: EdgeFeedback
 
 
-class NeonProgressBar extends ProgressBar:
+class NeonProgressBar extends Control:
 	var tint := Color("#62eaff")
 	var fill_ratio := 1.0
 
@@ -315,8 +315,6 @@ func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> NeonProgressBa
 	b.tint = col
 	b.position = pos
 	b.size = sz
-	b.show_percentage = false
-	b.max_value = 100.0
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = Color("#06101e", 0.96)
 	bg.set_border_width_all(1)
@@ -329,8 +327,6 @@ func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> NeonProgressBa
 	fl.shadow_color = Color(col.r, col.g, col.b, 0.45)
 	fl.shadow_size = 3
 	fl.set_corner_radius_all(3)
-	b.add_theme_stylebox_override("background", StyleBoxEmpty.new())
-	b.add_theme_stylebox_override("fill", StyleBoxEmpty.new())
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(b)
 	return b
@@ -1339,8 +1335,6 @@ func _update_hud(dt: float) -> void:
 	if not me.is_empty():
 		light_bar.max_value = me.hpmax
 		light_bar.value = me.l
-		dash_bar.max_value = 100.0
-		ability_bar.max_value = 100.0
 		var dash_cooldown := clampf(float(me.get("dc", 0.0)), 0.0, Sim.DASH_CD)
 		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
 		dash_bar.set_fill_ratio(1.0 - dash_cooldown / Sim.DASH_CD)
