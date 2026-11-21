@@ -131,6 +131,8 @@ var aim_screen_pos := Vector2.ZERO
 var stopwatch_lbl: Label
 var result_cards: Array[Button] = []
 var result_detail_open := false
+var result_list_scroll: ScrollContainer
+var result_list: VBoxContainer
 var banner: Label
 var score_lbl: RichTextLabel
 var help_lbl: Label
@@ -541,6 +543,27 @@ func _build_hud() -> void:
 	over_lbl.add_theme_color_override("default_color", Color("#f0fbff"))
 	cl.add_child(over_lbl)
 	over_lbl.visible = false
+	result_list_scroll = ScrollContainer.new()
+	result_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	result_list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	result_list_scroll.visible = false
+	var result_list_panel := PanelContainer.new()
+	var result_list_style := StyleBoxFlat.new()
+	result_list_style.bg_color = Color("#071625", 0.96)
+	result_list_style.border_color = Color("#287e91", 0.9)
+	result_list_style.set_border_width_all(1)
+	result_list_style.set_corner_radius_all(0)
+	result_list_style.content_margin_left = 8
+	result_list_style.content_margin_right = 8
+	result_list_style.content_margin_top = 8
+	result_list_style.content_margin_bottom = 8
+	result_list_panel.add_theme_stylebox_override("panel", result_list_style)
+	result_list_scroll.add_child(result_list_panel)
+	result_list = VBoxContainer.new()
+	result_list.add_theme_constant_override("separation", 7)
+	result_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	result_list_panel.add_child(result_list)
+	cl.add_child(result_list_scroll)
 	over_restart_btn = FacetButton.new()
 	over_restart_btn.text = "РЕВАНШ"
 	over_restart_btn.custom_minimum_size = Vector2(210, 48)
@@ -837,8 +860,8 @@ func _process(dt: float) -> void:
 		bullet_layer.queue_redraw()
 	last_bullet_count = bullet_count
 	if is_instance_valid(cursor_canvas):
-		cursor_canvas.visible = not G.tutorial_active
-		if not G.tutorial_active:
+		cursor_canvas.visible = not G.tutorial_active and not pause_open and view.get("ph", "play") != "over"
+		if cursor_canvas.visible:
 			cursor_canvas.position = aim_screen_pos - cursor_canvas.size * 0.5
 			cursor_canvas.queue_redraw()
 	shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
@@ -1256,7 +1279,7 @@ func _update_hud(dt: float) -> void:
 	timer_lbl.modulate = Color.WHITE
 	timer_shape.color = Color("#0b1b30", 0.94)
 	timer_outline.default_color = Color("#39d9f0", 0.92)
-	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 132.0)
+	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 88.0)
 	timer_outline.position = timer_shape.position
 	timer_lbl.anchor_top = 0.0
 	timer_lbl.anchor_bottom = 0.0
@@ -1264,8 +1287,8 @@ func _update_hud(dt: float) -> void:
 	timer_lbl.anchor_right = 1.0
 	timer_lbl.offset_left = -420.0
 	timer_lbl.offset_right = -40.0
-	timer_lbl.offset_top = 54.0
-	timer_lbl.offset_bottom = 210.0
+	timer_lbl.offset_top = 10.0
+	timer_lbl.offset_bottom = 166.0
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	timer_lbl.add_theme_stylebox_override("normal", _chaos_panel_style())
 	var rows: Array = []
@@ -1312,8 +1335,14 @@ func _update_hud(dt: float) -> void:
 	if not me.is_empty():
 		light_bar.max_value = me.hpmax
 		light_bar.value = me.l
-		dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
-		ability_bar.value = 100.0 * (1.0 - clampf(me.acd / 9.0, 0.0, 1.0))
+		dash_bar.max_value = 100.0
+		ability_bar.max_value = 100.0
+		var dash_cooldown := clampf(float(me.get("dc", 0.0)), 0.0, Sim.DASH_CD)
+		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
+		dash_bar.value = (1.0 - dash_cooldown / Sim.DASH_CD) * 100.0
+		ability_bar.value = (1.0 - ability_cooldown / 9.0) * 100.0
+		dash_bar.queue_redraw()
+		ability_bar.queue_redraw()
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
 		capsule_ammo_lbl.visible = is_capsule
 		capsule_reload_bar.visible = is_capsule
@@ -1338,7 +1367,8 @@ func _update_hud(dt: float) -> void:
 		over_rect.visible = true
 		over_shape.visible = true
 		over_outline.visible = true
-		over_lbl.visible = true
+		over_lbl.visible = not result_detail_open
+		result_list_scroll.visible = result_detail_open
 		over_restart_btn.visible = not is_client and not result_detail_open
 		over_menu_btn.visible = true
 		over_exit_btn.visible = result_detail_open
@@ -1437,6 +1467,7 @@ func _update_hud(dt: float) -> void:
 		over_lbl.visible = false
 		for card in result_cards:
 			card.visible = false
+		result_list_scroll.visible = false
 		result_detail_open = false
 		over_restart_btn.visible = false
 		over_menu_btn.visible = false
@@ -1459,8 +1490,71 @@ func _open_result_category(category: String) -> void:
 		var amount := int(p.get(key, 0))
 		lines += "[cell][color=%s]%02d[/color][/cell][cell][color=#%s]%s%s[/color][/cell][cell][b][color=%s]%d[/color][/b][/cell]" % [accent, i + 1, player_color, str(p.n), "  [Б]" if bool(p.get("bot", false)) else "", accent, amount]
 	lines += "[/table]"
-	over_lbl.scroll_active = true
-	over_lbl.text = lines
+	over_lbl.scroll_active = false
+	over_lbl.text = "[center][font_size=27][b][color=%s]◈  %s  ◈[/color][/b][/font_size][/center]" % [accent, category]
+	for child in result_list.get_children():
+		child.queue_free()
+	for i in rows.size():
+		var p: Dictionary = rows[i]
+		var row_card := PanelContainer.new()
+		row_card.custom_minimum_size = Vector2(0, 94)
+		row_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var row_style := StyleBoxFlat.new()
+		row_style.bg_color = Color("#0b1b2d", 0.82)
+		row_style.border_color = Color("#287e91", 0.82)
+		row_style.set_border_width_all(1)
+		row_style.set_corner_radius_all(0)
+		row_style.content_margin_left = 8
+		row_style.content_margin_right = 12
+		row_style.content_margin_top = 4
+		row_style.content_margin_bottom = 4
+		row_card.add_theme_stylebox_override("panel", row_style)
+		result_list.add_child(row_card)
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 12)
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row_card.add_child(row)
+		var portrait := SubViewportContainer.new()
+		portrait.custom_minimum_size = Vector2(88, 82)
+		portrait.size = Vector2(88, 82)
+		portrait.stretch = true
+		portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var portrait_vp := SubViewport.new()
+		portrait_vp.size = Vector2i(120, 110)
+		portrait_vp.transparent_bg = true
+		portrait_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		portrait.add_child(portrait_vp)
+		var portrait_actor := VectorActor.new()
+		portrait_actor.position = Vector2(60, 58)
+		portrait_actor.scale = Vector2.ONE * 0.72
+		portrait_vp.add_child(portrait_actor)
+		portrait_actor.setup(int(p.get("k", 0)), G.col(int(p.get("c", 0))), int(p.get("outfit", 0)), int(p.get("hat", 0)))
+		row.add_child(portrait)
+		var details := VBoxContainer.new()
+		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		details.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(details)
+		var name_label := Label.new()
+		name_label.text = "%02d   %s%s" % [i + 1, str(p.get("n", "Игрок")), "  •  БОТ" if bool(p.get("bot", false)) else ""]
+		name_label.add_theme_font_size_override("font_size", 18)
+		name_label.add_theme_color_override("font_color", G.col(int(p.get("c", 0))))
+		details.add_child(name_label)
+		var skin_label := Label.new()
+		var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
+		var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
+		skin_label.text = "%s  •  %s" % [outfits[clampi(int(p.get("outfit", 0)), 0, outfits.size() - 1)], hats[clampi(int(p.get("hat", 0)), 0, hats.size() - 1)]]
+		skin_label.add_theme_font_size_override("font_size", 12)
+		skin_label.add_theme_color_override("font_color", Color("#91a9c2"))
+		details.add_child(skin_label)
+		var score_label := Label.new()
+		score_label.text = "%s: %d" % [category, int(p.get(key, 0))]
+		score_label.custom_minimum_size.x = 150
+		score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		score_label.add_theme_font_size_override("font_size", 20)
+		score_label.add_theme_color_override("font_color", Color(accent))
+		row.add_child(score_label)
+	result_list_scroll.visible = true
 	for card in result_cards:
 		card.visible = false
 	over_restart_btn.visible = false
@@ -1488,6 +1582,8 @@ func _close_result_category() -> void:
 		over_menu_btn.pressed.connect(_to_menu)
 	for card in result_cards:
 		card.visible = true
+	result_list_scroll.visible = false
+	over_lbl.visible = true
 	over_restart_btn.visible = not is_client
 	over_lbl.modulate.a = 1.0
 
@@ -1574,7 +1670,9 @@ func _layout_game_over() -> void:
 		if value_label:
 			value_label.position = Vector2(8, card_height - 62)
 			value_label.size = Vector2(card_width - 16, 34)
-	over_lbl.size.y = 120.0 if not result_detail_open else panel_size.y - 190.0
+	over_lbl.size.y = 120.0
+	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 142.0)
+	result_list_scroll.size = Vector2(panel_size.x - 96.0, panel_size.y - 238.0)
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 22.0, buttons_y)
