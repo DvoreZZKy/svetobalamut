@@ -310,7 +310,7 @@ func _label(text: String, size: int, pos: Vector2, sz: Vector2, parent: Node, ce
 	return l
 
 
-func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> ProgressBar:
+func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> NeonProgressBar:
 	var b := NeonProgressBar.new()
 	b.tint = col
 	b.position = pos
