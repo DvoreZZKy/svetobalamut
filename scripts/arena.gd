@@ -348,10 +348,10 @@ func _build_hud() -> void:
 	timer_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	timer_lbl.anchor_left = 1.0
 	timer_lbl.anchor_right = 1.0
-	timer_lbl.offset_left = -430
-	timer_lbl.offset_right = -100
-	timer_lbl.offset_top = 54
-	timer_lbl.offset_bottom = 312
+	timer_lbl.offset_left = -370
+	timer_lbl.offset_right = -24
+	timer_lbl.offset_top = 18
+	timer_lbl.offset_bottom = 116
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	timer_lbl.add_theme_font_size_override("normal_font_size", 11)
 	timer_lbl.add_theme_font_override("normal_font", _bold_hud_font())
@@ -437,6 +437,8 @@ func _build_hud() -> void:
 	cl.add_child(timer_outline)
 	timer_shape.position = Vector2(1100, 48)
 	timer_outline.position = timer_shape.position
+	timer_shape.visible = false
+	timer_outline.visible = false
 	light_bar = _bar(Vector2.ZERO, Vector2(292, 14), Color("#ffd76a"), cl)
 	light_bar.anchor_left = 0.5
 	light_bar.anchor_right = 0.5
@@ -1281,18 +1283,16 @@ func _update_hud(dt: float) -> void:
 	if timer_lbl.text != chaos_text:
 		timer_lbl.text = chaos_text
 	timer_lbl.modulate = Color.WHITE
-	timer_shape.color = Color("#0b1b30", 0.94)
-	timer_outline.default_color = Color("#39d9f0", 0.92)
-	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 116.0)
-	timer_outline.position = timer_shape.position
+	timer_shape.visible = false
+	timer_outline.visible = false
 	timer_lbl.anchor_top = 0.0
 	timer_lbl.anchor_bottom = 0.0
 	timer_lbl.anchor_left = 1.0
 	timer_lbl.anchor_right = 1.0
-	timer_lbl.offset_left = -420.0
-	timer_lbl.offset_right = -40.0
-	timer_lbl.offset_top = 10.0
-	timer_lbl.offset_bottom = 166.0
+	timer_lbl.offset_left = -370.0
+	timer_lbl.offset_right = -24.0
+	timer_lbl.offset_top = 18.0
+	timer_lbl.offset_bottom = 116.0
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	timer_lbl.add_theme_stylebox_override("normal", _chaos_panel_style())
 	var rows: Array = []
@@ -1614,8 +1614,8 @@ func _chaos_panel_style() -> StyleBoxFlat:
 	style.set_corner_radius_all(0)
 	style.content_margin_left = 12
 	style.content_margin_right = 12
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
+	style.content_margin_top = 5
+	style.content_margin_bottom = 5
 	return style
 
 func _style_result_button(button: Button, accent: Color) -> void:
