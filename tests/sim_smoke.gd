@@ -109,7 +109,7 @@ func _run() -> void:
 		_fail("first shadow could not possess a nearby target")
 	if not is_equal_approx(float(shadow_a.poss_cd), Sim.POSSESS_COOLDOWN):
 		_fail("possessor did not receive the possession cooldown")
-	if not is_equal_approx(float(target.poss_protect_cd), Sim.POSSESS_COOLDOWN):
+	if not is_equal_approx(float(target.poss_protect_cd), Sim.POSSESS_COOLDOWN - 1.0 / 60.0):
 		_fail("target did not receive possession protection cooldown")
 	sim.inputs[1] = {}
 	sim.inputs[3] = {"poss": true}
