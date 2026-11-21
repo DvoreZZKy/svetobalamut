@@ -15,6 +15,8 @@ const PROFILE_COLORS := [
 ]
 var vol_music := 0.7
 var vol_sfx := 0.9
+var mouse_sensitivity := 1.35
+var match_mouse_sensitivity := true
 var shake_on := true
 var fullscreen := false
 var graphics_quality := 0 # 0: high, 1: medium, 2: low, 3: potato
@@ -185,6 +187,8 @@ func save_settings() -> void:
 	c.set_value("s", "profile_hat", profile_hat)
 	c.set_value("s", "music", vol_music)
 	c.set_value("s", "sfx", vol_sfx)
+	c.set_value("s", "mouse_sensitivity", mouse_sensitivity)
+	c.set_value("s", "match_mouse_sensitivity", match_mouse_sensitivity)
 	c.set_value("s", "shake", shake_on)
 	c.set_value("s", "fullscreen", fullscreen)
 	c.set_value("s", "graphics_quality", graphics_quality)
@@ -206,6 +210,8 @@ func load_settings() -> void:
 	profile_hat = c.get_value("s", "profile_hat", profile_hat)
 	vol_music = c.get_value("s", "music", vol_music)
 	vol_sfx = c.get_value("s", "sfx", vol_sfx)
+	mouse_sensitivity = clampf(float(c.get_value("s", "mouse_sensitivity", mouse_sensitivity)), 0.5, 3.0)
+	match_mouse_sensitivity = bool(c.get_value("s", "match_mouse_sensitivity", match_mouse_sensitivity))
 	shake_on = c.get_value("s", "shake", shake_on)
 	fullscreen = c.get_value("s", "fullscreen", fullscreen)
 	graphics_quality = clampi(int(c.get_value("s", "graphics_quality", graphics_quality)), 0, 3)
