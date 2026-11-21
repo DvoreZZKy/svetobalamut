@@ -745,12 +745,13 @@ func _check_end() -> void:
 		_end(cand[rng.randi() % cand.size()].id)
 		return
 	if time_left <= 0.0:
-		# лотерея по хаос-поинтам: билетов = 1 + pts
+		# At the timer limit, only still-glowing players can win.
+		# Chaos points increase their odds, but shadows are excluded.
 		var total := 0
-		for p in real:
+		for p in lit:
 			total += 1 + p.pts
 		var r := rng.randi() % total
-		for p in real:
+		for p in lit:
 			r -= 1 + p.pts
 			if r < 0:
 				_end(p.id)
