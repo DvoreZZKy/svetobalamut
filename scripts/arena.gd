@@ -346,7 +346,7 @@ func _build_hud() -> void:
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = false
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(52, 54)
+	score_lbl.position = Vector2(52, 34)
 	score_lbl.size = Vector2(280, 150)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -385,9 +385,9 @@ func _build_hud() -> void:
 	timer_shape = Polygon2D.new()
 	timer_shape.position = Vector2(1070, 54)
 	timer_shape.polygon = PackedVector2Array([
-		Vector2(-88, -28), Vector2(88, -28), Vector2(101, -15),
-		Vector2(101, 15), Vector2(88, 28), Vector2(-88, 28),
-		Vector2(-101, 15), Vector2(-101, -15)
+		Vector2(-190, -78), Vector2(190, -78), Vector2(202, -66),
+		Vector2(202, 66), Vector2(190, 78), Vector2(-190, 78),
+		Vector2(-202, 66), Vector2(-202, -66)
 	])
 	timer_shape.color = Color("#0c1d31", 0.0)
 	timer_shape.z_index = -1
@@ -730,9 +730,12 @@ func _read_input() -> Dictionary:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not pause_open:
-		var sensitivity := G.mouse_sensitivity if G.match_mouse_sensitivity else 1.0
-		aim_screen_pos += event.relative * sensitivity
-		aim_screen_pos = aim_screen_pos.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
+		if G.tutorial_active:
+			aim_screen_pos = event.position.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
+		else:
+			var sensitivity := G.mouse_sensitivity if G.match_mouse_sensitivity else 1.0
+			aim_screen_pos += event.relative * sensitivity
+			aim_screen_pos = aim_screen_pos.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
 
 
 func _process(dt: float) -> void:
@@ -798,8 +801,10 @@ func _process(dt: float) -> void:
 		bullet_layer.queue_redraw()
 	last_bullet_count = bullet_count
 	if is_instance_valid(cursor_canvas):
-		cursor_canvas.position = aim_screen_pos - cursor_canvas.size * 0.5
-		cursor_canvas.queue_redraw()
+		cursor_canvas.visible = not G.tutorial_active
+		if not G.tutorial_active:
+			cursor_canvas.position = aim_screen_pos - cursor_canvas.size * 0.5
+			cursor_canvas.queue_redraw()
 	shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
 	var s: float = shake if G.shake_on else 0.0
 	if s > 0.05:
@@ -1215,7 +1220,7 @@ func _update_hud(dt: float) -> void:
 	timer_lbl.modulate = Color.WHITE
 	timer_shape.color = Color("#0b1b30", 0.94)
 	timer_outline.default_color = Color("#39d9f0", 0.92)
-	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 190.0)
+	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 132.0)
 	timer_outline.position = timer_shape.position
 	timer_lbl.anchor_top = 0.0
 	timer_lbl.anchor_bottom = 0.0
@@ -1223,8 +1228,8 @@ func _update_hud(dt: float) -> void:
 	timer_lbl.anchor_right = 1.0
 	timer_lbl.offset_left = -420.0
 	timer_lbl.offset_right = -40.0
-	timer_lbl.offset_top = 150.0
-	timer_lbl.offset_bottom = 310.0
+	timer_lbl.offset_top = 54.0
+	timer_lbl.offset_bottom = 210.0
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	timer_lbl.add_theme_stylebox_override("normal", _chaos_panel_style())
 	var rows: Array = []
@@ -1262,7 +1267,7 @@ func _update_hud(dt: float) -> void:
 		txt += "[cell][color=%s]%s%02d[/color][/cell]" % [rank_color, current_marker, rank_i + 1]
 		txt += "[cell][color=#%s]%s[/color][/cell]" % [hex, display_name]
 		txt += "[cell][color=#9aacc0]%s[/color][/cell]" % state_text
-		txt += "[cell][color=%s][b]%d[/b][/color][/cell]" % [chaos_color, int(pd.pt)]
+		txt += "[cell][font_size=10][color=%s][b]%d[/b][/color][/font_size][/cell]" % [chaos_color, int(pd.pt)]
 	txt += "[/table]"
 	score_lbl.size.y = 48.0 + float(rows.size()) * 18.0
 	if txt != last_score_text:  # re-parsing BBCode every frame was needless work
