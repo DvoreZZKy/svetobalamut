@@ -78,7 +78,7 @@ func _run() -> void:
 	var victim: Dictionary = sim.players[3]
 	attacker_a.light = 80.0
 	attacker_b.light = 80.0
-	victim.light = 20.0
+	victim.light = 50.0
 	sim._damage(victim, 10.0, 1, false)
 	sim._damage(victim, 30.0, 2, false)
 	sim._damage(victim, 25.0, 2, false)
