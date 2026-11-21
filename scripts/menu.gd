@@ -105,6 +105,30 @@ func _ready() -> void:
 	var st := _box("settings")
 	_title(st, "Настройки")
 	var tabs := TabContainer.new()
+	tabs.add_theme_font_size_override("font_size", 16)
+	tabs.add_theme_color_override("font_selected_color", Color("#79efff"))
+	tabs.add_theme_color_override("font_unselected_color", Color("#9bb4ce"))
+	var tabs_panel := StyleBoxFlat.new()
+	tabs_panel.bg_color = Color("#071321", 0.96)
+	tabs_panel.border_color = Color("#287e91", 0.9)
+	tabs_panel.set_border_width_all(2)
+	tabs_panel.set_corner_radius_all(0)
+	tabs_panel.content_margin_left = 14
+	tabs_panel.content_margin_right = 14
+	tabs_panel.content_margin_top = 14
+	tabs_panel.content_margin_bottom = 12
+	tabs.add_theme_stylebox_override("panel", tabs_panel)
+	for tab_style_name in ["tab_selected", "tab_unselected", "tab_hovered"]:
+		var tab_style := StyleBoxFlat.new()
+		tab_style.bg_color = Color("#12304a", 0.98) if tab_style_name != "tab_unselected" else Color("#091827", 0.94)
+		tab_style.border_color = Color("#42dff4", 0.92) if tab_style_name != "tab_unselected" else Color("#24445c", 0.8)
+		tab_style.set_border_width_all(1)
+		tab_style.set_corner_radius_all(0)
+		tab_style.content_margin_left = 14
+		tab_style.content_margin_right = 14
+		tab_style.content_margin_top = 8
+		tab_style.content_margin_bottom = 8
+		tabs.add_theme_stylebox_override(tab_style_name, tab_style)
 	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	st.add_child(tabs)
