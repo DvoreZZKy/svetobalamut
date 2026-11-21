@@ -300,6 +300,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	if effects.has("invert"):
 		in_zone = not in_zone
 	p.light += REGEN_PASSIVE * dt
+	if str(p.get("buff", "")) == "battery":
+		p.light += 3.0 * dt
 	if spd_ratio < 0.15:
 		p.light += REGEN_STILL * dt
 	if in_zone:
@@ -1049,7 +1051,7 @@ func snapshot() -> Dictionary:
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
-			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
+			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var pu: Array = []
 	for pickup in pickups:
 		pu.append([pickup.pos, pickup.kind, pickup.t])
