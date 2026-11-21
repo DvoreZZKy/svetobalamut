@@ -335,6 +335,7 @@ func _capsule_shockwave(p: Dictionary) -> void:
 			p.light = minf(p.max_light, p.light + 9.0)
 			var healed: float = float(p.light) - old_light
 			if healed > 0.01:
+				p.healing_total = float(p.get("healing_total", 0.0)) + healed
 				events.append({"t": "heal", "id": p.id, "amount": healed})
 		else:
 			events.append({"t": "hit", "x": eater.pos.x, "y": eater.pos.y, "c": p.ci})
@@ -514,6 +515,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 			a.light = minf(a.max_light, a.light + reduced * 0.35)
 			var healed: float = float(a.light) - old_light
 			if healed > 0.01:
+				a.healing_total = float(a.get("healing_total", 0.0)) + healed
 				events.append({"t": "heal", "id": a.id, "amount": healed})
 	if p.light <= 0.0 and not p.decoy and not p.shadow:
 		_make_shadow(p, src, false)
@@ -638,7 +640,8 @@ func _match_event_tick(dt: float) -> void:
 				p.light = minf(p.max_light, p.light + 18.0)
 				var healed: float = float(p.light) - old_light
 				if healed > 0.01:
-					events.append({"t": "heal", "id": p.id, "amount": healed})
+					p.healing_total = float(p.get("healing_total", 0.0)) + healed
+				events.append({"t": "heal", "id": p.id, "amount": healed})
 	else:
 		events.append({"t": "match_event", "kind": "hunt"})
 		for i in 3:
@@ -702,7 +705,8 @@ func _update_bullets(dt: float) -> void:
 							eater_healer.light = minf(eater_healer.max_light, eater_healer.light + 9.0)
 							var healed: float = float(eater_healer.light) - old_light
 							if healed > 0.01:
-								events.append({"t": "heal", "id": eater_healer.id, "amount": healed})
+								eater_healer.healing_total = float(eater_healer.get("healing_total", 0.0)) + healed
+					events.append({"t": "heal", "id": eater_healer.id, "amount": healed})
 					else:
 						events.append({"t": "hit", "x": e.pos.x, "y": e.pos.y, "c": 0})
 					break
@@ -794,7 +798,8 @@ func trigger(name: String) -> void:
 				a.light = minf(a.max_light, a.light + amt)
 				var healed: float = float(a.light) - old_light
 				if healed > 0.01:
-					events.append({"t": "heal", "id": a.id, "amount": healed})
+					a.healing_total = float(a.get("healing_total", 0.0)) + healed
+				events.append({"t": "heal", "id": a.id, "amount": healed})
 				b.light = maxf(1.0, b.light - amt)
 				events.append({"t": "hurt", "id": b.id, "amount": amt})
 		"doubles":
