@@ -61,6 +61,32 @@ func _run() -> void:
 		if not is_equal_approx(float(p.max_light), float(st.hp)) or not is_equal_approx(float(p.defense), float(st.def)):
 			_fail("player %s has stats that don't match class %d after steal" % [str(pid), int(p.kind)])
 
+	# 2a) There is exactly one central regeneration zone.
+	if Sim.ZONES.size() != 1 or Vector2(Sim.ZONES[0].x, Sim.ZONES[0].y) != Vector2(800, 450):
+		_fail("arena must have exactly one central regeneration zone")
+
+	# 2aa) Kill healing is split between all damage contributors by damage share.
+	var heal_cfg: Array = [
+		{"id": 1, "name": "Attacker A", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Attacker B", "human": true, "color": 1, "kind": 1, "outfit": 0, "hat": 0},
+		{"id": 3, "name": "Victim", "human": true, "color": 2, "kind": 2, "outfit": 0, "hat": 0}
+	]
+	sim.reset(heal_cfg)
+	sim.chaos_enabled = false
+	var attacker_a: Dictionary = sim.players[1]
+	var attacker_b: Dictionary = sim.players[2]
+	var victim: Dictionary = sim.players[3]
+	attacker_a.light = 80.0
+	attacker_b.light = 80.0
+	victim.light = 20.0
+	sim._damage(victim, 10.0, 1, false)
+	sim._damage(victim, 30.0, 2, false)
+	sim._damage(victim, 25.0, 2, false)
+	var expected_a := 80.0 + 10.0 * 0.35 + Sim.KILL_BONUS * (10.0 / 65.0)
+	var expected_b := 80.0 + 55.0 * 0.35 + Sim.KILL_BONUS * (55.0 / 65.0)
+	if not victim.shadow or not is_equal_approx(float(attacker_a.light), expected_a) or not is_equal_approx(float(attacker_b.light), expected_b):
+		_fail("kill healing was not split proportionally between damage contributors")
+
 	# 2a) Sustained class damage must exceed the strongest possible stationary zone regeneration.
 	if not is_equal_approx(Sim.REGEN_PASSIVE, 2.0) or not is_equal_approx(Sim.REGEN_STILL, 2.0) or not is_equal_approx(Sim.REGEN_ZONE, 4.0):
 		_fail("light regeneration constants do not match the new balance")
