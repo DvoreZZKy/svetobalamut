@@ -50,6 +50,7 @@ var shadow_explanation := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	arena = get_parent()
 	_build_overlay()
 	_show_ui_step(0)
@@ -587,6 +588,7 @@ func _restart_tutorial() -> void:
 
 func _exit_tree() -> void:
 	Engine.time_scale = NORMAL_SPEED
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if not finished:
 		var state := _global_state()
 		state.set("tutorial_active", false)
