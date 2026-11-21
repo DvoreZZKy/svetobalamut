@@ -416,7 +416,7 @@ func _target_rect() -> Rect2:
 		"timer": return Rect2(Vector2(vp.x - 450, 0), Vector2(450, 115))
 		"score": return Rect2(Vector2(0, 0), Vector2(545, 420))
 		"help": return Rect2(Vector2(vp.x - 525, 0), Vector2(525, 145))
-		"zones": return Rect2(vp * 0.5 - Vector2(560, 310), Vector2(1120, 620))
+		"zones": return Rect2(vp * 0.5 + (Vector2(400, 225) - Vector2(800, 450)) * 0.78 - Vector2(88, 88), Vector2(176, 176))
 		"light": return Rect2(Vector2(vp.x * 0.5 - 190, vp.y - 74), Vector2(360, 30))
 		"dash": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 43), Vector2(440, 15))
 		"ability": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 29), Vector2(440, 15))
