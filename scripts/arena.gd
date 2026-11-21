@@ -333,8 +333,8 @@ func _build_hud() -> void:
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = false
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(42, 10)
-	score_lbl.size = Vector2(390, 214)
+	score_lbl.position = Vector2(42, 30)
+	score_lbl.size = Vector2(280, 150)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	score_lbl.add_theme_font_size_override("normal_font_size", 10)
@@ -348,10 +348,10 @@ func _build_hud() -> void:
 	board_style.border_color = Color("#42d9ed", 0.72)
 	board_style.set_border_width_all(1)
 	board_style.set_corner_radius_all(0)
-	board_style.content_margin_left = 7
-	board_style.content_margin_right = 7
-	board_style.content_margin_top = 6
-	board_style.content_margin_bottom = 6
+	board_style.content_margin_left = 9
+	board_style.content_margin_right = 9
+	board_style.content_margin_top = 8
+	board_style.content_margin_bottom = 8
 	score_lbl.add_theme_stylebox_override("normal", board_style)
 	cl.add_child(score_lbl)
 	help_lbl = _label("", 11, Vector2.ZERO, Vector2(340, 76), cl)
