@@ -546,6 +546,27 @@ func _draw_ambient() -> void:
 
 
 func _draw_bullets() -> void:
+	for obstacle in view.get("ob", []):
+		var center: Vector2 = obstacle[0]
+		var radius: float = float(obstacle[1])
+		var health: float = float(obstacle[2])
+		var max_health: float = float(obstacle[3])
+		var ratio := clampf(health / maxf(max_health, 1.0), 0.0, 1.0)
+		var points := PackedVector2Array()
+		for side in 9:
+			var angle := TAU * float(side) / 9.0
+			var uneven := radius * (0.88 + 0.12 * sin(float(side) * 7.1 + center.x))
+			points.append(center + Vector2.from_angle(angle) * uneven)
+		var rock_color := Color("#59616d").lerp(Color("#a65d45"), 1.0 - ratio)
+		bullet_layer.draw_colored_polygon(points, rock_color)
+		bullet_layer.draw_polyline(points, Color("#b9c6d4", 0.9), 3.0, true)
+		bullet_layer.draw_line(center + Vector2(-radius * 0.35, -radius * 0.12), center + Vector2(radius * 0.1, radius * 0.3), Color("#343b48"), 3.0, true)
+		bullet_layer.draw_line(center + Vector2(radius * 0.08, -radius * 0.32), center + Vector2(radius * 0.34, radius * 0.02), Color("#343b48"), 2.0, true)
+		if ratio < 0.999:
+			var bar_width := radius * 1.25
+			var bar_y := center.y - radius - 13.0
+			bullet_layer.draw_rect(Rect2(center.x - bar_width * 0.5, bar_y, bar_width, 5.0), Color("#202631"))
+			bullet_layer.draw_rect(Rect2(center.x - bar_width * 0.5, bar_y, bar_width * ratio, 5.0), Color("#ffb45c"))
 	for meteor in view.get("mt", []):
 		var center: Vector2 = meteor[0]
 		var remaining: float = float(meteor[1])
