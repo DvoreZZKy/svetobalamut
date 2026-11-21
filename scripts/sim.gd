@@ -7,7 +7,7 @@ const A := Vector2(1600, 900)
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
 	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.22, "ability": "Перегрузка"},
-	{"name": "Капсула", "hp": 155.0, "def": 0.72, "atk": 1.35, "speed": 0.78, "rate": 0.56, "ability": "Энергощит"},
+	{"name": "Капсула", "hp": 140.0, "def": 0.88, "atk": 1.35, "speed": 0.78, "rate": 0.56, "ability": "Энергощит"},
 	{"name": "Призрак", "hp": 130.0, "def": 0.88, "atk": 1.0, "speed": 1.20, "rate": 0.26, "ability": "Фазовый скачок"},
 	{"name": "Кристалл", "hp": 140.0, "def": 0.96, "atk": 1.65, "speed": 1.00, "rate": 0.46, "ability": "Звёздный залп"}
 ]
@@ -509,7 +509,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	if str(p.get("buff", "")) == "shield":
 		reduced *= 0.62
 	if p.kind == 1 and p.ability_t > 0.0:
-		reduced *= 0.25
+		reduced *= 0.50
 	p.light -= reduced
 	events.append({"t": "hurt", "id": p.id, "amount": reduced})
 	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
