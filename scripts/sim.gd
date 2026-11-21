@@ -40,6 +40,8 @@ const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog
 var players := {}
 var bullets: Array = []
 var eaters: Array = []
+var meteors: Array = []
+var meteor_timer := 14.0
 var effects := {}
 var events: Array = []
 var inputs := {}
@@ -63,6 +65,8 @@ func reset(cfg: Array) -> void:
 	players.clear()
 	bullets.clear()
 	eaters.clear()
+	meteors.clear()
+	meteor_timer = rng.randf_range(12.0, 18.0)
 	effects.clear()
 	events.clear()
 	inputs.clear()
@@ -133,6 +137,7 @@ func step(dt: float) -> void:
 	_collisions(dt)
 	_update_bullets(dt)
 	_update_eaters(dt)
+	_meteor_tick(dt)
 	_bomb_tick(dt)
 	for id in players.keys():
 		var p: Dictionary = players[id]
@@ -563,6 +568,42 @@ func _collisions(_dt: float) -> void:
 				b.pos = (b.pos as Vector2).clamp(Vector2(30, 30), A - Vector2(30, 30))
 
 
+func _meteor_tick(dt: float) -> void:
+	meteor_timer -= dt
+	if meteor_timer <= 0.0 and meteors.size() < 3:
+		var target := Vector2(rng.randf_range(100.0, A.x - 100.0), rng.randf_range(100.0, A.y - 100.0))
+		meteors.append({"pos": target, "t": 1.15, "id": next_id})
+		next_id += 1
+		events.append({"t": "meteor_warn", "x": target.x, "y": target.y, "c": 0})
+		meteor_timer = rng.randf_range(8.0, 13.0)
+	var keep: Array = []
+	for meteor in meteors:
+		meteor.t -= dt
+		if meteor.t > 0.0:
+			keep.append(meteor)
+			continue
+		var center: Vector2 = meteor.pos
+		const RADIUS := 138.0
+		for p in players.values():
+			if p.shadow or p.decoy:
+				continue
+			var offset: Vector2 = p.pos - center
+			var distance := offset.length()
+			if distance < RADIUS:
+				var strength := 1.0 - distance / RADIUS
+				_damage(p, 42.0 * (0.45 + strength * 0.55), 0, false)
+				p.vel += (offset.normalized() if distance > 0.01 else Vector2.UP) * (420.0 + 520.0 * strength)
+		for eater in eaters:
+			if not eater.dead and eater.pos.distance_to(center) < RADIUS:
+				eater.hp -= 5
+				eater.flash = 0.25
+				if eater.hp <= 0:
+					eater.dead = true
+		events.append({"t": "meteor_impact", "x": center.x, "y": center.y, "c": 0, "r": RADIUS})
+		shake_req = maxf(shake_req, 16.0)
+	meteors = keep
+
+
 func _update_bullets(dt: float) -> void:
 	var keep: Array = []
 	var bright := _brightest(0)
@@ -920,6 +961,9 @@ func snapshot() -> Dictionary:
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
 			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
+	var mt: Array = []
+	for meteor in meteors:
+		mt.append([meteor.pos, float(meteor.t)])
 	var bl: Array = []
 	for b in bullets:
 		bl.append([b.id, b.pos, b.vel, b.owner, b.bn, int(players.get(b.owner, {}).get("kind", 0)), float(b.get("radius", 6.0))])
@@ -927,4 +971,4 @@ func snapshot() -> Dictionary:
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
 	return {"pl": pl, "bl": bl, "ea": ea, "fx": effects.duplicate(), "tl": time_left,
-		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t}
+		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt}
