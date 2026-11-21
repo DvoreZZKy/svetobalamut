@@ -13,7 +13,7 @@ const UI_STEPS := [
 	{"title":"ЗАПАС СВЕТА","body":"Полоса внизу — запас света и одновременно здоровье. Попадания, движение и выстрелы расходуют его. Восстанавливай свет в тёмных зонах и подбирай батареи.","target":"light"},
 	{"title":"ПЕРЕЗАРЯДКА РЫВКА","body":"Голубая полоса показывает восстановление рывка. Рывок расходует свет и помогает быстро сменить позицию.","target":"dash"},
 	{"title":"ПЕРЕЗАРЯДКА СПОСОБНОСТИ","body":"Фиолетовая полоса показывает перезарядку способности твоего класса. Когда она заполнится, Q снова можно использовать.","target":"ability"},
-	{"title":"ТЁМНЫЕ ЗОНЫ И ПОБЕДА","body":"Фиолетовые области помогают восстанавливать свет. Матч заканчивается, когда остаётся один светящийся игрок. После этого появятся четыре рейтинга: урон, хил, киллы и хаос.","target":"arena"}
+	{"title":"ТЁМНЫЕ ЗОНЫ И ПОБЕДА","body":"Фиолетовые области помогают восстанавливать свет. Матч заканчивается, когда остаётся один светящийся игрок. Со временем энергия арены угасает, поэтому не получится бесконечно прятаться в зоне. После победы появятся четыре рейтинга: урон, хил, киллы и хаос.","target":"arena"}
 ]
 const CONTROL_STEPS := [
 	{"title":"ПЕРЕДВИЖЕНИЕ","body":"Используй WASD, чтобы двигаться по арене. Попробуй переместиться — обучение продолжится автоматически.","kind":"move"},
@@ -280,10 +280,10 @@ func _show_control_step(index: int) -> void:
 	body_label.text = str(item.body)
 	match str(item.kind):
 		"move": _set_wasd_keys()
-		"dash": _set_keys(["ПРОБЕЛ"])
-		"ability": _set_keys(["Q"])
+		"dash": _set_keys([_key_name("dash")])
+		"ability": _set_keys([_key_name("ability")])
 		"fire": _set_keys(["ЛКМ"])
-		"possess": _set_keys(["ПКМ", "E"])
+		"possess": _set_keys(["ПКМ", _key_name("possess")])
 	next_button.visible = false
 	panel.visible = true
 	panel.modulate.a = 0.0
@@ -301,16 +301,20 @@ func _set_wasd_keys() -> void:
 	layout.alignment = BoxContainer.ALIGNMENT_CENTER
 	var top := HBoxContainer.new()
 	top.alignment = BoxContainer.ALIGNMENT_CENTER
-	top.add_child(_keycap("W"))
+	top.add_child(_keycap(_key_name("up")))
 	layout.add_child(top)
 	var bottom := HBoxContainer.new()
 	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
 	bottom.add_theme_constant_override("separation", 5)
-	for letter in ["A", "S", "D"]:
-		bottom.add_child(_keycap(letter))
+	for action in ["left", "down", "right"]:
+		bottom.add_child(_keycap(_key_name(action)))
 	layout.add_child(bottom)
 	key_row.add_child(layout)
 	key_row.visible = true
+
+
+func _key_name(action: String) -> String:
+	return OS.get_keycode_string(int(G.control_keys.get(action, KEY_W))).to_upper()
 
 
 func _current_control_done() -> bool:
