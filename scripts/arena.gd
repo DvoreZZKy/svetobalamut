@@ -1217,6 +1217,13 @@ func _handle_events(evs: Array) -> void:
 				var combo_bonus := int(e.get("bonus", 0))
 				_show_banner("КОМБО ×%d   +%d ХАОСА" % [combo_count, combo_bonus])
 				flash(pos, 90.0, Color(1.0, 0.72, 0.18), 0.3)
+			"match_event":
+				if e.get("kind", "") == "surge":
+					_show_banner("ЭНЕРГОВЫБРОС  +18 СВЕТА")
+					flash(pos, 180.0, Color(0.25, 1.0, 0.65), 0.5)
+				else:
+					_show_banner("ОХОТА ПОЖИРАТЕЛЕЙ")
+					flash(Vector2(800, 450), 220.0, Color(1.0, 0.2, 0.55), 0.45)
 			"meteor_warn":
 				Sfx.play("chaos", 0.75, -5.0)
 				_show_banner("МЕТЕОРИТНЫЙ ДОЖДЬ")
