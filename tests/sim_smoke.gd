@@ -78,7 +78,7 @@ func _run() -> void:
 	var victim: Dictionary = sim.players[3]
 	attacker_a.light = 80.0
 	attacker_b.light = 80.0
-	victim.light = 50.0
+	victim.light = 40.0
 	sim._damage(victim, 10.0, 1, false)
 	sim._damage(victim, 30.0, 2, false)
 	sim._damage(victim, 25.0, 2, false)
@@ -118,7 +118,7 @@ func _run() -> void:
 		var player: Dictionary = sim.players[1]
 		if float(player.max_light) < 120.0:
 			_fail("class %d starts with too little light" % kind)
-		sim.inputs[1] = {"mv": Vector2(1, 0), "aim": player.pos + Vector2.RIGHT * 500.0, "fire": true}
+		sim.inputs[1] = {"mv": Vector2(1, 0), "aim": player.pos + Vector2.LEFT * 500.0, "fire": true}
 		for frame in int(30.0 * 60.0):
 			sim.step(1.0 / 60.0)
 		if not sim.players.has(1) or float(sim.players[1].light) < 80.0:
