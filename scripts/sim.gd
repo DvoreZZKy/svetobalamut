@@ -276,8 +276,10 @@ func _capsule_shockwave(p: Dictionary, charge_ratio: float) -> void:
 		if distance > wave_radius:
 			continue
 		var direction: Vector2 = offset.normalized() if distance > 0.01 else p.aim
-		_damage(target, WAVE_DAMAGE * p.attack, p.id, false)
-		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance / wave_radius)
+		var distance_ratio := clampf(distance / wave_radius, 0.0, 1.0)
+		var damage_factor := lerpf(1.0, 0.35, distance_ratio)
+		_damage(target, WAVE_DAMAGE * p.attack * damage_factor, p.id, false)
+		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance_ratio)
 	for eater in eaters:
 		if eater.dead:
 			continue
@@ -285,7 +287,9 @@ func _capsule_shockwave(p: Dictionary, charge_ratio: float) -> void:
 		var distance := offset.length()
 		if distance > wave_radius:
 			continue
-		eater.hp -= 2
+		var eater_distance_ratio := clampf(distance / wave_radius, 0.0, 1.0)
+		var eater_damage := maxi(1, roundi(2.0 * lerpf(1.0, 0.35, eater_distance_ratio)))
+		eater.hp -= eater_damage
 		eater.flash = 0.18
 		eater.vel += (offset.normalized() if distance > 0.01 else p.aim) * WAVE_PUSH * 0.65
 		if eater.hp <= 0:
