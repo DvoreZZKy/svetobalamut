@@ -65,15 +65,7 @@ class EdgeFeedback extends Control:
 		heal_strength = maxf(heal_strength, clampf(amount / 18.0, 0.25, 0.85))
 		queue_redraw()
 
-	
-func _input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and not pause_open:
-		var sensitivity := G.mouse_sensitivity if G.match_mouse_sensitivity else 1.0
-		aim_screen_pos += event.relative * sensitivity
-		aim_screen_pos = aim_screen_pos.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
-
-
-func _process(dt: float) -> void:
+	func _process(dt: float) -> void:
 		damage_strength = move_toward(damage_strength, 0.0, dt * 2.8)
 		heal_strength = move_toward(heal_strength, 0.0, dt * 2.2)
 		if damage_strength > 0.01 or heal_strength > 0.01:
@@ -733,6 +725,13 @@ func _read_input() -> Dictionary:
 		"poss": Input.is_action_pressed("possess") or (bool(view.get("pl", []).filter(func(p): return int(p.i) == local_id and p.s).size() > 0) and Input.is_action_pressed("fire")),
 		"ability": Input.is_action_just_pressed("ability"),
 	}
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and not pause_open:
+		var sensitivity := G.mouse_sensitivity if G.match_mouse_sensitivity else 1.0
+		aim_screen_pos += event.relative * sensitivity
+		aim_screen_pos = aim_screen_pos.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
 
 
 func _process(dt: float) -> void:
