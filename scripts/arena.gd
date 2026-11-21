@@ -108,7 +108,7 @@ var dash_bar: ProgressBar
 var over_rect: ColorRect
 var over_shape: Polygon2D
 var over_outline: Line2D
-var over_lbl: Label
+var over_lbl: RichTextLabel
 var over_restart_btn: Button
 var over_menu_btn: Button
 var wait_lbl: Label
