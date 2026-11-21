@@ -265,7 +265,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 
 
 func _capsule_shockwave(p: Dictionary, charge_ratio: float) -> void:
-	const WAVE_DAMAGE := 24.0
+	const WAVE_DAMAGE := 32.0
 	const WAVE_PUSH := 760.0
 	var wave_radius := lerpf(CAPSULE_WAVE_MIN_RADIUS, CAPSULE_WAVE_MAX_RADIUS, charge_ratio)
 	var center: Vector2 = p.pos
@@ -286,7 +286,7 @@ func _capsule_shockwave(p: Dictionary, charge_ratio: float) -> void:
 		var distance := offset.length()
 		if distance > wave_radius:
 			continue
-		eater.hp -= 2
+		eater.hp -= 3
 		eater.flash = 0.18
 		eater.vel += (offset.normalized() if distance > 0.01 else p.aim) * WAVE_PUSH * 0.65
 		if eater.hp <= 0:
