@@ -170,8 +170,9 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		want_dash = bool(control.get("dash", false))
 		want_ability = bool(control.get("ability", false))
 		want_poss = false
-	if p.derp_t > 0.0 and possessor.is_empty():
+	if p.derp_t > 0.0:
 		p.derp_t -= dt
+	if p.derp_t > 0.0 and possessor.is_empty():
 		var d: Dictionary = p.derp
 		d.t -= dt
 		if d.t <= 0.0:
