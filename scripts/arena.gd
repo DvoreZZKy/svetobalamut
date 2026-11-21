@@ -1048,6 +1048,11 @@ func _handle_events(evs: Array) -> void:
 		var pos := Vector2(e.get("x", 0.0), e.get("y", 0.0))
 		var col := G.col(e.get("c", 0))
 		match e.t:
+			"shockwave":
+				Sfx.play("dash", 1.0, -2.0)
+				flash(pos, float(e.get("r", 172.0)) * 2.0, col, 0.32)
+				burst(pos, col, 18, 520.0, 0.28)
+				shake = maxf(shake, 9.0)
 			"shot":
 				Sfx.play("shot", 1.0, -8.0)
 				burst(pos, col, 4, 240.0, 0.18)
