@@ -104,21 +104,53 @@ func _ready() -> void:
 
 	var st := _box("settings")
 	_title(st, "Настройки")
+	var tabs := TabContainer.new()
+	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	st.add_child(tabs)
+	var player_scroll := ScrollContainer.new()
+	player_scroll.name = "ИГРОК И ЗВУК"
+	player_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.add_child(player_scroll)
+	var player_tab := VBoxContainer.new()
+	player_tab.add_theme_constant_override("separation", 12)
+	player_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_scroll.add_child(player_tab)
 	var name_edit := LineEdit.new()
+	name_edit.placeholder_text = "Имя игрока"
 	name_edit.text = G.player_name
 	name_edit.max_length = 16
 	name_edit.custom_minimum_size = Vector2(380, 46)
-	name_edit.add_theme_font_size_override("font_size", 24)
+	name_edit.add_theme_font_size_override("font_size", 22)
 	name_edit.text_changed.connect(func(s: String): G.player_name = s if s != "" else "Светляк")
-	st.add_child(name_edit)
-	_slider(st, "Музыка", G.vol_music, func(v: float): G.vol_music = v; Sfx.refresh_volume())
-	_slider(st, "Звуки", G.vol_sfx, func(v: float): G.vol_sfx = v; Sfx.play("shot"))
-	_slider(st, "Чувствительность мыши", (G.mouse_sensitivity - 0.5) / 2.5, func(v: float): G.mouse_sensitivity = 0.5 + v * 2.5; G.save_settings())
+	player_tab.add_child(name_edit)
+	_slider(player_tab, "Музыка", G.vol_music, func(v: float): G.vol_music = v; Sfx.refresh_volume())
+	_slider(player_tab, "Звуки", G.vol_sfx, func(v: float): G.vol_sfx = v; Sfx.play("shot"))
+
+	var mouse_scroll := ScrollContainer.new()
+	mouse_scroll.name = "МЫШЬ И УПРАВЛЕНИЕ"
+	mouse_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.add_child(mouse_scroll)
+	var mouse_tab := VBoxContainer.new()
+	mouse_tab.add_theme_constant_override("separation", 12)
+	mouse_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mouse_scroll.add_child(mouse_tab)
+	_slider(mouse_tab, "Чувствительность мыши", (G.mouse_sensitivity - 0.5) / 2.5, func(v: float): G.mouse_sensitivity = 0.5 + v * 2.5; G.save_settings())
 	var match_sens := CheckBox.new()
 	match_sens.text = "Изменять чувствительность в матче"
 	match_sens.button_pressed = G.match_mouse_sensitivity
 	match_sens.toggled.connect(func(b: bool): G.match_mouse_sensitivity = b; G.save_settings())
-	st.add_child(match_sens)
+	mouse_tab.add_child(match_sens)
+	_btn("УПРАВЛЕНИЕ КЛАВИШАМИ", mouse_tab, func(): _show("controls"))
+
+	var graphics_scroll := ScrollContainer.new()
+	graphics_scroll.name = "ГРАФИКА И ЭКРАН"
+	graphics_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tabs.add_child(graphics_scroll)
+	var graphics_tab := VBoxContainer.new()
+	graphics_tab.add_theme_constant_override("separation", 12)
+	graphics_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	graphics_scroll.add_child(graphics_tab)
 	var quality_panel := VBoxContainer.new()
 	quality_panel.add_theme_constant_override("separation", 8)
 	var quality_heading := HBoxContainer.new()
@@ -179,22 +211,22 @@ func _ready() -> void:
 	quality_hint.add_theme_font_size_override("font_size", 12)
 	quality_hint.add_theme_color_override("font_color", Color("#829bb5"))
 	quality_panel.add_child(quality_hint)
-	st.add_child(quality_panel)
+	graphics_tab.add_child(quality_panel)
 	var sh := CheckBox.new()
 	sh.text = "Эффекты камеры"
 	sh.button_pressed = G.shake_on
 	sh.tooltip_text = "Лёгкая тряска при ударах, столкновениях и взрывах."
-	sh.add_theme_font_size_override("font_size", 22)
-	sh.toggled.connect(func(b: bool): G.shake_on = b)
-	st.add_child(sh)
+	sh.add_theme_font_size_override("font_size", 20)
+	sh.toggled.connect(func(b: bool): G.shake_on = b; G.save_settings())
+	graphics_tab.add_child(sh)
 	var fs := CheckBox.new()
 	fs.text = "Полный экран"
 	fs.button_pressed = G.fullscreen
-	fs.add_theme_font_size_override("font_size", 22)
+	fs.add_theme_font_size_override("font_size", 20)
 	fs.toggled.connect(func(b: bool): G.fullscreen = b; G.apply_display(); G.save_settings())
-	st.add_child(fs)
-	_btn("УПРАВЛЕНИЕ КЛАВИШАМИ", st, func(): _show("controls"))
-	_btn("Назад", st, func(): G.save_settings(); _show("main"))
+	graphics_tab.add_child(fs)
+	_btn("НАЗАД", st, func(): G.save_settings(); _show("main"))
+
 
 	var controls := _box("controls")
 	controls.position = Vector2(390, 95)
