@@ -15,6 +15,7 @@ const SPEED := 470.0
 const DASH_SPEED := 1550.0
 const DASH_TIME := 0.18
 const INV_TIME := 0.2
+const POSSESS_COOLDOWN := 8.0
 const DASH_CD := 1.5
 const FIRE_CD := 0.1
 const BULLET_SPEED := 1300.0
@@ -97,7 +98,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"pts": 0, "kills": 0, "last_hit": 0, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
-		"poss_target": 0, "poss_cd": 0.0,
+		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
 		"bot": {"t": 0.0, "strafe": 1.0, "want": 350.0},
 	}
 
@@ -175,6 +176,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.hit_age += dt
 	p.push_cd = maxf(0.0, p.push_cd - dt)
 	p.poss_cd = maxf(0.0, p.poss_cd - dt)
+	p.poss_protect_cd = maxf(0.0, p.poss_protect_cd - dt)
 	p.ability_cd = maxf(0.0, p.ability_cd - dt)
 	p.ability_t = maxf(0.0, p.ability_t - dt)
 
@@ -282,7 +284,7 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 		var best: Dictionary = {}
 		var bd := 145.0 * 145.0
 		for o in players.values():
-			if o.shadow or o.derp_t > 0.0:
+			if o.shadow or o.derp_t > 0.0 or o.poss_protect_cd > 0.0:
 				continue
 			var d: float = (o.pos - p.pos).length_squared()
 			if d < bd:
@@ -291,8 +293,9 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 		if not best.is_empty():
 			best.derp_t = 2.0
 			best.derp_by = p.id
+			best.poss_protect_cd = POSSESS_COOLDOWN
 			p.poss_target = best.id
-			p.poss_cd = 4.5
+			p.poss_cd = POSSESS_COOLDOWN
 			events.append({"t": "possess", "x": best.pos.x, "y": best.pos.y, "c": p.ci})
 
 
