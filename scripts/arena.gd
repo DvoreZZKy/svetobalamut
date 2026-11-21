@@ -869,17 +869,7 @@ func _update_views(dt: float) -> void:
 		root.visible = vis
 		local_ring.visible = (id == local_id and not shadow and not _is_potato())
 		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
-		if id == local_id and int(pd.k) == 1 and not shadow and float(pd.get("wc", 0.0)) > 0.0:
-			var charge_ratio := clampf(float(pd.get("wc", 0.0)), 0.0, 1.0)
-			var preview_radius := lerpf(Sim.CAPSULE_WAVE_MIN_RADIUS, Sim.CAPSULE_WAVE_MAX_RADIUS, charge_ratio)
-			capsule_charge_ring.visible = true
-			capsule_charge_ring.position = pv.pos
-			capsule_charge_ring.scale = Vector2.ONE
-			for ring_i in capsule_charge_ring.get_point_count():
-				capsule_charge_ring.set_point_position(ring_i, Vector2.from_angle(TAU * float(ring_i) / float(capsule_charge_ring.get_point_count())) * preview_radius)
-			capsule_charge_ring.default_color = Color(0.25, 0.95, 1.0, 0.72 + 0.25 * charge_ratio)
-		elif id == local_id:
-			capsule_charge_ring.visible = false
+		capsule_charge_ring.visible = false
 		var ability_ring: Line2D = pv.ability_ring
 		var ability_on: bool = float(pd.get("ab", 0.0)) > 0.0 and not shadow and (int(pd.k) == 0 or int(pd.k) == 1)
 		ability_ring.visible = ability_on and not _is_potato()
@@ -1088,8 +1078,8 @@ func _update_hud(dt: float) -> void:
 			for charge_i in 4:
 				ammo_text += "◆ " if charge_i < ammo else "◇ "
 			capsule_ammo_lbl.text = "ВОЛНЫ  " + ammo_text + ("  +" + ("%.1f" % float(me.get("wr", 0.0))) + "с" if ammo < 4 else "  ГОТОВО")
-			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 0.5)
-			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 0.5) if ammo < 4 else 100.0
+			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 1.5)
+			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 1.5) if ammo < 4 else 100.0
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
 		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
 		help_lbl.text = "%s • Q: %s (%s)\nЦЕЛЬ: остаться последним светящимся.\nWASD — движение • ЛКМ — атака • ПРОБЕЛ — рывок • ESC — меню" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
