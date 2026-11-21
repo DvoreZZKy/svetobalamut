@@ -278,7 +278,11 @@ func _capsule_shockwave(p: Dictionary) -> void:
 		if eater.hp <= 0:
 			eater.dead = true
 			events.append({"t": "eat", "x": eater.pos.x, "y": eater.pos.y, "c": p.ci})
+			var old_light := p.light
 			p.light = minf(p.max_light, p.light + 9.0)
+			var healed := p.light - old_light
+			if healed > 0.01:
+				events.append({"t": "heal", "id": p.id, "amount": healed})
 		else:
 			events.append({"t": "hit", "x": eater.pos.x, "y": eater.pos.y, "c": p.ci})
 	p.light -= SHOT_COST
@@ -387,11 +391,19 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 			if contributor.shadow or contributor.decoy:
 				continue
 			var share := KILL_BONUS * maxf(0.0, float(damage_by[attacker_id])) / total_damage
+			var old_light := contributor.light
 			contributor.light = minf(contributor.max_light, contributor.light + share)
+			var healed := contributor.light - old_light
+			if healed > 0.01:
+				events.append({"t": "heal", "id": contributor.id, "amount": healed})
 	elif killer != 0 and killer != p.id and players.has(killer):
 		var fallback: Dictionary = players[killer]
 		if not fallback.shadow and not fallback.decoy:
+			var old_light := fallback.light
 			fallback.light = minf(fallback.max_light, fallback.light + KILL_BONUS)
+			var healed := fallback.light - old_light
+			if healed > 0.01:
+				events.append({"t": "heal", "id": fallback.id, "amount": healed})
 	if killer != 0 and killer != p.id and players.has(killer):
 		var k: Dictionary = players[killer]
 		if not k.shadow:
@@ -418,6 +430,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.25
 	p.light -= reduced
+	events.append({"t": "hurt", "id": p.id, "amount": reduced})
 	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
 		var damage_by: Dictionary = p.get("damage_by", {})
 		damage_by[src] = float(damage_by.get(src, 0.0)) + reduced
@@ -430,7 +443,11 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	if src != 0 and players.has(src):
 		var a: Dictionary = players[src]
 		if not a.shadow:
+			var old_light := a.light
 			a.light = minf(a.max_light, a.light + reduced * 0.35)
+			var healed := a.light - old_light
+			if healed > 0.01:
+				events.append({"t": "heal", "id": a.id, "amount": healed})
 	if p.light <= 0.0 and not p.decoy and not p.shadow:
 		_make_shadow(p, src, false)
 		if bounced and players.has(src) and src != p.id:
@@ -545,7 +562,12 @@ func _update_bullets(dt: float) -> void:
 						e.dead = true
 						events.append({"t": "eat", "x": e.pos.x, "y": e.pos.y, "c": 0})
 						if players.has(b.owner) and not players[b.owner].shadow:
-							players[b.owner].light = minf(players[b.owner].max_light, players[b.owner].light + 9.0)
+							var eater_healer: Dictionary = players[b.owner]
+							var old_light := eater_healer.light
+							eater_healer.light = minf(eater_healer.max_light, eater_healer.light + 9.0)
+							var healed := eater_healer.light - old_light
+							if healed > 0.01:
+								events.append({"t": "heal", "id": eater_healer.id, "amount": healed})
 					else:
 						events.append({"t": "hit", "x": e.pos.x, "y": e.pos.y, "c": 0})
 					break
@@ -633,8 +655,13 @@ func trigger(name: String) -> void:
 				a.ci = b.ci
 				_set_kind(b, old_kind)
 				b.ci = old_color
+				var old_light := a.light
 				a.light = minf(a.max_light, a.light + amt)
+				var healed := a.light - old_light
+				if healed > 0.01:
+					events.append({"t": "heal", "id": a.id, "amount": healed})
 				b.light = maxf(1.0, b.light - amt)
+				events.append({"t": "hurt", "id": b.id, "amount": amt})
 		"doubles":
 			if not lit.is_empty():
 				for i in 3:
