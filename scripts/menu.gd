@@ -133,8 +133,11 @@ func _ready() -> void:
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	st.add_child(tabs)
 	var player_scroll := ScrollContainer.new()
-	player_scroll.name = "ИГРОК И ЗВУК"
+	player_scroll.name = "ЗВУК"
+	player_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	player_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	player_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	player_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	tabs.add_child(player_scroll)
 	var player_tab := VBoxContainer.new()
 	player_tab.add_theme_constant_override("separation", 12)
@@ -152,7 +155,7 @@ func _ready() -> void:
 	_slider(player_tab, "Звуки", G.vol_sfx, func(v: float): G.vol_sfx = v; Sfx.play("shot"))
 
 	var mouse_scroll := ScrollContainer.new()
-	mouse_scroll.name = "МЫШЬ И УПРАВЛЕНИЕ"
+	mouse_scroll.name = "МЫШЬ"
 	mouse_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mouse_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mouse_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -195,12 +198,16 @@ func _ready() -> void:
 	controls_button.add_theme_font_size_override("font_size", 16)
 
 	var graphics_scroll := ScrollContainer.new()
-	graphics_scroll.name = "ГРАФИКА И ЭКРАН"
+	graphics_scroll.name = "ГРАФИКА"
+	graphics_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	graphics_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	graphics_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	graphics_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	tabs.add_child(graphics_scroll)
 	var graphics_tab := VBoxContainer.new()
 	graphics_tab.add_theme_constant_override("separation", 12)
 	graphics_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	graphics_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	graphics_scroll.add_child(graphics_tab)
 	var quality_panel := VBoxContainer.new()
 	quality_panel.add_theme_constant_override("separation", 8)
