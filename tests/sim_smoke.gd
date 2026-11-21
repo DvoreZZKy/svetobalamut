@@ -87,6 +87,37 @@ func _run() -> void:
 			_fail("class %d takes excessive damage from a single eater" % kind)
 	sim.chaos_enabled = true
 
+	# 2c) Possession cooldown applies to both the shadow and the possessed player.
+	var poss_cfg: Array = [
+		{"id": 1, "name": "Shadow A", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Target", "human": true, "color": 1, "kind": 1, "outfit": 0, "hat": 0},
+		{"id": 3, "name": "Shadow B", "human": true, "color": 2, "kind": 2, "outfit": 0, "hat": 0}
+	]
+	sim.reset(poss_cfg)
+	sim.chaos_enabled = false
+	var shadow_a: Dictionary = sim.players[1]
+	var target: Dictionary = sim.players[2]
+	var shadow_b: Dictionary = sim.players[3]
+	shadow_a.shadow = true
+	shadow_b.shadow = true
+	shadow_a.pos = Vector2(700, 450)
+	target.pos = Vector2(720, 450)
+	shadow_b.pos = Vector2(710, 450)
+	sim.inputs[1] = {"poss": true}
+	sim.step(1.0 / 60.0)
+	if int(shadow_a.poss_target) != 2:
+		_fail("first shadow could not possess a nearby target")
+	if not is_equal_approx(float(shadow_a.poss_cd), Sim.POSSESS_COOLDOWN):
+		_fail("possessor did not receive the possession cooldown")
+	if not is_equal_approx(float(target.poss_protect_cd), Sim.POSSESS_COOLDOWN):
+		_fail("target did not receive possession protection cooldown")
+	sim.inputs[1] = {}
+	sim.inputs[3] = {"poss": true}
+	for frame in int(2.5 * 60.0):
+		sim.step(1.0 / 60.0)
+	if int(shadow_b.poss_target) != 0:
+		_fail("a protected player was possessed again before cooldown expired")
+
 	# 3) Effects and temporary state expire; eaters stay capped under repeated rain.
 	sim.reset(cfg)
 	for i in 6:
