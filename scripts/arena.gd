@@ -1178,21 +1178,21 @@ func _handle_events(evs: Array) -> void:
 func _outline_shockwave(pos: Vector2, radius: float, col: Color) -> void:
 	if _is_potato():
 		return
-	var ring := Line2D.new()
-	ring.width = 4.0
-	ring.default_color = col
-	ring.closed = true
-	ring.z_index = 30
+	# A translucent filled pulse makes the released charge readable without hiding the arena.
+	var wave := Polygon2D.new()
+	var points := PackedVector2Array()
 	for i in 64:
-		ring.add_point(Vector2.from_angle(TAU * float(i) / 64.0) * radius)
-	fx_layer.add_child(ring)
-	ring.position = pos
-	ring.scale = Vector2.ONE * 0.72
+		points.append(Vector2.from_angle(TAU * float(i) / 64.0) * radius)
+	wave.polygon = points
+	wave.color = Color(col.r, col.g, col.b, 0.34)
+	wave.z_index = 30
+	fx_layer.add_child(wave)
+	wave.position = pos
+	wave.scale = Vector2.ONE * 0.72
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(ring, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(ring, "modulate:a", 0.0, 0.24)
-	tw.chain().tween_callback(ring.queue_free)
-
+	tw.tween_property(wave, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(wave, "modulate:a", 0.0, 0.24)
+	tw.chain().tween_callback(wave.queue_free)
 
 func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, important := false) -> void:
 	if _is_potato():
