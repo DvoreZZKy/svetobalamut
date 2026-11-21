@@ -868,17 +868,19 @@ func _check_end() -> void:
 		_end(cand[rng.randi() % cand.size()].id)
 		return
 	if time_left <= 0.0:
-		# At the timer limit, only still-glowing players can win.
-		# Chaos points increase their odds, but shadows are excluded.
-		var total := 0
+		# At the timer limit, the glowing player with the most chaos wins.
+		# Shadows are excluded; ties are resolved randomly.
+		var best := -1
+		var cand: Array = []
 		for p in lit:
-			total += 1 + p.pts
-		var r := rng.randi() % total
-		for p in lit:
-			r -= 1 + p.pts
-			if r < 0:
-				_end(p.id)
-				return
+			if p.pts > best:
+				best = p.pts
+				cand = [p]
+			elif p.pts == best:
+				cand.append(p)
+		if not cand.is_empty():
+			_end(cand[rng.randi() % cand.size()].id)
+			return
 
 
 func _end(id: int) -> void:
