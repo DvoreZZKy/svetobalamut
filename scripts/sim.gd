@@ -9,7 +9,7 @@ const CLASS_STATS := [
 	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.22, "ability": "Перегрузка"},
 	{"name": "Капсула", "hp": 155.0, "def": 0.72, "atk": 1.35, "speed": 0.78, "rate": 0.56, "ability": "Энергощит"},
 	{"name": "Призрак", "hp": 130.0, "def": 0.88, "atk": 1.0, "speed": 1.20, "rate": 0.26, "ability": "Фазовый скачок"},
-	{"name": "Кристалл", "hp": 125.0, "def": 0.92, "atk": 1.55, "speed": 0.90, "rate": 0.64, "ability": "Звёздный залп"}
+	{"name": "Кристалл", "hp": 140.0, "def": 0.96, "atk": 1.65, "speed": 1.00, "rate": 0.46, "ability": "Звёздный залп"}
 ]
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
@@ -239,7 +239,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
 			var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
 			var dir := Vector2.from_angle(ang)
-			var bolt_speed := 960.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED)
+			var bolt_speed := 1180.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED)
 			var bolt_radius := 11.0 if p.kind == 3 else 6.0
 			var damage_mult := 0.42 if p.kind == 0 else 1.0
 			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
@@ -326,7 +326,7 @@ func _use_ability(p: Dictionary) -> void:
 			for i in 10:
 				var dir := Vector2.from_angle(TAU * float(i) / 10.0)
 				bullets.append({"id": next_id, "pos": p.pos + dir * 40.0, "vel": dir * 760.0,
-					"owner": p.id, "life": 1.1, "bn": 0, "dmg": BULLET_DMG * p.attack * 0.62, "radius": 9.0})
+					"owner": p.id, "life": 1.25, "bn": 0, "dmg": BULLET_DMG * p.attack * 0.82, "radius": 10.0})
 				next_id += 1
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
 
