@@ -65,7 +65,15 @@ class EdgeFeedback extends Control:
 		heal_strength = maxf(heal_strength, clampf(amount / 18.0, 0.25, 0.85))
 		queue_redraw()
 
-	func _process(dt: float) -> void:
+	
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and not pause_open:
+		var sensitivity := G.mouse_sensitivity if G.match_mouse_sensitivity else 1.0
+		aim_screen_pos += event.relative * sensitivity
+		aim_screen_pos = aim_screen_pos.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
+
+
+func _process(dt: float) -> void:
 		damage_strength = move_toward(damage_strength, 0.0, dt * 2.8)
 		heal_strength = move_toward(heal_strength, 0.0, dt * 2.2)
 		if damage_strength > 0.01 or heal_strength > 0.01:
@@ -100,6 +108,10 @@ var capsule_ammo_lbl: Label
 var capsule_reload_bar: ProgressBar
 var cursor_layer: CanvasLayer
 var cursor_canvas: Control
+var aim_screen_pos := Vector2.ZERO
+var stopwatch_lbl: Label
+var result_cards: Array[Button] = []
+var result_detail_open := false
 var banner: Label
 var score_lbl: RichTextLabel
 var help_lbl: Label
@@ -308,10 +320,10 @@ func _build_hud() -> void:
 	timer_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	timer_lbl.anchor_left = 1.0
 	timer_lbl.anchor_right = 1.0
-	timer_lbl.offset_left = -383
-	timer_lbl.offset_right = -53
-	timer_lbl.offset_top = 12
-	timer_lbl.offset_bottom = 270
+	timer_lbl.offset_left = -430
+	timer_lbl.offset_right = -100
+	timer_lbl.offset_top = 74
+	timer_lbl.offset_bottom = 332
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	timer_lbl.add_theme_font_size_override("normal_font_size", 11)
 	timer_lbl.add_theme_font_override("normal_font", _bold_hud_font())
@@ -320,6 +332,14 @@ func _build_hud() -> void:
 	timer_lbl.add_theme_constant_override("table_v_separation", 1)
 	timer_lbl.modulate = Color("#a9efff")
 	cl.add_child(timer_lbl)
+	stopwatch_lbl = _label("00:00", 20, Vector2.ZERO, Vector2(160, 34), cl, true)
+	stopwatch_lbl.anchor_left = 0.5
+	stopwatch_lbl.anchor_right = 0.5
+	stopwatch_lbl.offset_left = -80
+	stopwatch_lbl.offset_right = 80
+	stopwatch_lbl.offset_top = 14
+	stopwatch_lbl.offset_bottom = 48
+	stopwatch_lbl.add_theme_color_override("font_color", Color("#b7f7ff"))
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
 	banner.anchor_left = 0.5
 	banner.anchor_right = 0.5
@@ -333,7 +353,7 @@ func _build_hud() -> void:
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = false
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(42, 30)
+	score_lbl.position = Vector2(52, 74)
 	score_lbl.size = Vector2(280, 150)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -513,6 +533,15 @@ func _build_hud() -> void:
 	cl.add_child(over_menu_btn)
 	over_restart_btn.visible = false
 	over_menu_btn.visible = false
+	for category in ["УРОН", "ХИЛ", "УБИЙСТВА", "ХАОС"]:
+		var card := FacetButton.new()
+		card.text = category
+		card.custom_minimum_size = Vector2(190, 118)
+		card.visible = false
+		_style_result_button(card, Color("#64eaff"))
+		card.pressed.connect(_open_result_category.bind(category))
+		cl.add_child(card)
+		result_cards.append(card)
 
 
 # -------------------------------------------------------------- рисование --
@@ -669,33 +698,39 @@ func _build_aim_cursor() -> void:
 	add_child(cursor_layer)
 	cursor_canvas = Control.new()
 	cursor_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cursor_canvas.size = Vector2(38, 38)
+	cursor_canvas.size = Vector2(48, 48)
 	cursor_canvas.z_index = 100
 	cursor_canvas.draw.connect(_draw_aim_cursor)
 	cursor_layer.add_child(cursor_canvas)
-	Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	aim_screen_pos = get_viewport().get_visible_rect().size * 0.5
 
 
 func _draw_aim_cursor() -> void:
 	if not is_instance_valid(cursor_canvas):
 		return
-	var center := Vector2(19, 19)
+	var center := Vector2(24, 24)
 	var color := Color("#8df6ff")
-	cursor_canvas.draw_arc(center, 10.0, 0.0, TAU, 32, Color(color, 0.9), 1.6, true)
-	cursor_canvas.draw_line(Vector2(19, 1), Vector2(19, 8), color, 2.0, true)
-	cursor_canvas.draw_line(Vector2(19, 30), Vector2(19, 37), color, 2.0, true)
-	cursor_canvas.draw_line(Vector2(1, 19), Vector2(8, 19), color, 2.0, true)
-	cursor_canvas.draw_line(Vector2(30, 19), Vector2(37, 19), color, 2.0, true)
-	cursor_canvas.draw_circle(center, 2.0, Color.WHITE)
+	cursor_canvas.draw_arc(center, 13.0, 0.0, TAU, 32, Color.BLACK, 5.0, true)
+	cursor_canvas.draw_arc(center, 13.0, 0.0, TAU, 32, Color(color, 1.0), 2.8, true)
+	cursor_canvas.draw_line(Vector2(24, 0), Vector2(24, 9), Color.BLACK, 5.0, true)
+	cursor_canvas.draw_line(Vector2(24, 39), Vector2(24, 48), Color.BLACK, 5.0, true)
+	cursor_canvas.draw_line(Vector2(0, 24), Vector2(9, 24), Color.BLACK, 5.0, true)
+	cursor_canvas.draw_line(Vector2(39, 24), Vector2(48, 24), Color.BLACK, 5.0, true)
+	cursor_canvas.draw_line(Vector2(24, 0), Vector2(24, 9), color, 2.2, true)
+	cursor_canvas.draw_line(Vector2(24, 39), Vector2(24, 48), color, 2.2, true)
+	cursor_canvas.draw_line(Vector2(0, 24), Vector2(9, 24), color, 2.2, true)
+	cursor_canvas.draw_line(Vector2(39, 24), Vector2(48, 24), color, 2.2, true)
+	cursor_canvas.draw_circle(center, 3.0, Color.WHITE)
 
 
 func _read_input() -> Dictionary:
 	return {
 		"mv": Input.get_vector("left", "right", "up", "down"),
-		"aim": get_global_mouse_position(),
+		"aim": get_canvas_transform().affine_inverse() * aim_screen_pos,
 		"fire": Input.is_action_pressed("fire"),
 		"dash": Input.is_action_pressed("dash"),
-		"poss": Input.is_action_pressed("possess"),
+		"poss": Input.is_action_pressed("possess") or (bool(view.get("pl", []).filter(func(p): return int(p.i) == local_id and p.s).size() > 0) and Input.is_action_pressed("fire")),
 		"ability": Input.is_action_just_pressed("ability"),
 	}
 
@@ -716,7 +751,7 @@ func _process(dt: float) -> void:
 	ability_latch = maxf(0.0, ability_latch - dt)
 	inp["ability"] = ability_latch > 0.0
 	if pause_open:
-		inp = {"mv": Vector2.ZERO, "aim": get_global_mouse_position(),
+		inp = {"mv": Vector2.ZERO, "aim": get_canvas_transform().affine_inverse() * aim_screen_pos,
 			"fire": false, "dash": false, "poss": false, "ability": false}
 	if not is_client:
 		sim.inputs[local_id] = inp
@@ -763,7 +798,7 @@ func _process(dt: float) -> void:
 		bullet_layer.queue_redraw()
 	last_bullet_count = bullet_count
 	if is_instance_valid(cursor_canvas):
-		cursor_canvas.position = get_viewport().get_mouse_position() - cursor_canvas.size * 0.5
+		cursor_canvas.position = aim_screen_pos - cursor_canvas.size * 0.5
 		cursor_canvas.queue_redraw()
 	shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
 	var s: float = shake if G.shake_on else 0.0
@@ -841,7 +876,7 @@ func _toggle_pause() -> void:
 		cam.rotation = 0.0
 	if is_instance_valid(cursor_canvas):
 		cursor_canvas.visible = not pause_open
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if pause_open else Input.MOUSE_MODE_HIDDEN
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if pause_open else Input.MOUSE_MODE_CAPTURED
 	if pause_open:
 		pause_title.text = "ПАУЗА" if (not Net.online or G.tutorial_active) else "МЕНЮ МАТЧА"
 		pause_menu_btn.text = "ВЫЙТИ ИЗ МАТЧА"
@@ -961,8 +996,9 @@ func _update_views(dt: float) -> void:
 			pv.hat = new_hat
 		var lbl: Label = pv.lbl
 		root.visible = vis
-		local_ring.visible = (id == local_id and not shadow and not _is_potato())
-		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
+		local_ring.visible = ((id == local_id and not shadow) or float(pd.get("dr", 0.0)) > 0.0) and not _is_potato()
+		local_ring.default_color = Color("#ffdc70") if float(pd.get("dr", 0.0)) > 0.0 else Color("#8df6ff")
+		local_ring.width = 5.0 + 2.0 * (0.5 + 0.5 * sin(t * 7.0))
 		capsule_charge_ring.visible = false
 		var ability_ring: Line2D = pv.ability_ring
 		var ability_on: bool = float(pd.get("ab", 0.0)) > 0.0 and not shadow and (int(pd.k) == 0 or int(pd.k) == 1)
@@ -992,7 +1028,7 @@ func _update_views(dt: float) -> void:
 			if not _is_potato():
 				actor.scale = Vector2.ONE * 0.62 * (1.0 + 0.025 * sin(t * 4.0 + float(id)))
 		else:
-			var c := col if _is_potato() else G.hdr(col, 0.78 + 0.42 * lf)
+			var c := col if _is_potato() else G.hdr(col, 1.0 + 0.55 * lf)
 			if pd.h > 0.0:
 				c = Color.WHITE if _is_potato() else Color(3.2, 3.2, 3.2)
 			if pd.iv > 0.0 and not _is_potato():
@@ -1004,7 +1040,7 @@ func _update_views(dt: float) -> void:
 				root.position += Vector2(randf_range(-6, 6), randf_range(-6, 6))
 			actor.modulate = c
 			var hc := G.hdr(col, 0.12 + 0.28 * lf)
-			hc.a = 0.12 + 0.22 * lf
+			hc.a = 0.20 + 0.32 * lf
 			halo.modulate = hc
 		lbl.visible = vis and not shadow
 		var nm: String = pd.n
@@ -1155,6 +1191,8 @@ func _update_hud(dt: float) -> void:
 	if pause_open:
 		_layout_pause_menu()
 	var over: bool = view.get("ph", "play") == "over"
+	var elapsed := int(float(view.get("elapsed", 0.0)))
+	stopwatch_lbl.text = "%02d:%02d" % [elapsed / 60, elapsed % 60]
 	var active_chaos: Array[String] = []
 	var fx: Dictionary = view.get("fx", {})
 	for chaos_key in fx.keys():
@@ -1241,6 +1279,9 @@ func _update_hud(dt: float) -> void:
 		over_lbl.visible = true
 		over_restart_btn.visible = not is_client
 		over_menu_btn.visible = true
+		over_menu_btn.text = "В МЕНЮ"
+		if not over_menu_btn.pressed.is_connected(_to_menu):
+			over_menu_btn.pressed.connect(_to_menu)
 		var wn := "никто"
 		for pd in view.get("pl", []):
 			if pd.i == view.get("wn", 0):
@@ -1258,26 +1299,55 @@ func _update_hud(dt: float) -> void:
 		kill_rank.sort_custom(func(a, b): return int(a.ki) > int(b.ki))
 		chaos_rank.sort_custom(func(a, b): return int(a.pt) > int(b.pt))
 		var report := "[center][font_size=30][b][color=#68edff]◈  ИТОГИ МАТЧА  ◈[/color][/b][/font_size]\n"
-		report += "[font_size=24][color=#ffffff]ПОБЕДИТЕЛЬ[/color]  [color=#ffd76a]%s[/color][/font_size]\n" % wn
-		report += "[color=#52718e]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[/color]\n"
-		report += "[font_size=18][b][color=#ff8d83]⚔  УРОН[/color][/b][/font_size]\n"
-		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(damage_rank, "dm")
-		report += "[font_size=18][b][color=#69e9bd]✚  ВОССТАНОВЛЕНИЕ[/color][/b][/font_size]\n"
-		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(heal_rank, "hl")
-		report += "[font_size=18][b][color=#c5a0ff]✦  УБИЙСТВА[/color][/b][/font_size]\n"
-		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size]\n" % _rank_line(kill_rank, "ki")
-		report += "[font_size=18][b][color=#ffd76a]☄  ХАОС[/color][/b][/font_size]\n"
-		report += "[font_size=20][color=#eaf6ff]%s[/color][/font_size][/center]" % _rank_line(chaos_rank, "pt")
+		report += "[font_size=22][color=#ffffff]ПОБЕДИТЕЛЬ[/color]  [color=#ffd76a]%s[/color]\n" % wn
+		report += "[font_size=16][color=#9ab8d4]ВРЕМЯ МАТЧА  %02d:%02d[/color][/font_size][/center]" % [int(float(view.get("elapsed", 0.0))) / 60, int(float(view.get("elapsed", 0.0))) % 60]
 		over_lbl.text = report
 		over_lbl.modulate = Color.WHITE
+		result_detail_open = false
+		for card in result_cards: card.visible = true
 		_layout_game_over()
 	else:
 		over_rect.visible = false
 		over_shape.visible = false
 		over_outline.visible = false
 		over_lbl.visible = false
+		for card in result_cards: card.visible = false
+		result_detail_open = false
 		over_restart_btn.visible = false
 		over_menu_btn.visible = false
+
+
+func _open_result_category(category: String) -> void:
+	result_detail_open = true
+	var key := {"УРОН":"dm", "ХИЛ":"hl", "УБИЙСТВА":"ki", "ХАОС":"pt"}.get(category, "pt")
+	var rows: Array = []
+	for pd in view.get("pl", []): rows.append(pd)
+	rows.sort_custom(func(a, b): return float(a.get(key, 0.0)) > float(b.get(key, 0.0)))
+	var lines := "[center][font_size=26][b][color=#70eaff]%s[/color][/b][/font_size]\n" % category
+	for i in rows.size():
+		var p: Dictionary = rows[i]
+		lines += "%02d   %s   •   %s\n" % [i + 1, str(p.n), str(int(p.get(key, 0)))]
+	lines += "[/center]"
+	over_lbl.text = lines
+	for card in result_cards: card.visible = false
+	over_restart_btn.visible = false
+	over_menu_btn.text = "ВЕРНУТЬСЯ"
+	over_menu_btn.pressed.disconnect(_to_menu)
+	over_menu_btn.pressed.connect(_close_result_category, CONNECT_ONE_SHOT)
+	var tween := create_tween()
+	over_lbl.modulate.a = 0.0
+	tween.tween_property(over_lbl, "modulate:a", 1.0, 0.35)
+
+
+func _close_result_category() -> void:
+	result_detail_open = false
+	over_menu_btn.text = "В МЕНЮ"
+	over_menu_btn.pressed.disconnect(_close_result_category)
+	over_menu_btn.pressed.connect(_to_menu)
+	for card in result_cards: card.visible = true
+	over_restart_btn.visible = not is_client
+	over_lbl.modulate.a = 1.0
+	_update_hud(0.0)
 
 
 func _rank_line(rank: Array, key: String) -> String:
@@ -1326,6 +1396,11 @@ func _layout_game_over() -> void:
 	over_lbl.size = Vector2(panel_size.x - 104.0, panel_size.y - 150.0)
 	over_lbl.add_theme_font_size_override("normal_font_size", 20)
 	over_lbl.add_theme_constant_override("line_separation", 5)
+	var cards_y := pos.y + 148.0
+	for i in result_cards.size():
+		var card := result_cards[i]
+		card.position = Vector2(pos.x + 55.0 + float(i) * 220.0, cards_y)
+		card.size = Vector2(190, 150)
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 22.0, buttons_y)
