@@ -87,6 +87,30 @@ func _run() -> void:
 			_fail("class %d takes excessive damage from a single eater" % kind)
 	sim.chaos_enabled = true
 
+	# 2d) Capsule's primary attack is a radial melee shockwave, not a projectile.
+	var melee_cfg: Array = [
+		{"id": 1, "name": "Capsule", "human": true, "color": 0, "kind": 1, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Nearby", "human": true, "color": 1, "kind": 0, "outfit": 0, "hat": 0},
+		{"id": 3, "name": "Far", "human": true, "color": 2, "kind": 0, "outfit": 0, "hat": 0}
+	]
+	sim.reset(melee_cfg)
+	sim.chaos_enabled = false
+	var capsule: Dictionary = sim.players[1]
+	var nearby: Dictionary = sim.players[2]
+	var far_player: Dictionary = sim.players[3]
+	capsule.pos = Vector2(800, 450)
+	nearby.pos = capsule.pos + Vector2(100, 0)
+	far_player.pos = capsule.pos + Vector2(260, 0)
+	var nearby_light := float(nearby.light)
+	var far_light := float(far_player.light)
+	sim._capsule_shockwave(capsule)
+	if float(nearby.light) >= nearby_light or nearby.vel.length() < 100.0:
+		_fail("capsule shockwave did not damage and push a nearby player")
+	if not is_equal_approx(float(far_player.light), far_light):
+		_fail("capsule shockwave damaged a player outside its radius")
+	if not sim.bullets.is_empty():
+		_fail("capsule shockwave unexpectedly spawned a projectile")
+
 	# 2c) Timer winner lottery must exclude shadows, even if they have more chaos points.
 	var winner_cfg: Array = [
 		{"id": 1, "name": "Lit A", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
