@@ -546,6 +546,22 @@ func _draw_ambient() -> void:
 
 
 func _draw_bullets() -> void:
+	for meteor in view.get("mt", []):
+		var center: Vector2 = meteor[0]
+		var remaining: float = float(meteor[1])
+		var progress := clampf(1.0 - remaining / 1.15, 0.0, 1.0)
+		var pulse := 0.72 + 0.28 * sin(t * 22.0)
+		var warning_color := Color(1.0, 0.24, 0.12, 0.72 * pulse)
+		bullet_layer.draw_arc(center, 138.0, 0.0, TAU, 64, warning_color, 4.0, true)
+		bullet_layer.draw_arc(center, 126.0 + 7.0 * pulse, 0.0, TAU, 64, Color(1.0, 0.62, 0.18, 0.4), 2.0, true)
+		var meteor_pos := center + Vector2(-150.0, -430.0).lerp(Vector2.ZERO, progress)
+		if _is_potato():
+			bullet_layer.draw_line(meteor_pos - Vector2(0, 90), meteor_pos, Color(1.0, 0.38, 0.12), 7.0, false)
+			bullet_layer.draw_circle(meteor_pos, 15.0, Color(1.0, 0.72, 0.28))
+		else:
+			bullet_layer.draw_line(meteor_pos - Vector2(0, 105), meteor_pos, Color(1.0, 0.24, 0.08, 0.5), 30.0, true)
+			bullet_layer.draw_circle(meteor_pos, 20.0, Color(3.2, 0.72, 0.18))
+			bullet_layer.draw_circle(meteor_pos, 9.0, Color(4.0, 2.4, 0.8))
 	for b in view.get("bl", []):
 		var vel: Vector2 = b[2]
 		var pos: Vector2 = b[1] + vel * snap_age
@@ -1196,6 +1212,15 @@ func _handle_events(evs: Array) -> void:
 			"eat":
 				Sfx.play("eat")
 				burst(pos, Color(1.0, 0.2, 0.45), 16, 360.0, 0.45)
+			"meteor_warn":
+				Sfx.play("chaos", 0.75, -5.0)
+				_show_banner("МЕТЕОРИТНЫЙ ДОЖДЬ")
+				flash(pos, 110.0, Color(1.0, 0.32, 0.12), 0.35)
+			"meteor_impact":
+				Sfx.play("boom", 1.15, -1.0)
+				flash(pos, float(e.get("r", 138.0)) * 1.5, Color(1.0, 0.3, 0.08), 0.55)
+				burst(pos, Color(1.0, 0.38, 0.12), 72, 820.0, 0.75, true)
+				shake = maxf(shake, 22.0)
 			"boom":
 				Sfx.play("boom")
 				flash(pos, float(e.get("r", 260.0)) * 1.3, Color(1.0, 0.85, 0.4), 0.55)
