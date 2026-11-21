@@ -213,23 +213,26 @@ func _update_player(p: Dictionary, dt: float) -> void:
 
 	var shot_cost: float = 1.5 if p.kind == 0 else SHOT_COST
 	if want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
-		var spread_count := 3 if p.kind == 0 else 1
-		for shot_i in spread_count:
-			var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
-			var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
-			var dir := Vector2.from_angle(ang)
-			var bolt_speed := 880.0 if p.kind == 1 else (960.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED))
-			var bolt_radius := 11.0 if p.kind == 3 else (10.0 if p.kind == 1 else 6.0)
-			var damage_mult := 0.42 if p.kind == 0 else 1.0
-			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
-				"owner": p.id, "life": 1.4, "bn": 0, "dmg": BULLET_DMG * p.attack * damage_mult,
-				"radius": bolt_radius})
-			next_id += 1
-		p.light -= shot_cost
-		var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
-		p.fire_cd = p.fire_rate * haste
-		p.vel -= p.aim * 55.0
-		events.append({"t": "shot", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
+		if p.kind == 1:
+			_capsule_shockwave(p)
+		else:
+			var spread_count := 3 if p.kind == 0 else 1
+			for shot_i in spread_count:
+				var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
+				var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
+				var dir := Vector2.from_angle(ang)
+				var bolt_speed := 960.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED)
+				var bolt_radius := 11.0 if p.kind == 3 else 6.0
+				var damage_mult := 0.42 if p.kind == 0 else 1.0
+				bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
+					"owner": p.id, "life": 1.4, "bn": 0, "dmg": BULLET_DMG * p.attack * damage_mult,
+					"radius": bolt_radius})
+				next_id += 1
+			p.light -= shot_cost
+			var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
+			p.fire_cd = p.fire_rate * haste
+			p.vel -= p.aim * 55.0
+			events.append({"t": "shot", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
 
 	var spd_ratio: float = p.vel.length() / SPEED
 	p.light -= MOVE_COST * minf(spd_ratio, 1.2) * dt
@@ -245,6 +248,43 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	if p.light <= 0.0 and not p.decoy:
 		# Credit a kill only for a recent hit; otherwise this is starvation (no stale kill credit).
 		_make_shadow(p, p.last_hit if p.hit_age < 4.0 else 0, false)
+
+
+func _capsule_shockwave(p: Dictionary) -> void:
+	const WAVE_RADIUS := 172.0
+	const WAVE_DAMAGE := 24.0
+	const WAVE_PUSH := 760.0
+	var center: Vector2 = p.pos
+	for target in players.values():
+		if target.id == p.id or target.shadow or target.decoy or target.inv > 0.0:
+			continue
+		var offset: Vector2 = target.pos - center
+		var distance := offset.length()
+		if distance > WAVE_RADIUS:
+			continue
+		var direction := offset.normalized() if distance > 0.01 else p.aim
+		_damage(target, WAVE_DAMAGE * p.attack, p.id, false)
+		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance / WAVE_RADIUS)
+	for eater in eaters:
+		if eater.dead:
+			continue
+		var offset: Vector2 = eater.pos - center
+		var distance := offset.length()
+		if distance > WAVE_RADIUS:
+			continue
+		eater.hp -= 2
+		eater.flash = 0.18
+		eater.vel += (offset.normalized() if distance > 0.01 else p.aim) * WAVE_PUSH * 0.65
+		if eater.hp <= 0:
+			eater.dead = true
+			events.append({"t": "eat", "x": eater.pos.x, "y": eater.pos.y, "c": p.ci})
+			p.light = minf(p.max_light, p.light + 9.0)
+		else:
+			events.append({"t": "hit", "x": eater.pos.x, "y": eater.pos.y, "c": p.ci})
+	p.light -= SHOT_COST
+	p.fire_cd = p.fire_rate
+	events.append({"t": "shockwave", "x": center.x, "y": center.y, "c": p.ci, "r": WAVE_RADIUS})
+	shake_req = maxf(shake_req, 5.0)
 
 
 func _use_ability(p: Dictionary) -> void:
