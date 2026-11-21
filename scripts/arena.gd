@@ -1140,7 +1140,7 @@ func _update_hud(dt: float) -> void:
 	# Leaderboard follows the actual match objective: chaos first, then remaining light.
 	rows.sort_custom(func(a, b): return a.pt > b.pt if a.pt != b.pt else a.l > b.l)
 	var txt := "[font_size=17][color=#74edff][b]◈  РЕЙТИНГ МАТЧА[/b][/color][/font_size]\n"
-	txt += "[table=6]"
+	txt += "[table=7]"
 	txt += "[cell][color=#718ba5]#[/color][/cell]"
 	txt += "[cell][color=#718ba5]ИГРОК[/color][/cell]"
 	txt += "[cell][color=#718ba5]СВЕТ[/color][/cell]"
