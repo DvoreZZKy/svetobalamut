@@ -53,6 +53,33 @@ var blind_cur := 0.0
 var edge_feedback: EdgeFeedback
 
 
+class NeonProgressBar extends ProgressBar:
+	var tint := Color("#62eaff")
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		var cut := minf(5.0, h * 0.42)
+		var frame := PackedVector2Array([
+			Vector2(cut, 0), Vector2(w - cut, 0), Vector2(w, cut),
+			Vector2(w, h - cut), Vector2(w - cut, h), Vector2(cut, h),
+			Vector2(0, h - cut), Vector2(0, cut)
+		])
+		draw_colored_polygon(frame, Color("#06101e", 0.96))
+		var ratio := clampf(value / maxf(max_value, 0.001), 0.0, 1.0)
+		var fill_w := maxf(0.0, w * ratio - 2.0)
+		if fill_w > 2.0:
+			var fill_cut := minf(cut, fill_w * 0.35)
+			var fill := PackedVector2Array([
+				Vector2(1 + fill_cut, 2), Vector2(fill_w - fill_cut, 2),
+				Vector2(fill_w, 2 + fill_cut), Vector2(fill_w, h - 2 - fill_cut),
+				Vector2(fill_w - fill_cut, h - 2), Vector2(1 + fill_cut, h - 2),
+				Vector2(1, h - 2 - fill_cut), Vector2(1, 2 + fill_cut)
+			])
+			draw_colored_polygon(fill, tint.lightened(0.12))
+		draw_polyline(PackedVector2Array([frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[0]]), tint.darkened(0.22), 1.5, true)
+
+
 class EdgeFeedback extends Control:
 	var damage_strength := 0.0
 	var heal_strength := 0.0
@@ -278,7 +305,8 @@ func _label(text: String, size: int, pos: Vector2, sz: Vector2, parent: Node, ce
 
 
 func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> ProgressBar:
-	var b := ProgressBar.new()
+	var b := NeonProgressBar.new()
+	b.tint = col
 	b.position = pos
 	b.size = sz
 	b.show_percentage = false
@@ -295,8 +323,8 @@ func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> ProgressBar:
 	fl.shadow_color = Color(col.r, col.g, col.b, 0.45)
 	fl.shadow_size = 3
 	fl.set_corner_radius_all(3)
-	b.add_theme_stylebox_override("background", bg)
-	b.add_theme_stylebox_override("fill", fl)
+	b.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	b.add_theme_stylebox_override("fill", StyleBoxEmpty.new())
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(b)
 	return b
