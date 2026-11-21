@@ -52,6 +52,7 @@ var effects := {}
 var events: Array = []
 var inputs := {}
 var time_left := 0.0
+var elapsed_time := 0.0
 var phase := "play"
 var winner := 0
 var chaos_timer := 4.0
@@ -83,6 +84,7 @@ func reset(cfg: Array) -> void:
 	events.clear()
 	inputs.clear()
 	time_left = 0.0
+	elapsed_time = 0.0
 	phase = "play"
 	winner = 0
 	chaos_timer = 15.0
@@ -128,6 +130,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 func step(dt: float) -> void:
 	if phase != "play":
 		return
+	elapsed_time += dt
 	if not endless:
 		time_left += dt
 	if chaos_enabled:
@@ -1075,4 +1078,4 @@ func snapshot() -> Dictionary:
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
 	return {"pl": pl, "bl": bl, "ea": ea, "fx": effects.duplicate(), "tl": time_left,
-		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu}
+		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time}
