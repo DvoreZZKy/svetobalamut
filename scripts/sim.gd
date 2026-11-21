@@ -27,9 +27,8 @@ const REGEN_PASSIVE := 2.5
 const REGEN_STILL := 2.0
 const REGEN_ZONE := 5.0
 const KILL_BONUS := 24.0
-const CAPSULE_WAVE_MIN_RADIUS := 86.0
-const CAPSULE_WAVE_MAX_RADIUS := 280.0
-const CAPSULE_WAVE_CHARGE_TIME := 1.15
+const CAPSULE_WAVE_RADIUS := 190.0
+const CAPSULE_WAVE_RELOAD := 1.5
 const MATCH_TIME := 240.0
 const MIN_SURVIVAL_TIME := 60.0
 const P_RADIUS := 28.0
@@ -224,20 +223,15 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			p.wave_reload_t = maxf(0.0, float(p.wave_reload_t) - dt)
 			if p.wave_reload_t <= 0.0:
 				p.wave_ammo = int(p.wave_ammo) + 1
-				p.wave_reload_t = 0.5 if int(p.wave_ammo) < 4 else 0.0
-		if want_fire and int(p.wave_ammo) > 0:
-			p.wave_charge = minf(CAPSULE_WAVE_CHARGE_TIME, float(p.wave_charge) + dt)
-			p.wave_released = false
-		elif p.fire_was_down:
-			p.wave_released = true
-		if p.wave_released and int(p.wave_ammo) > 0 and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
-			var charge_ratio := clampf(float(p.wave_charge) / CAPSULE_WAVE_CHARGE_TIME, 0.0, 1.0)
-			_capsule_shockwave(p, charge_ratio)
+				p.wave_reload_t = CAPSULE_WAVE_RELOAD if int(p.wave_ammo) < 4 else 0.0
+		# Fixed-radius shockwave fires immediately on a fresh press; holding does not charge it.
+		if want_fire and not p.fire_was_down and int(p.wave_ammo) > 0 and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
+			_capsule_shockwave(p)
 			p.wave_ammo = int(p.wave_ammo) - 1
 			if float(p.wave_reload_t) <= 0.0:
-				p.wave_reload_t = 0.5
-			p.wave_charge = 0.0
-			p.wave_released = false
+				p.wave_reload_t = CAPSULE_WAVE_RELOAD
+		p.wave_charge = 0.0
+		p.wave_released = false
 		p.fire_was_down = want_fire
 	elif want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
 		var spread_count := 3 if p.kind == 0 else 1
@@ -274,10 +268,10 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		_make_shadow(p, p.last_hit if p.hit_age < 4.0 else 0, false)
 
 
-func _capsule_shockwave(p: Dictionary, charge_ratio: float) -> void:
+func _capsule_shockwave(p: Dictionary) -> void:
 	const WAVE_DAMAGE := 32.0
 	const WAVE_PUSH := 760.0
-	var wave_radius := lerpf(CAPSULE_WAVE_MIN_RADIUS, CAPSULE_WAVE_MAX_RADIUS, charge_ratio)
+	var wave_radius := CAPSULE_WAVE_RADIUS
 	var center: Vector2 = p.pos
 	for target in players.values():
 		if target.id == p.id or target.shadow or target.decoy or target.inv > 0.0:
@@ -798,11 +792,7 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 		inp.aim = lead
 		inp.fire = d < 820.0 and p.light > 14.0
 		if p.kind == 1:
-			var desired_charge := lerpf(0.32, 0.88, skill)
-			if p.wave_charge > 0.0:
-				inp.fire = p.wave_charge / CAPSULE_WAVE_CHARGE_TIME < desired_charge
-			else:
-				inp.fire = d < lerpf(235.0, 360.0, skill) and p.light > 14.0
+			inp.fire = d < lerpf(235.0, 360.0, skill) and p.light > 14.0 and not p.fire_was_down
 	if p.light < 32.0:
 		var bz := Vector2(ZONES[0].x, ZONES[0].y)
 		var bdz := 1e18
@@ -895,7 +885,7 @@ func snapshot() -> Dictionary:
 	for p in players.values():
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
-			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": clampf(float(p.wave_charge) / CAPSULE_WAVE_CHARGE_TIME, 0.0, 1.0), "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
+			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
 			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var bl: Array = []
