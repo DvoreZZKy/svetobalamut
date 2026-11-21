@@ -51,7 +51,7 @@ var match_event_timer := 28.0
 var effects := {}
 var events: Array = []
 var inputs := {}
-var time_left := MATCH_TIME
+var time_left := 0.0
 var phase := "play"
 var winner := 0
 var chaos_timer := 4.0
@@ -82,7 +82,7 @@ func reset(cfg: Array) -> void:
 	effects.clear()
 	events.clear()
 	inputs.clear()
-	time_left = MATCH_TIME
+	time_left = 0.0
 	phase = "play"
 	winner = 0
 	chaos_timer = 15.0
@@ -306,6 +306,9 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.light += REGEN_STILL * dt
 	if in_zone:
 		p.light += REGEN_ZONE * dt
+	# As the arena ages, its ambient energy fades; this is pressure, not a round timer.
+	var arena_drain := clampf((time_left - 75.0) * 0.10, 0.0, 11.0)
+	p.light -= arena_drain * dt
 	p.light = clampf(p.light, 0.0, p.max_light)
 	if p.light <= 0.0 and not p.decoy:
 		# Credit a kill only for a recent hit; otherwise this is starvation (no stale kill credit).
@@ -325,7 +328,7 @@ func _capsule_shockwave(p: Dictionary) -> void:
 		if distance > wave_radius:
 			continue
 		var direction: Vector2 = offset.normalized() if distance > 0.01 else p.aim
-		_damage(target, WAVE_DAMAGE * p.attack, p.id, false)
+		_damage(target, WAVE_DAMAGE * p.attack * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0), p.id, false)
 		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance / wave_radius)
 	for eater in eaters:
 		if eater.dead:
@@ -371,7 +374,7 @@ func _use_ability(p: Dictionary) -> void:
 			for i in 10:
 				var dir := Vector2.from_angle(TAU * float(i) / 10.0)
 				bullets.append({"id": next_id, "pos": p.pos + dir * 40.0, "vel": dir * 760.0,
-					"owner": p.id, "life": 1.25, "bn": 0, "ricochet": true, "dmg": BULLET_DMG * p.attack * 0.82, "radius": 10.0})
+					"owner": p.id, "life": 1.25, "bn": 0, "ricochet": true, "dmg": BULLET_DMG * p.attack * 0.82 * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0), "radius": 10.0})
 				next_id += 1
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
 
