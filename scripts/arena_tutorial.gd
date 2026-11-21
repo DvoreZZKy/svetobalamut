@@ -89,7 +89,7 @@ func _process(_dt: float) -> void:
 		_update_pointer()
 		if _current_control_done():
 			if str(CONTROL_STEPS[control_index].kind) == "move":
-				_begin_transition("control", control_index + 1)
+				_begin_transition("control", control_index + 1, 0)
 			elif str(CONTROL_STEPS[control_index].kind) == "fire":
 				_begin_transition("shadow", 0)
 			else:
@@ -385,7 +385,7 @@ func _show_shadow_explanation() -> void:
 	_update_focus()
 
 
-func _begin_transition(next_stage: String, next_index: int) -> void:
+func _begin_transition(next_stage: String, next_index: int, delay_ms: int = TRANSITION_MS) -> void:
 	stage = "transition"
 	transition_target = next_stage
 	if next_stage == "control":
@@ -395,7 +395,7 @@ func _begin_transition(next_stage: String, next_index: int) -> void:
 	Engine.time_scale = NORMAL_SPEED
 	_hide_shade()
 	panel.modulate.a = 0.0
-	transition_deadline = Time.get_ticks_msec() + TRANSITION_MS
+	transition_deadline = Time.get_ticks_msec() + delay_ms
 
 
 func _on_next() -> void:
@@ -478,7 +478,13 @@ func _update_pointer() -> void:
 	if (stage == "control" or stage == "ui") and pointer_target == "player":
 		var me := _local_player()
 		if not me.is_empty():
-			target = vp * 0.5 + (me.p - Vector2(800, 450)) * 0.78
+			var target_pos: Vector2 = me.p
+			if shadow_explanation:
+				for candidate in arena.view.get("pl", []):
+					if int(candidate.i) != arena.local_id and not bool(candidate.s):
+						target_pos = candidate.p
+						break
+			target = vp * 0.5 + (target_pos - Vector2(800, 450)) * 0.78
 	if stage == "ui" or stage == "ui_fade":
 		var start := panel.position + Vector2(panel.size.x * 0.5, panel.size.y * 0.5)
 		var direction := (target - start).normalized()
