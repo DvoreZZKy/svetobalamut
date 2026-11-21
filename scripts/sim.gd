@@ -42,6 +42,8 @@ var bullets: Array = []
 var eaters: Array = []
 var meteors: Array = []
 var obstacles: Array = []
+var meteor_burst_left := 0
+var meteor_burst_timer := 0.0
 var meteor_timer := 14.0
 var match_event_timer := 28.0
 var effects := {}
@@ -68,14 +70,9 @@ func reset(cfg: Array) -> void:
 	bullets.clear()
 	eaters.clear()
 	meteors.clear()
-	obstacles = [
-		{"pos": Vector2(600, 300), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
-		{"pos": Vector2(1000, 300), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
-		{"pos": Vector2(600, 600), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
-		{"pos": Vector2(1000, 600), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
-		{"pos": Vector2(800, 145), "r": 38.0, "hp": 65.0, "max_hp": 65.0},
-		{"pos": Vector2(800, 755), "r": 38.0, "hp": 65.0, "max_hp": 65.0}
-	]
+	obstacles.clear()
+	meteor_burst_left = 0
+	meteor_burst_timer = 0.0
 	meteor_timer = rng.randf_range(12.0, 18.0)
 	match_event_timer = rng.randf_range(24.0, 32.0)
 	effects.clear()
@@ -116,7 +113,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
 		"wave_ammo": 4, "wave_reload_t": 0.0,
-		"pts": 0, "kills": 0, "kill_streak": 0, "kill_streak_t": 0.0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
+		"pts": 0, "kills": 0, "damage_total": 0.0, "healing_total": 0.0, "kill_streak": 0, "kill_streak_t": 0.0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
 		"bot": {"t": 0.0, "strafe": 1.0, "want": 350.0, "skill": 0.08},
@@ -252,7 +249,6 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		if not b.is_empty():
 			p.vel += (b.pos - p.pos).normalized() * 750.0 * dt
 	p.pos += p.vel * dt
-	_resolve_obstacle_player(p)
 	_wall_bounce(p)
 
 	var shot_cost: float = SHOT_COST
@@ -380,7 +376,6 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 			return
 	p.vel = p.vel.lerp(mv.limit_length(1.0) * SPEED * 1.35, clampf(16.0 * dt, 0.0, 1.0))
 	p.pos += p.vel * dt
-	_resolve_obstacle_player(p)
 	_wall_bounce(p)
 	if want_poss and p.poss_cd <= 0.0:
 		var best: Dictionary = {}
@@ -399,21 +394,6 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 			p.poss_target = best.id
 			p.poss_cd = POSSESS_COOLDOWN
 			events.append({"t": "possess", "x": best.pos.x, "y": best.pos.y, "c": p.ci})
-
-
-func _resolve_obstacle_player(p: Dictionary) -> void:
-	if p.shadow:
-		return
-	for obstacle in obstacles:
-		var offset: Vector2 = p.pos - obstacle.pos
-		var min_distance: float = float(obstacle.r) + P_RADIUS
-		var distance: float = offset.length()
-		if distance < min_distance:
-			var normal: Vector2 = offset / distance if distance > 0.001 else Vector2.RIGHT
-			p.pos = obstacle.pos + normal * min_distance
-			var inward: float = p.vel.dot(normal)
-			if inward < 0.0:
-				p.vel -= normal * inward * 1.25
 
 
 func _wall_bounce(p: Dictionary) -> void:
@@ -466,6 +446,7 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 			var share := KILL_BONUS * maxf(0.0, float(damage_by[attacker_id])) / total_damage
 			var old_light: float = float(contributor.light)
 			contributor.light = minf(contributor.max_light, contributor.light + share)
+			contributor.healing_total = float(contributor.get("healing_total", 0.0)) + maxf(0.0, float(contributor.light) - old_light)
 			var healed: float = float(contributor.light) - old_light
 			if healed > 0.01:
 				events.append({"t": "heal", "id": contributor.id, "amount": healed})
@@ -474,6 +455,7 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 		if not fallback.shadow and not fallback.decoy:
 			var old_light: float = float(fallback.light)
 			fallback.light = minf(fallback.max_light, fallback.light + KILL_BONUS)
+			fallback.healing_total = float(fallback.get("healing_total", 0.0)) + maxf(0.0, float(fallback.light) - old_light)
 			var healed: float = float(fallback.light) - old_light
 			if healed > 0.01:
 				events.append({"t": "heal", "id": fallback.id, "amount": healed})
@@ -516,6 +498,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	p.light -= reduced
 	events.append({"t": "hurt", "id": p.id, "amount": reduced})
 	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
+		players[src].damage_total = float(players[src].get("damage_total", 0.0)) + reduced
 		var damage_by: Dictionary = p.get("damage_by", {})
 		damage_by[src] = float(damage_by.get(src, 0.0)) + reduced
 		p.damage_by = damage_by
@@ -599,12 +582,19 @@ func _collisions(_dt: float) -> void:
 
 func _meteor_tick(dt: float) -> void:
 	meteor_timer -= dt
-	if meteor_timer <= 0.0 and meteors.size() < 3:
-		var target := Vector2(rng.randf_range(100.0, A.x - 100.0), rng.randf_range(100.0, A.y - 100.0))
-		meteors.append({"pos": target, "t": 1.15, "id": next_id})
-		next_id += 1
-		events.append({"t": "meteor_warn", "x": target.x, "y": target.y, "c": 0})
-		meteor_timer = rng.randf_range(8.0, 13.0)
+	if meteor_timer <= 0.0 and meteor_burst_left <= 0:
+		meteor_burst_left = 9
+		meteor_burst_timer = 0.0
+		meteor_timer = rng.randf_range(20.0, 27.0)
+	if meteor_burst_left > 0:
+		meteor_burst_timer -= dt
+		if meteor_burst_timer <= 0.0:
+			var target := Vector2(rng.randf_range(100.0, A.x - 100.0), rng.randf_range(100.0, A.y - 100.0))
+			meteors.append({"pos": target, "t": rng.randf_range(0.85, 1.25), "id": next_id})
+			next_id += 1
+			events.append({"t": "meteor_warn", "x": target.x, "y": target.y, "c": 0})
+			meteor_burst_left -= 1
+			meteor_burst_timer = 0.18
 	var keep: Array = []
 	for meteor in meteors:
 		meteor.t -= dt
@@ -622,12 +612,6 @@ func _meteor_tick(dt: float) -> void:
 				var strength := 1.0 - distance / RADIUS
 				_damage(p, 42.0 * (0.45 + strength * 0.55), 0, false)
 				p.vel += (offset.normalized() if distance > 0.01 else Vector2.UP) * (420.0 + 520.0 * strength)
-		for obstacle in obstacles.duplicate():
-			if obstacle.pos.distance_to(center) < RADIUS + float(obstacle.r):
-				obstacle.hp -= 70.0
-				if obstacle.hp <= 0.0:
-					events.append({"t": "obstacle_break", "x": obstacle.pos.x, "y": obstacle.pos.y})
-					obstacles.erase(obstacle)
 		for eater in eaters:
 			if not eater.dead and eater.pos.distance_to(center) < RADIUS:
 				eater.hp -= 5
@@ -693,19 +677,6 @@ func _update_bullets(dt: float) -> void:
 				dead = true
 		b.pos = bp
 		b.vel = bv
-		if not dead:
-			for obstacle in obstacles:
-				var obstacle_radius: float = float(obstacle.r) + float(b.get("radius", 6.0))
-				if b.pos.distance_squared_to(obstacle.pos) < obstacle_radius * obstacle_radius:
-					obstacle.hp -= float(b.get("dmg", BULLET_DMG))
-					dead = true
-					if obstacle.hp <= 0.0:
-						events.append({"t": "obstacle_break", "x": obstacle.pos.x, "y": obstacle.pos.y})
-						obstacles.erase(obstacle)
-						shake_req = maxf(shake_req, 9.0)
-					else:
-						events.append({"t": "obstacle_hit", "x": obstacle.pos.x, "y": obstacle.pos.y})
-					break
 		if not dead:
 			for p in players.values():
 				if p.shadow or p.inv > 0.0:
@@ -1006,20 +977,6 @@ func _check_end() -> void:
 				cand.append(p)
 		_end(cand[rng.randi() % cand.size()].id)
 		return
-	if time_left <= 0.0:
-		# At the timer limit, the glowing player with the most chaos wins.
-		# Shadows are excluded; ties are resolved randomly.
-		var best := -1
-		var cand: Array = []
-		for p in lit:
-			if p.pts > best:
-				best = p.pts
-				cand = [p]
-			elif p.pts == best:
-				cand.append(p)
-		if not cand.is_empty():
-			_end(cand[rng.randi() % cand.size()].id)
-			return
 
 
 func _end(id: int) -> void:
@@ -1036,7 +993,7 @@ func snapshot() -> Dictionary:
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
-			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
+			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var mt: Array = []
 	for meteor in meteors:
 		mt.append([meteor.pos, float(meteor.t)])
