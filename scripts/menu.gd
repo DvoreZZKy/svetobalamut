@@ -30,6 +30,8 @@ var profile_outfit_btn: Button
 var profile_hat_btn: Button
 var lobby_frame_data: Array[Dictionary] = []
 var lobby_root: VBoxContainer
+var waiting_control := ""
+var control_buttons := {}
 
 
 func _ready() -> void:
@@ -185,7 +187,21 @@ func _ready() -> void:
 	fs.add_theme_font_size_override("font_size", 22)
 	fs.toggled.connect(func(b: bool): G.fullscreen = b; G.apply_display(); G.save_settings())
 	st.add_child(fs)
+	_btn("УПРАВЛЕНИЕ КЛАВИШАМИ", st, func(): _show("controls"))
 	_btn("Назад", st, func(): G.save_settings(); _show("main"))
+
+	var controls := _box("controls")
+	controls.position = Vector2(390, 95)
+	controls.size = Vector2(500, 610)
+	_title(controls, "НАСТРОЙКА УПРАВЛЕНИЯ")
+	var control_names := {"up": "Движение вверх", "down": "Движение вниз", "left": "Движение влево", "right": "Движение вправо", "dash": "Рывок", "ability": "Способность", "possess": "Всeление"}
+	for action in ["up", "down", "left", "right", "dash", "ability", "possess"]:
+		var bind_btn := _btn("", controls, func(): _begin_rebind(action))
+		bind_btn.custom_minimum_size = Vector2(450, 48)
+		bind_btn.add_theme_font_size_override("font_size", 17)
+		control_buttons[action] = bind_btn
+		_update_bind_button(action)
+	_btn("НАЗАД К НАСТРОЙКАМ", controls, func(): waiting_control = ""; _show("settings"))
 
 	var lobby := _box("lobby")
 	lobby_root = lobby
@@ -259,6 +275,35 @@ func _ready() -> void:
 	Net.match_started.connect(_on_match_started)
 	_show("lobby" if Net.online else "main")
 	Sfx.play_music()
+
+
+
+func _begin_rebind(action: String) -> void:
+	waiting_control = action
+	if control_buttons.has(action):
+		control_buttons[action].text = "НАЖМИ НОВУЮ КЛАВИШУ…"
+
+
+func _update_bind_button(action: String) -> void:
+	if not control_buttons.has(action):
+		return
+	var names := {"up": "ВВЕРХ", "down": "ВНИЗ", "left": "ВЛЕВО", "right": "ВПРАВО", "dash": "РЫВОК", "ability": "СПОСОБНОСТЬ", "possess": "ВСЕЛЕНИЕ"}
+	var key_name := OS.get_keycode_string(int(G.control_keys[action]))
+	control_buttons[action].text = "%s  —  %s" % [names[action], key_name.to_upper()]
+
+
+func _input(event: InputEvent) -> void:
+	if waiting_control == "" or not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	var key_event := event as InputEventKey
+	var keycode := int(key_event.physical_keycode) if key_event.physical_keycode != 0 else int(key_event.keycode)
+	if keycode <= 0:
+		return
+	G.set_control_key(waiting_control, keycode)
+	var changed := waiting_control
+	waiting_control = ""
+	_update_bind_button(changed)
+	get_viewport().set_input_as_handled()
 
 
 func _exit_tree() -> void:
