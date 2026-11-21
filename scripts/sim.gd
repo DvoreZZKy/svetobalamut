@@ -101,7 +101,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
 		"wave_ammo": 4, "wave_reload_t": 0.0,
-		"pts": 0, "kills": 0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
+		"pts": 0, "kills": 0, "kill_streak": 0, "kill_streak_t": 0.0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
 		"bot": {"t": 0.0, "strafe": 1.0, "want": 350.0, "skill": 0.08},
@@ -197,6 +197,9 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.fire_cd = maxf(0.0, p.fire_cd - dt)
 	p.hit_t = maxf(0.0, p.hit_t - dt)
 	p.hit_age += dt
+	p.kill_streak_t = maxf(0.0, float(p.kill_streak_t) - dt)
+	if p.kill_streak_t <= 0.0:
+		p.kill_streak = 0
 	p.push_cd = maxf(0.0, p.push_cd - dt)
 	p.poss_cd = maxf(0.0, p.poss_cd - dt)
 	p.poss_protect_cd = maxf(0.0, p.poss_protect_cd - dt)
@@ -444,7 +447,17 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 		var k: Dictionary = players[killer]
 		if not k.shadow:
 			k.kills += 1
-		k.pts += 2 # Every confirmed elimination awards chaos.
+			if float(k.kill_streak_t) > 0.0:
+				k.kill_streak = int(k.kill_streak) + 1
+			else:
+				k.kill_streak = 1
+			k.kill_streak_t = 8.0
+			var streak_bonus: int = mini(3, maxi(0, int(k.kill_streak) - 1))
+			k.pts += 2 + streak_bonus
+			if int(k.kill_streak) >= 2:
+				events.append({"t": "streak", "id": k.id, "count": k.kill_streak, "bonus": streak_bonus})
+		else:
+			k.pts += 2 # Shadows still earn base chaos for a confirmed elimination.
 		if k.derp_t > 0.0 and players.has(k.derp_by):
 			players[k.derp_by].pts += 2
 	else:
