@@ -551,7 +551,7 @@ func _draw_bullets() -> void:
 	for pickup in view.get("pu", []):
 		var pickup_pos: Vector2 = pickup[0]
 		var pickup_kind: String = str(pickup[1])
-		var pickup_color := {"swift": Color("#64eaff"), "overdrive": Color("#ff8b67"), "shield": Color("#a78bfa"), "battery": Color("#7cf7b2")}.get(pickup_kind, Color.WHITE)
+		var pickup_color: Color = {"swift": Color("#64eaff"), "overdrive": Color("#ff8b67"), "shield": Color("#a78bfa"), "battery": Color("#7cf7b2")}.get(pickup_kind, Color.WHITE)
 		var points := PackedVector2Array()
 		for side in 6:
 			points.append(pickup_pos + Vector2.from_angle(TAU * float(side) / 6.0) * 17.0)
