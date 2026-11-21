@@ -140,7 +140,7 @@ var result_list: VBoxContainer
 var banner: Label
 var score_lbl: RichTextLabel
 var help_lbl: Label
-var light_bar: ProgressBar
+var light_bar: NeonProgressBar
 var dash_bar: NeonProgressBar
 var over_rect: ColorRect
 var over_shape: Polygon2D
@@ -1333,8 +1333,8 @@ func _update_hud(dt: float) -> void:
 		last_score_text = txt
 		score_lbl.text = txt
 	if not me.is_empty():
-		light_bar.max_value = me.hpmax
-		light_bar.value = me.l
+		var light_ratio := 0.0 if bool(me.get("s", false)) else clampf(float(me.get("l", 0.0)) / maxf(float(me.get("hpmax", 1.0)), 1.0), 0.0, 1.0)
+		light_bar.set_fill_ratio(light_ratio)
 		var dash_cooldown := clampf(float(me.get("dc", 0.0)), 0.0, Sim.DASH_CD)
 		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
 		dash_bar.set_fill_ratio(1.0 - dash_cooldown / Sim.DASH_CD)
