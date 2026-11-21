@@ -23,9 +23,9 @@ const BULLET_DMG := 9.0
 const SHOT_COST := 0.28
 const MOVE_COST := 0.65
 const DASH_COST := 2.0
-const REGEN_PASSIVE := 2.0
+const REGEN_PASSIVE := 2.5
 const REGEN_STILL := 2.0
-const REGEN_ZONE := 4.0
+const REGEN_ZONE := 5.0
 const KILL_BONUS := 24.0
 const MATCH_TIME := 240.0
 const MIN_SURVIVAL_TIME := 60.0
@@ -426,7 +426,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	var global_state := (Engine.get_main_loop() as SceneTree).root.get_node_or_null("G")
 	if global_state != null and bool(global_state.get("tutorial_active")) and bool(p.get("human", false)):
 		return
-	var reduced: float = dmg * float(p.get("defense", 1.0))
+	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.85
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.25
 	p.light -= reduced
