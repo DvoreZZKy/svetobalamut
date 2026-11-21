@@ -652,7 +652,7 @@ func _match_event_tick(dt: float) -> void:
 				var healed: float = float(p.light) - old_light
 				if healed > 0.01:
 					p.healing_total = float(p.get("healing_total", 0.0)) + healed
-				events.append({"t": "heal", "id": p.id, "amount": healed})
+					events.append({"t": "heal", "id": p.id, "amount": healed})
 	else:
 		events.append({"t": "match_event", "kind": "hunt"})
 		for i in 3:
@@ -717,7 +717,7 @@ func _update_bullets(dt: float) -> void:
 							var healed: float = float(eater_healer.light) - old_light
 							if healed > 0.01:
 								eater_healer.healing_total = float(eater_healer.get("healing_total", 0.0)) + healed
-					events.append({"t": "heal", "id": eater_healer.id, "amount": healed})
+								events.append({"t": "heal", "id": eater_healer.id, "amount": healed})
 					else:
 						events.append({"t": "hit", "x": e.pos.x, "y": e.pos.y, "c": 0})
 					break
@@ -856,7 +856,7 @@ func trigger(name: String) -> void:
 				var healed: float = float(a.light) - old_light
 				if healed > 0.01:
 					a.healing_total = float(a.get("healing_total", 0.0)) + healed
-				events.append({"t": "heal", "id": a.id, "amount": healed})
+					events.append({"t": "heal", "id": a.id, "amount": healed})
 				b.light = maxf(1.0, b.light - amt)
 				events.append({"t": "hurt", "id": b.id, "amount": amt})
 		"doubles":
