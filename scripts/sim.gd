@@ -262,7 +262,7 @@ func _capsule_shockwave(p: Dictionary) -> void:
 		var distance := offset.length()
 		if distance > WAVE_RADIUS:
 			continue
-		var direction := offset.normalized() if distance > 0.01 else p.aim
+		var direction: Vector2 = offset.normalized() if distance > 0.01 else p.aim
 		_damage(target, WAVE_DAMAGE * p.attack, p.id, false)
 		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance / WAVE_RADIUS)
 	for eater in eaters:
