@@ -113,6 +113,12 @@ func _ready() -> void:
 	st.add_child(name_edit)
 	_slider(st, "Музыка", G.vol_music, func(v: float): G.vol_music = v; Sfx.refresh_volume())
 	_slider(st, "Звуки", G.vol_sfx, func(v: float): G.vol_sfx = v; Sfx.play("shot"))
+	_slider(st, "Чувствительность мыши", (G.mouse_sensitivity - 0.5) / 2.5, func(v: float): G.mouse_sensitivity = 0.5 + v * 2.5; G.save_settings())
+	var match_sens := CheckBox.new()
+	match_sens.text = "Изменять чувствительность в матче"
+	match_sens.button_pressed = G.match_mouse_sensitivity
+	match_sens.toggled.connect(func(b: bool): G.match_mouse_sensitivity = b; G.save_settings())
+	st.add_child(match_sens)
 	var quality_panel := VBoxContainer.new()
 	quality_panel.add_theme_constant_override("separation", 8)
 	var quality_heading := HBoxContainer.new()
