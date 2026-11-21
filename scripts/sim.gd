@@ -211,7 +211,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.pos += p.vel * dt
 	_wall_bounce(p)
 
-	var shot_cost: float = 1.5 if p.kind == 0 else SHOT_COST
+	var shot_cost: float = SHOT_COST
 	if want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
 		if p.kind == 1:
 			_capsule_shockwave(p)
