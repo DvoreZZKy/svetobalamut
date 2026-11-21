@@ -41,6 +41,7 @@ var players := {}
 var bullets: Array = []
 var eaters: Array = []
 var meteors: Array = []
+var obstacles: Array = []
 var meteor_timer := 14.0
 var match_event_timer := 28.0
 var effects := {}
@@ -67,6 +68,14 @@ func reset(cfg: Array) -> void:
 	bullets.clear()
 	eaters.clear()
 	meteors.clear()
+	obstacles = [
+		{"pos": Vector2(600, 300), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
+		{"pos": Vector2(1000, 300), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
+		{"pos": Vector2(600, 600), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
+		{"pos": Vector2(1000, 600), "r": 46.0, "hp": 90.0, "max_hp": 90.0},
+		{"pos": Vector2(800, 145), "r": 38.0, "hp": 65.0, "max_hp": 65.0},
+		{"pos": Vector2(800, 755), "r": 38.0, "hp": 65.0, "max_hp": 65.0}
+	]
 	meteor_timer = rng.randf_range(12.0, 18.0)
 	match_event_timer = rng.randf_range(24.0, 32.0)
 	effects.clear()
@@ -243,6 +252,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		if not b.is_empty():
 			p.vel += (b.pos - p.pos).normalized() * 750.0 * dt
 	p.pos += p.vel * dt
+	_resolve_obstacle_player(p)
 	_wall_bounce(p)
 
 	var shot_cost: float = SHOT_COST
@@ -370,6 +380,7 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 			return
 	p.vel = p.vel.lerp(mv.limit_length(1.0) * SPEED * 1.35, clampf(16.0 * dt, 0.0, 1.0))
 	p.pos += p.vel * dt
+	_resolve_obstacle_player(p)
 	_wall_bounce(p)
 	if want_poss and p.poss_cd <= 0.0:
 		var best: Dictionary = {}
@@ -388,6 +399,21 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 			p.poss_target = best.id
 			p.poss_cd = POSSESS_COOLDOWN
 			events.append({"t": "possess", "x": best.pos.x, "y": best.pos.y, "c": p.ci})
+
+
+func _resolve_obstacle_player(p: Dictionary) -> void:
+	if p.shadow:
+		return
+	for obstacle in obstacles:
+		var offset: Vector2 = p.pos - obstacle.pos
+		var min_distance: float = float(obstacle.r) + P_RADIUS
+		var distance: float = offset.length()
+		if distance < min_distance:
+			var normal: Vector2 = offset / distance if distance > 0.001 else Vector2.RIGHT
+			p.pos = obstacle.pos + normal * min_distance
+			var inward: float = p.vel.dot(normal)
+			if inward < 0.0:
+				p.vel -= normal * inward * 1.25
 
 
 func _wall_bounce(p: Dictionary) -> void:
@@ -596,6 +622,12 @@ func _meteor_tick(dt: float) -> void:
 				var strength := 1.0 - distance / RADIUS
 				_damage(p, 42.0 * (0.45 + strength * 0.55), 0, false)
 				p.vel += (offset.normalized() if distance > 0.01 else Vector2.UP) * (420.0 + 520.0 * strength)
+		for obstacle in obstacles.duplicate():
+			if obstacle.pos.distance_to(center) < RADIUS + float(obstacle.r):
+				obstacle.hp -= 70.0
+				if obstacle.hp <= 0.0:
+					events.append({"t": "obstacle_break", "x": obstacle.pos.x, "y": obstacle.pos.y})
+					obstacles.erase(obstacle)
 		for eater in eaters:
 			if not eater.dead and eater.pos.distance_to(center) < RADIUS:
 				eater.hp -= 5
@@ -661,6 +693,19 @@ func _update_bullets(dt: float) -> void:
 				dead = true
 		b.pos = bp
 		b.vel = bv
+		if not dead:
+			for obstacle in obstacles:
+				var obstacle_radius: float = float(obstacle.r) + float(b.get("radius", 6.0))
+				if b.pos.distance_squared_to(obstacle.pos) < obstacle_radius * obstacle_radius:
+					obstacle.hp -= float(b.get("dmg", BULLET_DMG))
+					dead = true
+					if obstacle.hp <= 0.0:
+						events.append({"t": "obstacle_break", "x": obstacle.pos.x, "y": obstacle.pos.y})
+						obstacles.erase(obstacle)
+						shake_req = maxf(shake_req, 9.0)
+					else:
+						events.append({"t": "obstacle_hit", "x": obstacle.pos.x, "y": obstacle.pos.y})
+					break
 		if not dead:
 			for p in players.values():
 				if p.shadow or p.inv > 0.0:
@@ -992,6 +1037,9 @@ func snapshot() -> Dictionary:
 	var mt: Array = []
 	for meteor in meteors:
 		mt.append([meteor.pos, float(meteor.t)])
+	var ob: Array = []
+	for obstacle in obstacles:
+		ob.append([obstacle.pos, float(obstacle.r), float(obstacle.hp), float(obstacle.max_hp)])
 	var bl: Array = []
 	for b in bullets:
 		bl.append([b.id, b.pos, b.vel, b.owner, b.bn, int(players.get(b.owner, {}).get("kind", 0)), float(b.get("radius", 6.0))])
@@ -999,4 +1047,4 @@ func snapshot() -> Dictionary:
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
 	return {"pl": pl, "bl": bl, "ea": ea, "fx": effects.duplicate(), "tl": time_left,
-		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt}
+		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob}
