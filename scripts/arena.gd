@@ -285,6 +285,7 @@ func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> ProgressBar:
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = Color("#06101e", 0.96)
 	bg.set_border_width_all(1)
+	bg.set_corner_radius_all(3)
 	bg.border_color = col.darkened(0.28)
 	bg.shadow_color = Color(col.r, col.g, col.b, 0.22)
 	bg.shadow_size = 2
@@ -292,7 +293,7 @@ func _bar(pos: Vector2, sz: Vector2, col: Color, parent: Node) -> ProgressBar:
 	fl.bg_color = col.lightened(0.12)
 	fl.shadow_color = Color(col.r, col.g, col.b, 0.45)
 	fl.shadow_size = 3
-	fl.set_corner_radius_all(0)
+	fl.set_corner_radius_all(3)
 	b.add_theme_stylebox_override("background", bg)
 	b.add_theme_stylebox_override("fill", fl)
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1359,8 +1360,12 @@ func _open_result_category(category: String) -> void:
 		over_menu_btn.pressed.disconnect(_to_menu)
 	over_menu_btn.pressed.connect(_close_result_category, CONNECT_ONE_SHOT)
 	var tween := create_tween()
+	var target_position := over_lbl.position
+	over_lbl.position += Vector2(0, 26)
 	over_lbl.modulate.a = 0.0
+	tween.set_parallel(true)
 	tween.tween_property(over_lbl, "modulate:a", 1.0, 0.35)
+	tween.tween_property(over_lbl, "position", target_position, 0.35)
 
 
 func _close_result_category() -> void:
