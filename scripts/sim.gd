@@ -31,7 +31,7 @@ const MATCH_TIME := 240.0
 const MIN_SURVIVAL_TIME := 60.0
 const P_RADIUS := 28.0
 const MAX_EATERS_RAIN := 8
-const ZONES := [Vector3(420, 250, 125), Vector3(1180, 250, 125), Vector3(420, 650, 125), Vector3(1180, 650, 125), Vector3(800, 450, 95)]
+const ZONES := [Vector3(800, 450, 95)]
 const CHAOS := ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]
 const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog": 6.0, "magnet": 5.0}
 
@@ -96,7 +96,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"ability_cd": 0.0, "ability_t": 0.0,
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
-		"pts": 0, "kills": 0, "last_hit": 0, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
+		"pts": 0, "kills": 0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
 		"bot": {"t": 0.0, "strafe": 1.0, "want": 350.0},
@@ -374,10 +374,27 @@ func _make_shadow(p: Dictionary, killer: int, silent: bool) -> void:
 	p.poss_target = 0
 	events.append({"t": "death", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "id": p.id})
 	shake_req = maxf(shake_req, 18.0)
+	var damage_by: Dictionary = p.get("damage_by", {})
+	var total_damage := 0.0
+	for attacker_id in damage_by:
+		total_damage += maxf(0.0, float(damage_by[attacker_id]))
+	if total_damage > 0.0:
+		# Split the kill heal between every living contributor by their share of damage.
+		for attacker_id in damage_by:
+			if not players.has(attacker_id):
+				continue
+			var contributor: Dictionary = players[attacker_id]
+			if contributor.shadow or contributor.decoy:
+				continue
+			var share := KILL_BONUS * maxf(0.0, float(damage_by[attacker_id])) / total_damage
+			contributor.light = minf(contributor.max_light, contributor.light + share)
+	elif killer != 0 and killer != p.id and players.has(killer):
+		var fallback: Dictionary = players[killer]
+		if not fallback.shadow and not fallback.decoy:
+			fallback.light = minf(fallback.max_light, fallback.light + KILL_BONUS)
 	if killer != 0 and killer != p.id and players.has(killer):
 		var k: Dictionary = players[killer]
 		if not k.shadow:
-			k.light = minf(k.max_light, k.light + KILL_BONUS)
 			k.kills += 1
 		if k.derp_t > 0.0 and players.has(k.derp_by):
 			players[k.derp_by].pts += 2
@@ -401,6 +418,10 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.25
 	p.light -= reduced
+	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
+		var damage_by: Dictionary = p.get("damage_by", {})
+		damage_by[src] = float(damage_by.get(src, 0.0)) + reduced
+		p.damage_by = damage_by
 	p.last_hit = src
 	p.hit_age = 0.0
 	p.hit_t = 0.14
