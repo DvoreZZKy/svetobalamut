@@ -548,6 +548,16 @@ func _draw_ambient() -> void:
 
 
 func _draw_bullets() -> void:
+	for pickup in view.get("pu", []):
+		var pickup_pos: Vector2 = pickup[0]
+		var pickup_kind: String = str(pickup[1])
+		var pickup_color := {"swift": Color("#64eaff"), "overdrive": Color("#ff8b67"), "shield": Color("#a78bfa"), "battery": Color("#7cf7b2")}.get(pickup_kind, Color.WHITE)
+		var points := PackedVector2Array()
+		for side in 6:
+			points.append(pickup_pos + Vector2.from_angle(TAU * float(side) / 6.0) * 17.0)
+		bullet_layer.draw_colored_polygon(points, pickup_color * Color(1, 1, 1, 0.85))
+		bullet_layer.draw_polyline(points, Color.WHITE, 2.0, true)
+		bullet_layer.draw_arc(pickup_pos, 25.0 + 2.0 * sin(t * 5.0), 0.0, TAU, 32, pickup_color, 2.0, true)
 	for meteor in view.get("mt", []):
 		var center: Vector2 = meteor[0]
 		var remaining: float = float(meteor[1])
@@ -1141,6 +1151,9 @@ func _update_hud(dt: float) -> void:
 			capsule_ammo_lbl.text = "ВОЛНЫ  " + ammo_text + ("  +" + ("%.1f" % float(me.get("wr", 0.0))) + "с" if ammo < 4 else "  ГОТОВО")
 			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 1.5)
 			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 1.5) if ammo < 4 else 100.0
+		var buff_names := {"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕННЫЙ УРОН", "shield": "ЗАЩИТА", "battery": "БАТАРЕЯ"}
+		if str(me.get("buff", "")) != "" and float(me.get("buff_t", 0.0)) > 0.0:
+			timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
 		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
 		help_lbl.text = "%s • Q: %s (%s)\nЦЕЛЬ: остаться последним светящимся.\nWASD — движение • ЛКМ — атака • ПРОБЕЛ — рывок • ESC — меню" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
@@ -1295,6 +1308,9 @@ func _handle_events(evs: Array) -> void:
 				else:
 					_show_banner("ОХОТА ПОЖИРАТЕЛЕЙ")
 					flash(Vector2(800, 450), 220.0, Color(1.0, 0.2, 0.55), 0.45)
+			"upgrade_pick":
+				_show_banner({"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕНИЕ УРОНА", "shield": "ЭНЕРГОЩИТ", "battery": "ЗАРЯД СВЕТА"}.get(str(e.get("kind", "")), "УЛУЧШЕНИЕ"))
+				flash(pos, 90.0, col, 0.35)
 			"meteor_warn":
 				Sfx.play("chaos", 0.75, -5.0)
 				_show_banner("МЕТЕОРИТНЫЙ ДОЖДЬ")
