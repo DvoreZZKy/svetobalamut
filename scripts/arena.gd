@@ -55,6 +55,11 @@ var edge_feedback: EdgeFeedback
 
 class NeonProgressBar extends ProgressBar:
 	var tint := Color("#62eaff")
+	var fill_ratio := 1.0
+
+	func set_fill_ratio(ratio: float) -> void:
+		fill_ratio = clampf(ratio, 0.0, 1.0)
+		queue_redraw()
 
 	func _draw() -> void:
 		var w := size.x
@@ -66,8 +71,7 @@ class NeonProgressBar extends ProgressBar:
 			Vector2(0, h - cut), Vector2(0, cut)
 		])
 		draw_colored_polygon(frame, Color("#06101e", 0.96))
-		var ratio := clampf(value / maxf(max_value, 0.001), 0.0, 1.0)
-		var fill_w := maxf(0.0, w * ratio - 2.0)
+		var fill_w := maxf(0.0, w * fill_ratio - 2.0)
 		if fill_w > 2.0:
 			var fill_cut := minf(cut, fill_w * 0.35)
 			var fill := PackedVector2Array([
@@ -122,7 +126,7 @@ class EdgeFeedback extends Control:
 var timer_lbl: RichTextLabel
 var timer_shape: Polygon2D
 var timer_outline: Line2D
-var ability_bar: ProgressBar
+var ability_bar: NeonProgressBar
 var capsule_ammo_lbl: Label
 var capsule_reload_bar: ProgressBar
 var cursor_layer: CanvasLayer
@@ -137,7 +141,7 @@ var banner: Label
 var score_lbl: RichTextLabel
 var help_lbl: Label
 var light_bar: ProgressBar
-var dash_bar: ProgressBar
+var dash_bar: NeonProgressBar
 var over_rect: ColorRect
 var over_shape: Polygon2D
 var over_outline: Line2D
@@ -1279,7 +1283,7 @@ func _update_hud(dt: float) -> void:
 	timer_lbl.modulate = Color.WHITE
 	timer_shape.color = Color("#0b1b30", 0.94)
 	timer_outline.default_color = Color("#39d9f0", 0.92)
-	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 88.0)
+	timer_shape.position = Vector2(get_viewport_rect().size.x - 230.0, 116.0)
 	timer_outline.position = timer_shape.position
 	timer_lbl.anchor_top = 0.0
 	timer_lbl.anchor_bottom = 0.0
@@ -1339,10 +1343,8 @@ func _update_hud(dt: float) -> void:
 		ability_bar.max_value = 100.0
 		var dash_cooldown := clampf(float(me.get("dc", 0.0)), 0.0, Sim.DASH_CD)
 		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
-		dash_bar.value = (1.0 - dash_cooldown / Sim.DASH_CD) * 100.0
-		ability_bar.value = (1.0 - ability_cooldown / 9.0) * 100.0
-		dash_bar.queue_redraw()
-		ability_bar.queue_redraw()
+		dash_bar.set_fill_ratio(1.0 - dash_cooldown / Sim.DASH_CD)
+		ability_bar.set_fill_ratio(1.0 - ability_cooldown / 9.0)
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
 		capsule_ammo_lbl.visible = is_capsule
 		capsule_reload_bar.visible = is_capsule
@@ -1497,63 +1499,66 @@ func _open_result_category(category: String) -> void:
 	for i in rows.size():
 		var p: Dictionary = rows[i]
 		var row_card := PanelContainer.new()
-		row_card.custom_minimum_size = Vector2(0, 94)
+		row_card.custom_minimum_size = Vector2(0, 236)
 		row_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var row_style := StyleBoxFlat.new()
-		row_style.bg_color = Color("#0b1b2d", 0.82)
-		row_style.border_color = Color("#287e91", 0.82)
-		row_style.set_border_width_all(1)
+		row_style.bg_color = Color("#0b1b2d", 0.94)
+		row_style.border_color = Color(accent, 0.92)
+		row_style.set_border_width_all(2)
 		row_style.set_corner_radius_all(0)
-		row_style.content_margin_left = 8
-		row_style.content_margin_right = 12
-		row_style.content_margin_top = 4
-		row_style.content_margin_bottom = 4
+		row_style.content_margin_left = 10
+		row_style.content_margin_right = 10
+		row_style.content_margin_top = 8
+		row_style.content_margin_bottom = 8
 		row_card.add_theme_stylebox_override("panel", row_style)
 		result_list.add_child(row_card)
-		var row := HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_theme_constant_override("separation", 12)
-		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		row_card.add_child(row)
+		var card_content := VBoxContainer.new()
+		card_content.alignment = BoxContainer.ALIGNMENT_CENTER
+		card_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card_content.add_theme_constant_override("separation", 2)
+		row_card.add_child(card_content)
+		var crown_label := Label.new()
+		crown_label.text = "♛" if i == 0 else "№ %02d" % (i + 1)
+		crown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		crown_label.add_theme_font_size_override("font_size", 24 if i == 0 else 16)
+		crown_label.add_theme_color_override("font_color", Color("#ffd76a") if i == 0 else Color("#91a9c2"))
+		card_content.add_child(crown_label)
 		var portrait := SubViewportContainer.new()
-		portrait.custom_minimum_size = Vector2(88, 82)
-		portrait.size = Vector2(88, 82)
+		portrait.custom_minimum_size = Vector2(0, 124)
+		portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		portrait.stretch = true
 		portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var portrait_vp := SubViewport.new()
-		portrait_vp.size = Vector2i(120, 110)
+		portrait_vp.size = Vector2i(180, 124)
 		portrait_vp.transparent_bg = true
 		portrait_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		portrait.add_child(portrait_vp)
 		var portrait_actor := VectorActor.new()
-		portrait_actor.position = Vector2(60, 58)
-		portrait_actor.scale = Vector2.ONE * 0.72
+		portrait_actor.position = Vector2(90, 91)
+		portrait_actor.scale = Vector2.ONE * 1.18
 		portrait_vp.add_child(portrait_actor)
 		portrait_actor.setup(int(p.get("k", 0)), G.col(int(p.get("c", 0))), int(p.get("outfit", 0)), int(p.get("hat", 0)))
-		row.add_child(portrait)
-		var details := VBoxContainer.new()
-		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		details.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_child(details)
+		card_content.add_child(portrait)
 		var name_label := Label.new()
-		name_label.text = "%02d   %s%s" % [i + 1, str(p.get("n", "Игрок")), "  •  БОТ" if bool(p.get("bot", false)) else ""]
-		name_label.add_theme_font_size_override("font_size", 18)
+		name_label.text = "%s%s" % [str(p.get("n", "Игрок")), "  •  БОТ" if bool(p.get("bot", false)) else ""]
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name_label.add_theme_font_size_override("font_size", 20)
 		name_label.add_theme_color_override("font_color", G.col(int(p.get("c", 0))))
-		details.add_child(name_label)
+		card_content.add_child(name_label)
 		var skin_label := Label.new()
 		var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
 		var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
 		skin_label.text = "%s  •  %s" % [outfits[clampi(int(p.get("outfit", 0)), 0, outfits.size() - 1)], hats[clampi(int(p.get("hat", 0)), 0, hats.size() - 1)]]
-		skin_label.add_theme_font_size_override("font_size", 12)
+		skin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		skin_label.add_theme_font_size_override("font_size", 13)
 		skin_label.add_theme_color_override("font_color", Color("#91a9c2"))
-		details.add_child(skin_label)
+		card_content.add_child(skin_label)
 		var score_label := Label.new()
 		score_label.text = "%s: %d" % [category, int(p.get(key, 0))]
-		score_label.custom_minimum_size.x = 150
-		score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		score_label.add_theme_font_size_override("font_size", 20)
+		score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		score_label.add_theme_font_size_override("font_size", 23)
 		score_label.add_theme_color_override("font_color", Color(accent))
-		row.add_child(score_label)
+		card_content.add_child(score_label)
 	result_list_scroll.visible = true
 	for card in result_cards:
 		card.visible = false
