@@ -395,8 +395,8 @@ func _on_next() -> void:
 func _target_rect() -> Rect2:
 	var vp := get_viewport().get_visible_rect().size
 	match pointer_target:
-		"timer": return Rect2(Vector2(vp.x * 0.5 - 115, 0), Vector2(230, 78))
-		"score": return Rect2(Vector2(0, 0), Vector2(355, 355))
+		"timer": return Rect2(Vector2(vp.x - 450, 0), Vector2(450, 115))
+		"score": return Rect2(Vector2(0, 0), Vector2(545, 420))
 		"help": return Rect2(Vector2(vp.x - 525, 0), Vector2(525, 145))
 		"light": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 62), Vector2(440, 40))
 		"dash": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 43), Vector2(440, 15))
