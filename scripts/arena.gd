@@ -846,7 +846,9 @@ func _update_views(dt: float) -> void:
 			var preview_radius := lerpf(Sim.CAPSULE_WAVE_MIN_RADIUS, Sim.CAPSULE_WAVE_MAX_RADIUS, charge_ratio)
 			capsule_charge_ring.visible = true
 			capsule_charge_ring.position = pv.pos
-			capsule_charge_ring.scale = Vector2.ONE * preview_radius
+			capsule_charge_ring.scale = Vector2.ONE
+			for ring_i in capsule_charge_ring.get_point_count():
+				capsule_charge_ring.set_point_position(ring_i, Vector2.from_angle(TAU * float(ring_i) / float(capsule_charge_ring.get_point_count())) * preview_radius)
 			capsule_charge_ring.default_color = Color(0.25, 0.95, 1.0, 0.72 + 0.25 * charge_ratio)
 		elif id == local_id:
 			capsule_charge_ring.visible = false
