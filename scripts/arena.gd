@@ -1450,7 +1450,7 @@ func _open_result_category(category: String) -> void:
 	for pd in view.get("pl", []):
 		rows.append(pd)
 	rows.sort_custom(func(a, b): return float(a.get(key, 0.0)) > float(b.get(key, 0.0)))
-	var accent := {"dm":"#ff9b67", "hl":"#72f0b1", "ki":"#b58aff", "pt":"#ffd76a"}.get(key, "#70eaff")
+	var accent: String = str({"dm":"#ff9b67", "hl":"#72f0b1", "ki":"#b58aff", "pt":"#ffd76a"}.get(key, "#70eaff"))
 	var lines := "[font_size=27][b][color=%s]◈  %s  ◈[/color][/b][/font_size]\n\n" % [accent, category]
 	lines += "[table=3][cell][color=#829bb5]# / ПЕРСОНАЖ[/color][/cell][cell][color=#829bb5]ИГРОК[/color][/cell][cell][color=#829bb5]РЕЗУЛЬТАТ[/color][/cell]"
 	for i in rows.size():
