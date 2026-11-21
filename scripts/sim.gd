@@ -42,6 +42,7 @@ var bullets: Array = []
 var eaters: Array = []
 var meteors: Array = []
 var meteor_timer := 14.0
+var match_event_timer := 28.0
 var effects := {}
 var events: Array = []
 var inputs := {}
@@ -67,6 +68,7 @@ func reset(cfg: Array) -> void:
 	eaters.clear()
 	meteors.clear()
 	meteor_timer = rng.randf_range(12.0, 18.0)
+	match_event_timer = rng.randf_range(24.0, 32.0)
 	effects.clear()
 	events.clear()
 	inputs.clear()
@@ -138,6 +140,7 @@ func step(dt: float) -> void:
 	_update_bullets(dt)
 	_update_eaters(dt)
 	_meteor_tick(dt)
+	_match_event_tick(dt)
 	_bomb_tick(dt)
 	for id in players.keys():
 		var p: Dictionary = players[id]
@@ -269,7 +272,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			var bolt_radius := 11.0 if p.kind == 3 else 6.0
 			var damage_mult := 0.42 if p.kind == 0 else 1.0
 			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
-				"owner": p.id, "life": 1.4, "bn": 0, "dmg": BULLET_DMG * p.attack * damage_mult,
+				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3, "dmg": BULLET_DMG * p.attack * damage_mult,
 				"radius": bolt_radius})
 			next_id += 1
 		p.light -= shot_cost
@@ -352,7 +355,7 @@ func _use_ability(p: Dictionary) -> void:
 			for i in 10:
 				var dir := Vector2.from_angle(TAU * float(i) / 10.0)
 				bullets.append({"id": next_id, "pos": p.pos + dir * 40.0, "vel": dir * 760.0,
-					"owner": p.id, "life": 1.25, "bn": 0, "dmg": BULLET_DMG * p.attack * 0.82, "radius": 10.0})
+					"owner": p.id, "life": 1.25, "bn": 0, "ricochet": true, "dmg": BULLET_DMG * p.attack * 0.82, "radius": 10.0})
 				next_id += 1
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
 
@@ -604,6 +607,30 @@ func _meteor_tick(dt: float) -> void:
 	meteors = keep
 
 
+func _match_event_tick(dt: float) -> void:
+	if endless or not chaos_enabled:
+		return
+	match_event_timer -= dt
+	if match_event_timer > 0.0:
+		return
+	match_event_timer = rng.randf_range(32.0, 42.0)
+	if rng.randf() < 0.5:
+		events.append({"t": "match_event", "kind": "surge"})
+		for p in players.values():
+			if not p.shadow and not p.decoy:
+				var old_light: float = float(p.light)
+				p.light = minf(p.max_light, p.light + 18.0)
+				var healed: float = float(p.light) - old_light
+				if healed > 0.01:
+					events.append({"t": "heal", "id": p.id, "amount": healed})
+	else:
+		events.append({"t": "match_event", "kind": "hunt"})
+		for i in 3:
+			if eaters.size() >= 7:
+				break
+			_spawn_eater(Vector2(rng.randf_range(80.0, A.x - 80.0), rng.randf_range(80.0, A.y - 80.0)), rng.randf() < 0.5)
+
+
 func _update_bullets(dt: float) -> void:
 	var keep: Array = []
 	var bright := _brightest(0)
@@ -614,18 +641,19 @@ func _update_bullets(dt: float) -> void:
 			b.vel = (b.vel + (bright.pos - b.pos).normalized() * 2600.0 * dt).normalized() * sp
 		b.pos += b.vel * dt
 		var dead: bool = b.life <= 0.0
-		var bounce_on: bool = effects.has("bounce")
+		var bounce_on: bool = effects.has("bounce") or bool(b.get("ricochet", false))
+		var bounce_limit: int = 2 if bool(b.get("ricochet", false)) else 4
 		var bp: Vector2 = b.pos
 		var bv: Vector2 = b.vel
 		if bp.x < 0.0 or bp.x > A.x:
-			if bounce_on and b.bn < 4:
+			if bounce_on and b.bn < bounce_limit:
 				bv.x = -bv.x
 				bp.x = clampf(bp.x, 0.0, A.x)
 				b.bn += 1
 			else:
 				dead = true
 		if bp.y < 0.0 or bp.y > A.y:
-			if bounce_on and b.bn < 4:
+			if bounce_on and b.bn < bounce_limit:
 				bv.y = -bv.y
 				bp.y = clampf(bp.y, 0.0, A.y)
 				b.bn += 1
