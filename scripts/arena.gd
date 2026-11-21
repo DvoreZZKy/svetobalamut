@@ -389,6 +389,36 @@ func _build_hud() -> void:
 	ability_bar.offset_right = 200
 	ability_bar.offset_top = -26
 	ability_bar.offset_bottom = -19
+	var light_caption := _label("СВЕТ", 10, Vector2.ZERO, Vector2(48, 18), cl)
+	light_caption.anchor_left = 0.5
+	light_caption.anchor_right = 0.5
+	light_caption.anchor_top = 1.0
+	light_caption.anchor_bottom = 1.0
+	light_caption.offset_left = -254
+	light_caption.offset_right = -206
+	light_caption.offset_top = -65
+	light_caption.offset_bottom = -47
+	light_caption.add_theme_color_override("font_color", Color("#ffe28a"))
+	var dash_caption := _label("РЫВОК", 9, Vector2.ZERO, Vector2(48, 14), cl)
+	dash_caption.anchor_left = 0.5
+	dash_caption.anchor_right = 0.5
+	dash_caption.anchor_top = 1.0
+	dash_caption.anchor_bottom = 1.0
+	dash_caption.offset_left = -254
+	dash_caption.offset_right = -206
+	dash_caption.offset_top = -40
+	dash_caption.offset_bottom = -26
+	dash_caption.add_theme_color_override("font_color", Color("#76eaff"))
+	var ability_caption := _label("Q", 10, Vector2.ZERO, Vector2(48, 14), cl)
+	ability_caption.anchor_left = 0.5
+	ability_caption.anchor_right = 0.5
+	ability_caption.anchor_top = 1.0
+	ability_caption.anchor_bottom = 1.0
+	ability_caption.offset_left = -254
+	ability_caption.offset_right = -206
+	ability_caption.offset_top = -27
+	ability_caption.offset_bottom = -13
+	ability_caption.add_theme_color_override("font_color", Color("#c3a0ff"))
 	capsule_ammo_lbl = _label("ВОЛНЫ  ◆ ◆ ◆ ◆", 16, Vector2(18, 0), Vector2(220, 24), cl)
 	capsule_ammo_lbl.anchor_top = 1.0
 	capsule_ammo_lbl.anchor_bottom = 1.0
