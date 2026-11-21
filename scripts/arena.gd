@@ -92,7 +92,7 @@ class EdgeFeedback extends Control:
 				draw_rect(Rect2(inset, 0.0, 13.0, h), green)
 				draw_rect(Rect2(w - inset - 13.0, 0.0, 13.0, h), green)
 
-var timer_lbl: Label
+var timer_lbl: RichTextLabel
 var timer_shape: Polygon2D
 var timer_outline: Line2D
 var ability_bar: ProgressBar
@@ -251,8 +251,16 @@ func _build_fx_overlay() -> void:
 	cl.add_child(r)
 
 
+func _bold_hud_font() -> Font:
+	var font := FontVariation.new()
+	font.base_font = ThemeDB.fallback_font
+	font.variation_embolden = 0.72
+	return font
+
+
 func _label(text: String, size: int, pos: Vector2, sz: Vector2, parent: Node, center := false) -> Label:
 	var l := Label.new()
+	l.add_theme_font_override("font", _bold_hud_font())
 	l.text = text
 	l.position = pos
 	l.size = sz
@@ -292,18 +300,26 @@ func _build_hud() -> void:
 	var cl := CanvasLayer.new()
 	cl.layer = 10
 	add_child(cl)
-	timer_lbl = _label("АКТИВНЫЙ ХАОС", 12, Vector2.ZERO, Vector2(330, 74), cl, true)
+	timer_lbl = RichTextLabel.new()
+	timer_lbl.bbcode_enabled = true
+	timer_lbl.fit_content = false
+	timer_lbl.scroll_active = false
+	timer_lbl.clip_contents = true
+	timer_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	timer_lbl.anchor_left = 1.0
 	timer_lbl.anchor_right = 1.0
-	timer_lbl.offset_left = -346
-	timer_lbl.offset_right = -16
+	timer_lbl.offset_left = -358
+	timer_lbl.offset_right = -28
 	timer_lbl.offset_top = 12
-	timer_lbl.offset_bottom = 86
+	timer_lbl.offset_bottom = 270
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	timer_lbl.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	timer_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	timer_lbl.add_theme_font_size_override("font_size", 11)
+	timer_lbl.add_theme_font_size_override("normal_font_size", 11)
+	timer_lbl.add_theme_font_override("normal_font", _bold_hud_font())
+	timer_lbl.add_theme_font_override("bold_font", _bold_hud_font())
+	timer_lbl.add_theme_constant_override("table_h_separation", 0)
+	timer_lbl.add_theme_constant_override("table_v_separation", 1)
 	timer_lbl.modulate = Color("#a9efff")
+	cl.add_child(timer_lbl)
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
 	banner.anchor_left = 0.5
 	banner.anchor_right = 0.5
@@ -317,11 +333,13 @@ func _build_hud() -> void:
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = true
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(12, 10)
-	score_lbl.size = Vector2(350, 248)
+	score_lbl.position = Vector2(24, 10)
+	score_lbl.size = Vector2(330, 230)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	score_lbl.add_theme_font_size_override("normal_font_size", 10)
+	score_lbl.add_theme_font_override("normal_font", _bold_hud_font())
+	score_lbl.add_theme_font_override("bold_font", _bold_hud_font())
 	score_lbl.add_theme_constant_override("table_h_separation", 5)
 	score_lbl.add_theme_constant_override("table_v_separation", 2)
 	score_lbl.add_theme_color_override("default_color", Color("#eaf6ff"))
@@ -348,6 +366,7 @@ func _build_hud() -> void:
 	help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help_lbl.add_theme_font_size_override("font_size", 10)
+	help_lbl.add_theme_font_override("font", _bold_hud_font())
 	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.0)
 	timer_shape = Polygon2D.new()
@@ -1134,10 +1153,19 @@ func _update_hud(dt: float) -> void:
 			active_chaos.append(str(CHAOS_RU[chaos_key]))
 	if int(view.get("bomb", 0)) != 0:
 		active_chaos.append("НЕОНОВАЯ БОМБА")
-	timer_lbl.text = "АКТИВНЫЙ ХАОС\n" + ("  •  ".join(active_chaos) if not active_chaos.is_empty() else "СЕЙЧАС ТИХО")
+	var chaos_text := "[font_size=11][b][color=#74edff]АКТИВНЫЙ ХАОС[/color][/b][/font_size]\n[table=1]"
+	if active_chaos.is_empty():
+		chaos_text += "[cell][b][color=#a9efff]СЕЙЧАС ТИХО[/color][/b][/cell]"
+	else:
+		active_chaos.sort()
+		for chaos_name in active_chaos:
+			chaos_text += "[cell][b][color=#ffd47a]◆  %s[/color][/b][/cell]" % chaos_name
 	if float(view.get("tl", 0.0)) > 75.0:
-		timer_lbl.text += "\nСВЕТ АРЕНЫ УГАСАЕТ"
-	timer_lbl.modulate = Color("#ffd47a") if not active_chaos.is_empty() or float(view.get("tl", 0.0)) > 75.0 else Color("#a9efff")
+		chaos_text += "[cell][b][color=#ff9d72]СВЕТ АРЕНЫ УГАСАЕТ[/color][/b][/cell]"
+	chaos_text += "[/table]"
+	if timer_lbl.text != chaos_text:
+		timer_lbl.text = chaos_text
+	timer_lbl.modulate = Color.WHITE
 	var rows: Array = []
 	var me: Dictionary = {}
 	for pd in view.get("pl", []):
