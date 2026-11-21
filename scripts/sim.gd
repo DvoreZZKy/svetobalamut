@@ -158,6 +158,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		mv = -mv
 	# A shadow possessing this player directly drives their movement and actions.
 	var possessor: Dictionary = {}
+	var possessed_fire_press := false
 	for candidate in players.values():
 		if candidate.shadow and int(candidate.get("poss_target", 0)) == p.id:
 			possessor = candidate
@@ -167,6 +168,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		mv = control.get("mv", Vector2.ZERO)
 		aim_pt = control.get("aim", aim_pt)
 		want_fire = bool(control.get("fire", false))
+		possessed_fire_press = want_fire and not bool(possessor.get("poss_fire_was_down", false))
+		possessor.poss_fire_was_down = want_fire
 		want_dash = bool(control.get("dash", false))
 		want_ability = bool(control.get("ability", false))
 		want_poss = false
@@ -240,7 +243,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 				p.wave_ammo = int(p.wave_ammo) + 1
 				p.wave_reload_t = CAPSULE_WAVE_RELOAD if int(p.wave_ammo) < 4 else 0.0
 		# Fixed-radius shockwave fires immediately on a fresh press; holding does not charge it.
-		if want_fire and not p.fire_was_down and int(p.wave_ammo) > 0 and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
+		if want_fire and (not p.fire_was_down or possessed_fire_press) and int(p.wave_ammo) > 0 and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
 			_capsule_shockwave(p)
 			p.wave_ammo = int(p.wave_ammo) - 1
 			if float(p.wave_reload_t) <= 0.0:
