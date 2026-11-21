@@ -5,7 +5,7 @@ const FacetButton = preload("res://scripts/facet_button.gd")
 
 const NORMAL_SPEED := 1.0
 const SLOW_SPEED := 0.22
-const TRANSITION_MS := 1750
+const TRANSITION_MS := 500
 const UI_STEPS := [
 	{"title":"АКТИВНЫЙ ХАОС","body":"В правом верхнем углу отображаются хаосы, которые действуют прямо сейчас. Если список пуст — арена временно спокойна.","target":"timer"},
 	{"title":"ТАБЛИЦА МАТЧА","body":"Слева показаны все участники. Свет — сколько энергии осталось. Урон — сколько здоровья ты снял соперникам. Хил — сколько света восстановил. K — число выбывших игроков. Хаос — очки за устранения и события. Стрелка отмечает тебя.","target":"score"},
@@ -13,14 +13,14 @@ const UI_STEPS := [
 	{"title":"ЗАПАС СВЕТА","body":"Полоса внизу — запас света и одновременно здоровье. Попадания, движение и выстрелы расходуют его. Восстанавливай свет в тёмных зонах и подбирай батареи.","target":"light"},
 	{"title":"ПЕРЕЗАРЯДКА РЫВКА","body":"Голубая полоса показывает восстановление рывка. Рывок расходует свет и помогает быстро сменить позицию.","target":"dash"},
 	{"title":"ПЕРЕЗАРЯДКА СПОСОБНОСТИ","body":"Фиолетовая полоса показывает перезарядку способности твоего класса. Когда она заполнится, Q снова можно использовать.","target":"ability"},
-	{"title":"ТЁМНЫЕ ЗОНЫ И ПОБЕДА","body":"Фиолетовые области помогают восстанавливать свет. Матч заканчивается, когда остаётся один светящийся игрок. Со временем энергия арены угасает, поэтому не получится бесконечно прятаться в зоне. После победы появятся четыре рейтинга: урон, хил, киллы и хаос.","target":"arena"}
+	{"title":"ТЁМНЫЕ ЗОНЫ И ПОБЕДА","body":"Круглые зоны на арене помогают восстанавливать свет. Матч заканчивается, когда остаётся один светящийся игрок. После победы появятся четыре рейтинга: урон, хил, киллы и хаос.","target":"zones"}
 ]
 const CONTROL_STEPS := [
-	{"title":"ПЕРЕДВИЖЕНИЕ","body":"Используй WASD, чтобы двигаться по арене. Попробуй переместиться — обучение продолжится автоматически.","kind":"move"},
+	{"title":"ПЕРЕДВИЖЕНИЕ","body":"Используй WASD, чтобы двигаться по арене. Персонаж реагирует сразу, без задержки.","kind":"move"},
 	{"title":"РЫВОК","body":"Рывок резко ускоряет персонажа и на короткое время помогает избежать попаданий. Нажми ПРОБЕЛ.","kind":"dash"},
 	{"title":"ОСОБАЯ СПОСОБНОСТЬ","body":"У каждого класса своя способность. Нажми Q, чтобы применить способность своего персонажа.","kind":"ability"},
 	{"title":"АТАКА","body":"Наведи указатель на соперника и нажми левую кнопку мыши. Попробуй выстрелить.","kind":"fire"},
-	{"title":"ВСЕЛЕНИЕ","body":"Подойди к живому игроку и нажми ПКМ или E. У тебя будет 2 секунды, чтобы управлять им и вернуться в бой.","kind":"possess"}
+	{"title":"ВСЕЛЕНИЕ","body":"Подойди к подсвеченному игроку и нажми ЛКМ или E, чтобы вселиться в него.","kind":"possess"}
 ]
 
 var arena: Node2D
@@ -88,7 +88,9 @@ func _process(_dt: float) -> void:
 	elif stage == "control":
 		_update_pointer()
 		if _current_control_done():
-			if str(CONTROL_STEPS[control_index].kind) == "fire":
+			if str(CONTROL_STEPS[control_index].kind) == "move":
+				_begin_transition("control", control_index + 1)
+			elif str(CONTROL_STEPS[control_index].kind) == "fire":
 				_begin_transition("shadow", 0)
 			else:
 				_begin_transition("control", control_index + 1)
@@ -149,10 +151,10 @@ func _build_overlay() -> void:
 	skip_button = FacetButton.new()
 	skip_button.text = "ПРОПУСТИТЬ ОБУЧЕНИЕ"
 	skip_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	skip_button.offset_left = -355
-	skip_button.offset_top = -58
-	skip_button.offset_right = -16
-	skip_button.offset_bottom = -14
+	skip_button.offset_left = -385
+	skip_button.offset_top = -72
+	skip_button.offset_right = -42
+	skip_button.offset_bottom = -28
 	skip_button.add_theme_font_size_override("font_size", 12)
 	skip_button.pressed.connect(_show_completion)
 	layer.add_child(skip_button)
@@ -293,7 +295,7 @@ func _show_control_step(index: int) -> void:
 		"dash": _set_keys([_key_name("dash")])
 		"ability": _set_keys([_key_name("ability")])
 		"fire": _set_keys(["ЛКМ"])
-		"possess": _set_keys(["ПКМ", _key_name("possess")])
+		"possess": _set_keys(["ЛКМ", _key_name("possess")])
 	next_button.visible = false
 	panel.visible = true
 	panel.modulate.a = 0.0
@@ -372,9 +374,9 @@ func _show_shadow_explanation() -> void:
 	stage = "ui"
 	shadow_explanation = true
 	Engine.time_scale = 0.0
-	pointer_target = "help"
-	title_label.text = "ТЫ СТАЛ ТЕНЬЮ"
-	body_label.text = "Когда запас света заканчивается, ты превращаешься в Тень. Светящиеся игроки не видят Теней, а Тени видят друг друга. Ты быстрее Светляков и можешь вселиться в живого игрока, чтобы вернуться в бой."
+	pointer_target = "player"
+	title_label.text = "ЦЕЛЬ ДЛЯ ВСЕЛЕНИЯ"
+	body_label.text = "Подсвеченный игрок — доступная цель. Подойди к нему и нажми ЛКМ или E, чтобы вселиться и управлять им."
 	_set_keys([])
 	next_button.visible = true
 	next_button.text = "ПОПРОБОВАТЬ ВСЕЛЕНИЕ"
@@ -414,6 +416,7 @@ func _target_rect() -> Rect2:
 		"timer": return Rect2(Vector2(vp.x - 450, 0), Vector2(450, 115))
 		"score": return Rect2(Vector2(0, 0), Vector2(545, 420))
 		"help": return Rect2(Vector2(vp.x - 525, 0), Vector2(525, 145))
+		"zones": return Rect2(vp * 0.5 - Vector2(560, 310), Vector2(1120, 620))
 		"light": return Rect2(Vector2(vp.x * 0.5 - 190, vp.y - 74), Vector2(360, 30))
 		"dash": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 43), Vector2(440, 15))
 		"ability": return Rect2(Vector2(vp.x * 0.5 - 220, vp.y - 29), Vector2(440, 15))
@@ -472,7 +475,7 @@ func _position_control_panel() -> void:
 func _update_pointer() -> void:
 	var vp := get_viewport().get_visible_rect().size
 	var target := focus_rect.get_center() if stage == "ui" else Vector2(vp.x * 0.5, vp.y * 0.5)
-	if stage == "control" and pointer_target == "player":
+	if (stage == "control" or stage == "ui") and pointer_target == "player":
 		var me := _local_player()
 		if not me.is_empty():
 			target = vp * 0.5 + (me.p - Vector2(800, 450)) * 0.78
