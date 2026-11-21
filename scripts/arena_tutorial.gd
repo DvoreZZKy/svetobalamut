@@ -314,7 +314,9 @@ func _set_wasd_keys() -> void:
 
 
 func _key_name(action: String) -> String:
-	return OS.get_keycode_string(int(G.control_keys.get(action, KEY_W))).to_upper()
+	var state := _global_state()
+	var controls: Dictionary = state.get("control_keys")
+	return OS.get_keycode_string(int(controls.get(action, KEY_W))).to_upper()
 
 
 func _current_control_done() -> bool:
