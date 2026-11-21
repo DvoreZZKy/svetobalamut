@@ -194,7 +194,6 @@ func _ready() -> void:
 	controls.position = Vector2(390, 95)
 	controls.size = Vector2(500, 610)
 	_title(controls, "НАСТРОЙКА УПРАВЛЕНИЯ")
-	var control_names := {"up": "Движение вверх", "down": "Движение вниз", "left": "Движение влево", "right": "Движение вправо", "dash": "Рывок", "ability": "Способность", "possess": "Всeление"}
 	for action in ["up", "down", "left", "right", "dash", "ability", "possess"]:
 		var bind_btn := _btn("", controls, func(): _begin_rebind(action))
 		bind_btn.custom_minimum_size = Vector2(450, 48)
