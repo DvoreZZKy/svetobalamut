@@ -61,6 +61,23 @@ func _run() -> void:
 		if not is_equal_approx(float(p.max_light), float(st.hp)) or not is_equal_approx(float(p.defense), float(st.def)):
 			_fail("player %s has stats that don't match class %d after steal" % [str(pid), int(p.kind)])
 
+	# 2a) Sustained class damage must exceed the strongest possible stationary zone regeneration.
+	if not is_equal_approx(Sim.REGEN_PASSIVE, 2.0) or not is_equal_approx(Sim.REGEN_STILL, 2.0) or not is_equal_approx(Sim.REGEN_ZONE, 4.0):
+		_fail("light regeneration constants do not match the new balance")
+	var max_regen := Sim.REGEN_PASSIVE + Sim.REGEN_STILL + Sim.REGEN_ZONE
+	for kind in 4:
+		var st: Dictionary = Sim.CLASS_STATS[kind]
+		var raw_dps: float
+		if kind == 0:
+			raw_dps = 3.0 * Sim.BULLET_DMG * float(st.atk) * 0.42 / float(st.rate)
+		elif kind == 1:
+			raw_dps = 24.0 * float(st.atk) / float(st.rate)
+		else:
+			raw_dps = Sim.BULLET_DMG * float(st.atk) / float(st.rate)
+		var dps_vs_toughest := raw_dps * 0.95
+		if dps_vs_toughest <= max_regen:
+			_fail("class %d sustained DPS (%.2f) does not beat max regeneration (%.2f)" % [kind, dps_vs_toughest, max_regen])
+
 	# 2b) Every class must sustain active movement + continuous firing for a meaningful interval.
 	for kind in 4:
 		var class_cfg: Array = [{"id": 1, "name": "QA", "human": true, "color": 0, "kind": kind, "outfit": 0, "hat": 0}]
