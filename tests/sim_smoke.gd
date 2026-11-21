@@ -61,9 +61,9 @@ func _run() -> void:
 		if not is_equal_approx(float(p.max_light), float(st.hp)) or not is_equal_approx(float(p.defense), float(st.def)):
 			_fail("player %s has stats that don't match class %d after steal" % [str(pid), int(p.kind)])
 
-	# 2a) There is exactly one central regeneration zone.
-	if Sim.ZONES.size() != 1 or Vector2(Sim.ZONES[0].x, Sim.ZONES[0].y) != Vector2(800, 450):
-		_fail("arena must have exactly one central regeneration zone")
+	# 2a) The arena has four corner regeneration zones.
+	if Sim.ZONES.size() != 4:
+		_fail("arena must have four regeneration zones")
 
 	# 2aa) Kill healing is split between all damage contributors by damage share.
 	var heal_cfg: Array = [
@@ -82,8 +82,8 @@ func _run() -> void:
 	sim._damage(victim, 10.0, 1, false)
 	sim._damage(victim, 30.0, 2, false)
 	sim._damage(victim, 25.0, 2, false)
-	var damage_a := 10.0 * float(victim.defense)
-	var damage_b := 55.0 * float(victim.defense)
+	var damage_a := 10.0 * float(victim.defense) * 0.70
+	var damage_b := 55.0 * float(victim.defense) * 0.70
 	var total_damage := damage_a + damage_b
 	var expected_a := 80.0 + damage_a * 0.35 + Sim.KILL_BONUS * (damage_a / total_damage)
 	var expected_b := 80.0 + damage_b * 0.35 + Sim.KILL_BONUS * (damage_b / total_damage)
@@ -91,8 +91,8 @@ func _run() -> void:
 		_fail("kill healing was not split proportionally between damage contributors")
 
 	# 2a) Sustained class damage must exceed the strongest possible stationary zone regeneration.
-	if not is_equal_approx(Sim.REGEN_PASSIVE, 2.0) or not is_equal_approx(Sim.REGEN_STILL, 2.0) or not is_equal_approx(Sim.REGEN_ZONE, 4.0):
-		_fail("light regeneration constants do not match the new balance")
+	if not is_equal_approx(Sim.REGEN_PASSIVE, 2.5) or not is_equal_approx(Sim.REGEN_STILL, 2.0) or not is_equal_approx(Sim.REGEN_ZONE, 5.0):
+		_fail("light regeneration constants do not match the current balance")
 	var max_regen := Sim.REGEN_PASSIVE + Sim.REGEN_STILL + Sim.REGEN_ZONE
 	for kind in 4:
 		var st: Dictionary = Sim.CLASS_STATS[kind]
@@ -113,6 +113,8 @@ func _run() -> void:
 		sim.reset(class_cfg)
 		sim.chaos_enabled = false
 		sim.eater_timer = 999.0
+		sim.meteor_timer = 9999.0
+		sim.pickup_timer = 9999.0
 		var player: Dictionary = sim.players[1]
 		if float(player.max_light) < 120.0:
 			_fail("class %d starts with too little light" % kind)
@@ -125,6 +127,8 @@ func _run() -> void:
 		sim.reset(class_cfg)
 		sim.chaos_enabled = false
 		sim.eater_timer = 999.0
+		sim.meteor_timer = 9999.0
+		sim.pickup_timer = 9999.0
 		player = sim.players[1]
 		sim._spawn_eater(player.pos + Vector2(18, 0), false)
 		for frame in int(5.0 * 60.0):
@@ -157,22 +161,23 @@ func _run() -> void:
 	if not sim.bullets.is_empty():
 		_fail("capsule shockwave unexpectedly spawned a projectile")
 
-	# 2c) Timer winner lottery must exclude shadows, even if they have more chaos points.
+	# 2c) A match does not end because of elapsed time; the last glowing player wins.
 	var winner_cfg: Array = [
-		{"id": 1, "name": "Lit A", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
-		{"id": 2, "name": "Lit B", "human": true, "color": 1, "kind": 1, "outfit": 0, "hat": 0},
-		{"id": 3, "name": "Old Shadow", "human": true, "color": 2, "kind": 2, "outfit": 0, "hat": 0}
+		{"id": 1, "name": "Last Light", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Shadow A", "human": true, "color": 1, "kind": 1, "outfit": 0, "hat": 0},
+		{"id": 3, "name": "Shadow B", "human": true, "color": 2, "kind": 2, "outfit": 0, "hat": 0}
 	]
 	sim.reset(winner_cfg)
 	sim.chaos_enabled = false
-	sim.players[1].pts = 0
-	sim.players[2].pts = 0
-	sim.players[3].shadow = true
-	sim.players[3].pts = 100000
-	sim.time_left = 0.0
+	sim.time_left = 99999.0
 	sim._check_end()
-	if sim.winner != 1 and sim.winner != 2:
-		_fail("timer lottery selected a shadow instead of a glowing player")
+	if sim.phase != "play":
+		_fail("match ended because of elapsed time")
+	sim.players[2].shadow = true
+	sim.players[3].shadow = true
+	sim._check_end()
+	if sim.winner != 1:
+		_fail("the last glowing player was not declared winner")
 
 	# 2c) Possession cooldown applies to both the shadow and the possessed player.
 	var poss_cfg: Array = [
