@@ -18,6 +18,7 @@ var vol_sfx := 0.9
 var shake_on := true
 var fullscreen := false
 var graphics_quality := 0 # 0: high, 1: medium, 2: low, 3: potato
+var control_keys := {"up": KEY_W, "down": KEY_S, "left": KEY_A, "right": KEY_D, "dash": KEY_SPACE, "ability": KEY_Q, "possess": KEY_E}
 const GRAPHICS_PRESETS := ["Высокая", "Средняя", "Низкая", "Режим картошки"]
 var tutorial_done := false
 const TUTORIAL_VERSION := 4
@@ -65,6 +66,27 @@ func _setup_input() -> void:
 		var e := InputEventMouseButton.new()
 		e.button_index = mb[a]
 		InputMap.action_add_event(a, e)
+
+
+
+func set_control_key(action: String, keycode: int) -> void:
+	if not control_keys.has(action) or keycode <= 0:
+		return
+	control_keys[action] = keycode
+	apply_control_keys()
+	save_settings()
+
+
+func apply_control_keys() -> void:
+	for action in control_keys.keys():
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+		for event in InputMap.action_get_events(action):
+			if event is InputEventKey:
+				InputMap.action_erase_event(action, event)
+		var key_event := InputEventKey.new()
+		key_event.physical_keycode = int(control_keys[action])
+		InputMap.action_add_event(action, key_event)
 
 
 func col(ci: int) -> Color:
@@ -168,6 +190,8 @@ func save_settings() -> void:
 	c.set_value("s", "graphics_quality", graphics_quality)
 	c.set_value("s", "tutorial_done", tutorial_done)
 	c.set_value("s", "tutorial_version", TUTORIAL_VERSION)
+	for action in control_keys.keys():
+		c.set_value("controls", action, int(control_keys[action]))
 	c.save(SAVE_PATH)
 
 
@@ -187,6 +211,9 @@ func load_settings() -> void:
 	graphics_quality = clampi(int(c.get_value("s", "graphics_quality", graphics_quality)), 0, 3)
 	var saved_tutorial_version := int(c.get_value("s", "tutorial_version", 0))
 	tutorial_done = bool(c.get_value("s", "tutorial_done", false)) if saved_tutorial_version >= TUTORIAL_VERSION else false
+	for action in control_keys.keys():
+		control_keys[action] = int(c.get_value("controls", action, control_keys[action]))
+	apply_control_keys()
 	apply_display()
 	apply_graphics()
 
