@@ -893,8 +893,8 @@ func _bomb_tick(dt: float) -> void:
 func _bot_think(p: Dictionary, dt: float) -> void:
 	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false, "ability": false}
 	var b: Dictionary = p.bot
-	# Bots begin clumsy and improve gradually as the match goes on.
-	b.skill = minf(0.88, float(b.get("skill", 0.08)) + dt * 0.0032)
+	# Bots stay deliberately imperfect: they improve a little, but never become expert marksmen.
+	b.skill = minf(0.38, float(b.get("skill", 0.04)) + dt * 0.0008)
 	var skill: float = float(b.skill)
 	b.t -= dt
 	if p.shadow:
@@ -902,44 +902,46 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 		if not target.is_empty():
 			var to: Vector2 = target.pos - p.pos
 			var distance := to.length()
-			inp.mv = to.normalized()
-			inp.poss = distance < 145.0
-			if distance > 190.0 and p.dash_cd <= 0.0 and rng.randf() < lerpf(0.025, 0.11, skill):
+			inp.mv = to.normalized() if distance > 1.0 else Vector2.ZERO
+			inp.poss = distance < 125.0 and rng.randf() < 0.45
+			if distance > 260.0 and p.dash_cd <= 0.0 and rng.randf() < 0.025:
 				inp.dash = true
 		inputs[p.id] = inp
 		return
 	if b.t <= 0.0:
-		b.t = lerpf(0.72, 0.20, skill) * rng.randf_range(0.8, 1.2)
+		# Slow reactions and inconsistent movement make bots easier to read.
+		b.t = lerpf(1.45, 0.85, skill) * rng.randf_range(0.75, 1.35)
 		b.strafe = -1.0 if rng.randf() < 0.5 else 1.0
-		b.want = lerpf(390.0, 300.0, skill) + rng.randf_range(-70.0, 70.0)
+		b.want = lerpf(500.0, 420.0, skill) + rng.randf_range(-110.0, 110.0)
 	var mv := Vector2.ZERO
 	for ghost in players.values():
 		if ghost.id == p.id or not ghost.shadow:
 			continue
 		var ghost_delta: Vector2 = p.pos - ghost.pos
 		var ghost_distance := ghost_delta.length()
-		if ghost_distance < 230.0:
-			mv += ghost_delta.normalized() * (2.1 if ghost_distance < 115.0 else 1.25)
+		if ghost_distance < 165.0:
+			mv += ghost_delta.normalized() * (1.2 if ghost_distance < 85.0 else 0.65)
 	var tgt := _nearest(p, true)
 	if not tgt.is_empty():
 		var to: Vector2 = tgt.pos - p.pos
 		var d := to.length()
-		if p.ability_cd <= 0.0 and rng.randf() < dt * lerpf(0.38, 0.85, skill):
+		if p.ability_cd <= 0.0 and rng.randf() < dt * lerpf(0.10, 0.24, skill):
 			inp.ability = true
 		var dirv := to / maxf(d, 1.0)
-		mv += dirv.orthogonal() * b.strafe * lerpf(0.65, 1.0, skill)
-		if d > b.want + 60.0:
-			mv += dirv
-		elif d < b.want - 80.0:
-			mv -= dirv
-		var lead: Vector2 = tgt.pos + tgt.vel * (d / BULLET_SPEED) * lerpf(0.45, 0.95, skill)
-		var aim_error := lerpf(76.0, 9.0, skill)
+		mv += dirv.orthogonal() * b.strafe * lerpf(0.35, 0.62, skill)
+		if d > b.want + 90.0:
+			mv += dirv * 0.75
+		elif d < b.want - 100.0:
+			mv -= dirv * 0.65
+		# Bots lead targets poorly and their aim drifts noticeably.
+		var lead: Vector2 = tgt.pos + tgt.vel * (d / BULLET_SPEED) * lerpf(0.12, 0.38, skill)
+		var aim_error := lerpf(175.0, 105.0, skill)
 		lead += Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * aim_error
 		inp.aim = lead
-		inp.fire = d < 820.0 and p.light > 14.0
+		inp.fire = d < 620.0 and p.light > 20.0 and rng.randf() < 0.78
 		if p.kind == 1:
-			inp.fire = d < lerpf(235.0, 360.0, skill) and p.light > 14.0 and not p.fire_was_down
-	if p.light < 32.0:
+			inp.fire = d < lerpf(185.0, 270.0, skill) and p.light > 20.0 and not p.fire_was_down and rng.randf() < 0.72
+	if p.light < 20.0:
 		var bz := Vector2(ZONES[0].x, ZONES[0].y)
 		var bdz := 1e18
 		for z in ZONES:
@@ -948,32 +950,33 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 			if dz < bdz:
 				bdz = dz
 				bz = zp
-		mv = (bz - p.pos).normalized() + mv * 0.25
-		if p.light < 12.0:
+		mv = (bz - p.pos).normalized() * 0.65 + mv * 0.2
+		if p.light < 8.0:
 			inp.fire = false
 	for e in eaters:
 		var de: float = (e.pos - p.pos).length()
-		if de < 230.0:
-			mv += (p.pos - e.pos).normalized() * 1.6
-			if de < 380.0 and p.light > 14.0:
-				inp.aim = e.pos
+		if de < 170.0:
+			mv += (p.pos - e.pos).normalized() * 0.8
+			# They sometimes notice nearby eaters, but don't instantly snap aim to them.
+			if de < 300.0 and p.light > 20.0 and rng.randf() < 0.18:
+				inp.aim = e.pos + Vector2(rng.randf_range(-90.0, 90.0), rng.randf_range(-90.0, 90.0))
 				if p.kind != 1:
 					inp.fire = true
-	if p.pos.x < 120.0: mv.x += 1.0
-	if p.pos.x > A.x - 120.0: mv.x -= 1.0
-	if p.pos.y < 120.0: mv.y += 1.0
-	if p.pos.y > A.y - 120.0: mv.y -= 1.0
+	if p.pos.x < 120.0: mv.x += 0.8
+	if p.pos.x > A.x - 120.0: mv.x -= 0.8
+	if p.pos.y < 120.0: mv.y += 0.8
+	if p.pos.y > A.y - 120.0: mv.y -= 0.8
 	if p.dash_cd <= 0.0:
 		for bl in bullets:
 			if bl.owner == p.id:
 				continue
 			var rel: Vector2 = p.pos - bl.pos
-			var dodge_range := lerpf(92.0, 210.0, skill)
-			if rel.length() < dodge_range and rel.length() > 0.01 and rel.normalized().dot(bl.vel.normalized()) > lerpf(0.93, 0.78, skill):
-				inp.dash = rng.randf() < lerpf(0.18, 0.82, skill)
-				mv += bl.vel.normalized().orthogonal() * b.strafe * lerpf(0.35, 1.0, skill)
+			var dodge_range := lerpf(72.0, 105.0, skill)
+			if rel.length() < dodge_range and rel.length() > 0.01 and rel.normalized().dot(bl.vel.normalized()) > 0.94:
+				inp.dash = rng.randf() < lerpf(0.08, 0.24, skill)
+				mv += bl.vel.normalized().orthogonal() * b.strafe * 0.25
 				break
-		if not inp.dash and rng.randf() < lerpf(0.001, 0.008, skill):
+		if not inp.dash and rng.randf() < 0.0015:
 			inp.dash = true
 	inp.mv = mv.limit_length(1.0)
 	if effects.has("reverse"):
