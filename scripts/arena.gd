@@ -996,7 +996,7 @@ func _update_views(dt: float) -> void:
 			pv.hat = new_hat
 		var lbl: Label = pv.lbl
 		root.visible = vis
-		local_ring.visible = ((id == local_id and not shadow) or float(pd.get("dr", 0.0)) > 0.0) and not _is_potato()
+		local_ring.visible = (id == local_id and not shadow) or float(pd.get("dr", 0.0)) > 0.0
 		local_ring.default_color = Color("#ffdc70") if float(pd.get("dr", 0.0)) > 0.0 else Color("#8df6ff")
 		local_ring.width = 5.0 + 2.0 * (0.5 + 0.5 * sin(t * 7.0))
 		capsule_charge_ring.visible = false
@@ -1304,7 +1304,34 @@ func _update_hud(dt: float) -> void:
 		over_lbl.text = report
 		over_lbl.modulate = Color.WHITE
 		result_detail_open = false
-		for card in result_cards: card.visible = true
+		var category_ranks := [damage_rank, heal_rank, kill_rank, chaos_rank]
+		var category_names := ["УРОН", "ХИЛ", "УБИЙСТВА", "ХАОС"]
+		var stat_keys := ["dm", "hl", "ki", "pt"]
+		for i in result_cards.size():
+			var card := result_cards[i]
+			var ranking: Array = category_ranks[i]
+			if not ranking.is_empty():
+				var leader: Dictionary = ranking[0]
+				card.text = "%s\n%s\n%s" % [category_names[i], str(leader.n), str(int(leader.get(stat_keys[i], 0)))]
+				if not card.has_meta("portrait_ready"):
+					var portrait := SubViewportContainer.new()
+					portrait.position = Vector2(7, 8)
+					portrait.size = Vector2(72, 76)
+					portrait.stretch = true
+					portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+					var portrait_vp := SubViewport.new()
+					portrait_vp.size = Vector2i(120, 120)
+					portrait_vp.transparent_bg = true
+					portrait_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+					portrait.add_child(portrait_vp)
+					var portrait_actor := VectorActor.new()
+					portrait_actor.position = Vector2(60, 66)
+					portrait_actor.scale = Vector2.ONE * 0.82
+					portrait_vp.add_child(portrait_actor)
+					portrait_actor.setup(int(leader.k), G.col(int(leader.c)), int(leader.get("outfit", 0)), int(leader.get("hat", 0)))
+					card.add_child(portrait)
+					card.set_meta("portrait_ready", true)
+		card.visible = true
 		_layout_game_over()
 	else:
 		over_rect.visible = false
@@ -1342,7 +1369,8 @@ func _open_result_category(category: String) -> void:
 func _close_result_category() -> void:
 	result_detail_open = false
 	over_menu_btn.text = "В МЕНЮ"
-	over_menu_btn.pressed.disconnect(_close_result_category)
+	if over_menu_btn.pressed.is_connected(_close_result_category):
+		over_menu_btn.pressed.disconnect(_close_result_category)
 	over_menu_btn.pressed.connect(_to_menu)
 	for card in result_cards: card.visible = true
 	over_restart_btn.visible = not is_client
