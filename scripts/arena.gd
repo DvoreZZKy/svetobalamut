@@ -96,6 +96,8 @@ var timer_lbl: Label
 var timer_shape: Polygon2D
 var timer_outline: Line2D
 var ability_bar: ProgressBar
+var capsule_ammo_lbl: Label
+var capsule_reload_bar: ProgressBar
 var cursor_layer: CanvasLayer
 var cursor_canvas: Control
 var banner: Label
@@ -372,6 +374,19 @@ func _build_hud() -> void:
 	ability_bar.offset_right = 200
 	ability_bar.offset_top = -26
 	ability_bar.offset_bottom = -19
+	capsule_ammo_lbl = _label("ВОЛНЫ  ◆ ◆ ◆ ◆", 16, Vector2(18, 0), Vector2(220, 24), cl)
+	capsule_ammo_lbl.anchor_top = 1.0
+	capsule_ammo_lbl.anchor_bottom = 1.0
+	capsule_ammo_lbl.offset_top = -66
+	capsule_ammo_lbl.offset_bottom = -42
+	capsule_ammo_lbl.add_theme_color_override("font_color", Color("#75efff"))
+	capsule_reload_bar = _bar(Vector2(18, 0), Vector2(180, 6), Color(0.25, 0.95, 1.0), cl)
+	capsule_reload_bar.anchor_top = 1.0
+	capsule_reload_bar.anchor_bottom = 1.0
+	capsule_reload_bar.offset_top = -37
+	capsule_reload_bar.offset_bottom = -31
+	capsule_ammo_lbl.visible = false
+	capsule_reload_bar.visible = false
 	light_bar.offset_top = -64
 	light_bar.offset_bottom = -46
 	wait_lbl = _label("Ждём хоста…", 30, Vector2.ZERO, Vector2(1280, 60), cl, true)
@@ -1037,6 +1052,17 @@ func _update_hud(dt: float) -> void:
 		light_bar.value = me.l
 		dash_bar.value = 100.0 * (1.0 - clampf(me.dc / Sim.DASH_CD, 0.0, 1.0))
 		ability_bar.value = 100.0 * (1.0 - clampf(me.acd / 9.0, 0.0, 1.0))
+		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
+		capsule_ammo_lbl.visible = is_capsule
+		capsule_reload_bar.visible = is_capsule
+		if is_capsule:
+			var ammo := clampi(int(me.get("wa", 4)), 0, 4)
+			var ammo_text := ""
+			for charge_i in 4:
+				ammo_text += "◆ " if charge_i < ammo else "◇ "
+			capsule_ammo_lbl.text = "ВОЛНЫ  " + ammo_text + ("  +" + ("%.1f" % float(me.get("wr", 0.0))) + "с" if ammo < 4 else "  ГОТОВО")
+			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 0.5)
+			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 0.5) if ammo < 4 else 100.0
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
 		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
 		help_lbl.text = "%s • Q: %s (%s)\nЦЕЛЬ: остаться последним светящимся.\nWASD — движение • ЛКМ — атака • ПРОБЕЛ — рывок • ESC — меню" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
