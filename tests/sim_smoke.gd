@@ -61,7 +61,7 @@ func _run() -> void:
 		if not is_equal_approx(float(p.max_light), float(st.hp)) or not is_equal_approx(float(p.defense), float(st.def)):
 			_fail("player %s has stats that don't match class %d after steal" % [str(pid), int(p.kind)])
 
-	# 2b) All four classes have a viable starting light pool and sustainable early-game economy.
+	# 2b) Every class must sustain active movement + continuous firing for a meaningful interval.
 	for kind in 4:
 		var class_cfg: Array = [{"id": 1, "name": "QA", "human": true, "color": 0, "kind": kind, "outfit": 0, "hat": 0}]
 		sim.reset(class_cfg)
@@ -71,10 +71,20 @@ func _run() -> void:
 		if float(player.max_light) < 120.0:
 			_fail("class %d starts with too little light" % kind)
 		sim.inputs[1] = {"mv": Vector2(1, 0), "aim": player.pos + Vector2.RIGHT * 500.0, "fire": true}
+		for frame in int(30.0 * 60.0):
+			sim.step(1.0 / 60.0)
+		if not sim.players.has(1) or float(sim.players[1].light) < 80.0:
+			_fail("class %d cannot sustain 30 seconds of movement and firing" % kind)
+		# Contact with one hazard should be pressure, not a near-instant knockout.
+		sim.reset(class_cfg)
+		sim.chaos_enabled = false
+		sim.eater_timer = 999.0
+		player = sim.players[1]
+		sim._spawn_eater(player.pos + Vector2(18, 0), false)
 		for frame in int(5.0 * 60.0):
 			sim.step(1.0 / 60.0)
-		if not sim.players.has(1) or float(sim.players[1].light) < 35.0:
-			_fail("class %d runs out of light during the first five seconds" % kind)
+		if not sim.players.has(1) or float(sim.players[1].light) < 80.0:
+			_fail("class %d takes excessive damage from a single eater" % kind)
 	sim.chaos_enabled = true
 
 	# 3) Effects and temporary state expire; eaters stay capped under repeated rain.
