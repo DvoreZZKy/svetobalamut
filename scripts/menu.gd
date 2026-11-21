@@ -153,19 +153,46 @@ func _ready() -> void:
 
 	var mouse_scroll := ScrollContainer.new()
 	mouse_scroll.name = "МЫШЬ И УПРАВЛЕНИЕ"
+	mouse_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mouse_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mouse_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	mouse_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	tabs.add_child(mouse_scroll)
 	var mouse_tab := VBoxContainer.new()
-	mouse_tab.add_theme_constant_override("separation", 12)
+	mouse_tab.add_theme_constant_override("separation", 18)
 	mouse_tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mouse_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mouse_tab.custom_minimum_size = Vector2(0, 0)
 	mouse_scroll.add_child(mouse_tab)
-	_slider(mouse_tab, "Чувствительность мыши", (G.mouse_sensitivity - 0.5) / 2.5, func(v: float): G.mouse_sensitivity = 0.5 + v * 2.5; G.save_settings())
+	var sensitivity_box := VBoxContainer.new()
+	sensitivity_box.add_theme_constant_override("separation", 8)
+	sensitivity_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var sensitivity_title := Label.new()
+	sensitivity_title.text = "ЧУВСТВИТЕЛЬНОСТЬ МЫШИ"
+	sensitivity_title.add_theme_font_size_override("font_size", 19)
+	sensitivity_title.add_theme_color_override("font_color", Color("#d9f5ff"))
+	sensitivity_box.add_child(sensitivity_title)
+	var sensitivity_slider := HSlider.new()
+	sensitivity_slider.min_value = 0.0
+	sensitivity_slider.max_value = 1.0
+	sensitivity_slider.step = 0.05
+	sensitivity_slider.value = (G.mouse_sensitivity - 0.5) / 2.5
+	sensitivity_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sensitivity_slider.custom_minimum_size = Vector2(0, 34)
+	sensitivity_slider.value_changed.connect(func(v: float): G.mouse_sensitivity = 0.5 + v * 2.5; G.save_settings())
+	sensitivity_box.add_child(sensitivity_slider)
+	mouse_tab.add_child(sensitivity_box)
 	var match_sens := CheckBox.new()
 	match_sens.text = "Изменять чувствительность в матче"
+	match_sens.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	match_sens.add_theme_font_size_override("font_size", 17)
 	match_sens.button_pressed = G.match_mouse_sensitivity
 	match_sens.toggled.connect(func(b: bool): G.match_mouse_sensitivity = b; G.save_settings())
 	mouse_tab.add_child(match_sens)
-	_btn("УПРАВЛЕНИЕ КЛАВИШАМИ", mouse_tab, func(): _show("controls"))
+	var controls_button := _btn("КЛАВИШИ И УПРАВЛЕНИЕ", mouse_tab, func(): _show("controls"))
+	controls_button.custom_minimum_size = Vector2(0, 54)
+	controls_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	controls_button.add_theme_font_size_override("font_size", 16)
 
 	var graphics_scroll := ScrollContainer.new()
 	graphics_scroll.name = "ГРАФИКА И ЭКРАН"
