@@ -87,6 +87,23 @@ func _run() -> void:
 			_fail("class %d takes excessive damage from a single eater" % kind)
 	sim.chaos_enabled = true
 
+	# 2c) Timer winner lottery must exclude shadows, even if they have more chaos points.
+	var winner_cfg: Array = [
+		{"id": 1, "name": "Lit A", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Lit B", "human": true, "color": 1, "kind": 1, "outfit": 0, "hat": 0},
+		{"id": 3, "name": "Old Shadow", "human": true, "color": 2, "kind": 2, "outfit": 0, "hat": 0}
+	]
+	sim.reset(winner_cfg)
+	sim.chaos_enabled = false
+	sim.players[1].pts = 0
+	sim.players[2].pts = 0
+	sim.players[3].shadow = true
+	sim.players[3].pts = 100000
+	sim.time_left = 0.0
+	sim._check_end()
+	if sim.winner != 1 and sim.winner != 2:
+		_fail("timer lottery selected a shadow instead of a glowing player")
+
 	# 2c) Possession cooldown applies to both the shadow and the possessed player.
 	var poss_cfg: Array = [
 		{"id": 1, "name": "Shadow A", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
