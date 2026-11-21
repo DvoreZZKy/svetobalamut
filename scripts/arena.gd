@@ -21,6 +21,7 @@ var shake := 0.0
 var t := 0.0
 var last_bullet_count := -1
 var ability_latch := 0.0
+var capsule_charge_ring: Line2D
 var last_score_text := ""
 var timer_glitch_until := 0
 var glitch_step := -1
@@ -143,6 +144,15 @@ func _ready() -> void:
 	fx_layer = Node2D.new()
 	for n in [trail_layer, ent_layer, bullet_layer, fx_layer]:
 		add_child(n)
+	capsule_charge_ring = Line2D.new()
+	capsule_charge_ring.width = 3.5
+	capsule_charge_ring.default_color = Color(0.25, 0.95, 1.0, 0.95)
+	capsule_charge_ring.closed = true
+	capsule_charge_ring.z_index = 12
+	for i in 64:
+		capsule_charge_ring.add_point(Vector2.from_angle(TAU * float(i) / 64.0))
+	capsule_charge_ring.visible = false
+	ent_layer.add_child(capsule_charge_ring)
 	bullet_layer.draw.connect(_draw_bullets)
 	_build_resources()
 	_build_fx_overlay()
@@ -831,6 +841,15 @@ func _update_views(dt: float) -> void:
 		root.visible = vis
 		local_ring.visible = (id == local_id and not shadow and not _is_potato())
 		local_ring.width = 4.0 + 1.5 * (0.5 + 0.5 * sin(t * 5.0))
+		if id == local_id and int(pd.k) == 1 and not shadow and float(pd.get("wc", 0.0)) > 0.0:
+			var charge_ratio := clampf(float(pd.get("wc", 0.0)), 0.0, 1.0)
+			var preview_radius := lerpf(Sim.CAPSULE_WAVE_MIN_RADIUS, Sim.CAPSULE_WAVE_MAX_RADIUS, charge_ratio)
+			capsule_charge_ring.visible = true
+			capsule_charge_ring.position = pv.pos
+			capsule_charge_ring.scale = Vector2.ONE * preview_radius
+			capsule_charge_ring.default_color = Color(0.25, 0.95, 1.0, 0.72 + 0.25 * charge_ratio)
+		elif id == local_id:
+			capsule_charge_ring.visible = false
 		var ability_ring: Line2D = pv.ability_ring
 		var ability_on: bool = float(pd.get("ab", 0.0)) > 0.0 and not shadow and (int(pd.k) == 0 or int(pd.k) == 1)
 		ability_ring.visible = ability_on and not _is_potato()
@@ -1104,7 +1123,7 @@ func _handle_events(evs: Array) -> void:
 					edge_feedback.ping_heal(float(e.get("amount", 8.0)))
 			"shockwave":
 				Sfx.play("dash", 1.0, -2.0)
-				flash(pos, float(e.get("r", 172.0)) * 2.0, col, 0.32)
+				_outline_shockwave(pos, float(e.get("r", 172.0)), col)
 				burst(pos, col, 18, 520.0, 0.28)
 				shake = maxf(shake, 9.0)
 			"shot":
@@ -1152,6 +1171,25 @@ func _handle_events(evs: Array) -> void:
 				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55, true)
 			"win":
 				Sfx.play("win")
+
+
+func _outline_shockwave(pos: Vector2, radius: float, col: Color) -> void:
+	if _is_potato():
+		return
+	var ring := Line2D.new()
+	ring.width = 4.0
+	ring.default_color = col
+	ring.closed = true
+	ring.z_index = 30
+	for i in 64:
+		ring.add_point(Vector2.from_angle(TAU * float(i) / 64.0) * radius)
+	fx_layer.add_child(ring)
+	ring.position = pos
+	ring.scale = Vector2.ONE * 0.72
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(ring, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(ring, "modulate:a", 0.0, 0.24)
+	tw.chain().tween_callback(ring.queue_free)
 
 
 func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, important := false) -> void:
