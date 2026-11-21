@@ -1212,6 +1212,11 @@ func _handle_events(evs: Array) -> void:
 			"eat":
 				Sfx.play("eat")
 				burst(pos, Color(1.0, 0.2, 0.45), 16, 360.0, 0.45)
+			"streak":
+				var combo_count := int(e.get("count", 2))
+				var combo_bonus := int(e.get("bonus", 0))
+				_show_banner("КОМБО ×%d   +%d ХАОСА" % [combo_count, combo_bonus])
+				flash(pos, 90.0, Color(1.0, 0.72, 0.18), 0.3)
 			"meteor_warn":
 				Sfx.play("chaos", 0.75, -5.0)
 				_show_banner("МЕТЕОРИТНЫЙ ДОЖДЬ")
