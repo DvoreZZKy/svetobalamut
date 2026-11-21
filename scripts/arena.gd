@@ -287,15 +287,17 @@ func _build_hud() -> void:
 	var cl := CanvasLayer.new()
 	cl.layer = 10
 	add_child(cl)
-	timer_lbl = _label("АКТИВНЫЙ ХАОС", 20, Vector2.ZERO, Vector2(420, 84), cl, true)
+	timer_lbl = _label("АКТИВНЫЙ ХАОС", 12, Vector2.ZERO, Vector2(330, 74), cl, true)
 	timer_lbl.anchor_left = 1.0
 	timer_lbl.anchor_right = 1.0
-	timer_lbl.offset_left = -430
+	timer_lbl.offset_left = -346
 	timer_lbl.offset_right = -16
 	timer_lbl.offset_top = 12
-	timer_lbl.offset_bottom = 96
+	timer_lbl.offset_bottom = 86
 	timer_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	timer_lbl.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	timer_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	timer_lbl.add_theme_font_size_override("font_size", 12)
 	timer_lbl.modulate = Color("#a9efff")
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
 	banner.anchor_left = 0.5
@@ -310,35 +312,38 @@ func _build_hud() -> void:
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = true
 	score_lbl.scroll_active = false
-	score_lbl.position = Vector2(16, 12)
-	score_lbl.size = Vector2(520, 390)
+	score_lbl.position = Vector2(12, 10)
+	score_lbl.size = Vector2(350, 248)
 	score_lbl.clip_contents = true
 	score_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	score_lbl.add_theme_font_size_override("normal_font_size", 13)
-	score_lbl.add_theme_constant_override("table_h_separation", 10)
-	score_lbl.add_theme_constant_override("table_v_separation", 5)
+	score_lbl.add_theme_font_size_override("normal_font_size", 10)
+	score_lbl.add_theme_constant_override("table_h_separation", 5)
+	score_lbl.add_theme_constant_override("table_v_separation", 2)
 	score_lbl.add_theme_color_override("default_color", Color("#eaf6ff"))
 	var board_style := StyleBoxFlat.new()
 	board_style.bg_color = Color("#071321", 0.88)
 	board_style.border_color = Color("#42d9ed", 0.72)
 	board_style.set_border_width_all(1)
 	board_style.set_corner_radius_all(0)
-	board_style.content_margin_left = 12
-	board_style.content_margin_right = 12
-	board_style.content_margin_top = 10
-	board_style.content_margin_bottom = 10
+	board_style.content_margin_left = 7
+	board_style.content_margin_right = 7
+	board_style.content_margin_top = 6
+	board_style.content_margin_bottom = 6
 	score_lbl.add_theme_stylebox_override("normal", board_style)
 	cl.add_child(score_lbl)
-	help_lbl = _label("", 15, Vector2.ZERO, Vector2(500, 112), cl)
+	help_lbl = _label("", 11, Vector2.ZERO, Vector2(340, 76), cl)
 	help_lbl.anchor_left = 1.0
 	help_lbl.anchor_right = 1.0
-	help_lbl.offset_left = -516
+	help_lbl.offset_left = -356
 	help_lbl.offset_right = -16
+	help_lbl.offset_top = 94
+	help_lbl.offset_bottom = 170
 	help_lbl.anchor_top = 0.0
 	help_lbl.anchor_bottom = 0.0
 	help_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	help_lbl.add_theme_font_size_override("font_size", 13)
+	help_lbl.add_theme_font_size_override("font_size", 10)
+	help_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help_lbl.modulate = Color(0.7, 0.8, 1.0, 0.0)
 	timer_shape = Polygon2D.new()
 	timer_shape.position = Vector2(1070, 54)
@@ -358,74 +363,72 @@ func _build_hud() -> void:
 	timer_outline.z_index = -1
 	timer_outline.default_color = Color("#39d9f0", 0.0)
 	cl.add_child(timer_outline)
-	timer_lbl.size = Vector2(190, 58)
-	timer_lbl.offset_left = -95
-	timer_lbl.offset_right = 95
-	timer_lbl.add_theme_font_size_override("font_size", 40)
-	light_bar = _bar(Vector2.ZERO, Vector2(400, 18), Color(1.6, 1.4, 0.5), cl)
+	timer_shape.position = Vector2(1100, 48)
+	timer_outline.position = timer_shape.position
+	light_bar = _bar(Vector2.ZERO, Vector2(292, 14), Color("#ffd76a"), cl)
 	light_bar.anchor_left = 0.5
 	light_bar.anchor_right = 0.5
 	light_bar.anchor_top = 1.0
 	light_bar.anchor_bottom = 1.0
-	light_bar.offset_left = -200
-	light_bar.offset_right = 200
-	light_bar.offset_top = -48
-	light_bar.offset_bottom = -30
-	dash_bar = _bar(Vector2.ZERO, Vector2(400, 7), Color(0.4, 1.6, 2.0), cl)
+	light_bar.offset_left = -132
+	light_bar.offset_right = 160
+	light_bar.offset_top = -65
+	light_bar.offset_bottom = -51
+	dash_bar = _bar(Vector2.ZERO, Vector2(292, 6), Color("#62eaff"), cl)
 	dash_bar.anchor_left = 0.5
 	dash_bar.anchor_right = 0.5
 	dash_bar.anchor_top = 1.0
 	dash_bar.anchor_bottom = 1.0
-	dash_bar.offset_left = -200
-	dash_bar.offset_right = 200
-	dash_bar.offset_top = -39
-	dash_bar.offset_bottom = -32
-	ability_bar = _bar(Vector2.ZERO, Vector2(400, 7), Color(0.75, 0.45, 1.8), cl)
+	dash_bar.offset_left = -132
+	dash_bar.offset_right = 160
+	dash_bar.offset_top = -43
+	dash_bar.offset_bottom = -37
+	ability_bar = _bar(Vector2.ZERO, Vector2(292, 6), Color("#b68aff"), cl)
 	ability_bar.anchor_left = 0.5
 	ability_bar.anchor_right = 0.5
 	ability_bar.anchor_top = 1.0
 	ability_bar.anchor_bottom = 1.0
-	ability_bar.offset_left = -200
-	ability_bar.offset_right = 200
-	ability_bar.offset_top = -26
-	ability_bar.offset_bottom = -19
-	var light_caption := _label("СВЕТ", 10, Vector2.ZERO, Vector2(48, 18), cl)
+	ability_bar.offset_left = -132
+	ability_bar.offset_right = 160
+	ability_bar.offset_top = -29
+	ability_bar.offset_bottom = -23
+	var light_caption := _label("СВЕТ", 9, Vector2.ZERO, Vector2(54, 14), cl)
 	light_caption.anchor_left = 0.5
 	light_caption.anchor_right = 0.5
 	light_caption.anchor_top = 1.0
 	light_caption.anchor_bottom = 1.0
-	light_caption.offset_left = -254
-	light_caption.offset_right = -206
+	light_caption.offset_left = -190
+	light_caption.offset_right = -138
 	light_caption.offset_top = -65
-	light_caption.offset_bottom = -47
+	light_caption.offset_bottom = -51
 	light_caption.add_theme_color_override("font_color", Color("#ffe28a"))
-	var dash_caption := _label("РЫВОК", 9, Vector2.ZERO, Vector2(48, 14), cl)
+	var dash_caption := _label("РЫВОК", 9, Vector2.ZERO, Vector2(54, 14), cl)
 	dash_caption.anchor_left = 0.5
 	dash_caption.anchor_right = 0.5
 	dash_caption.anchor_top = 1.0
 	dash_caption.anchor_bottom = 1.0
-	dash_caption.offset_left = -254
-	dash_caption.offset_right = -206
-	dash_caption.offset_top = -40
-	dash_caption.offset_bottom = -26
+	dash_caption.offset_left = -190
+	dash_caption.offset_right = -138
+	dash_caption.offset_top = -43
+	dash_caption.offset_bottom = -29
 	dash_caption.add_theme_color_override("font_color", Color("#76eaff"))
-	var ability_caption := _label("Q", 10, Vector2.ZERO, Vector2(48, 14), cl)
+	var ability_caption := _label("Q", 9, Vector2.ZERO, Vector2(54, 14), cl)
 	ability_caption.anchor_left = 0.5
 	ability_caption.anchor_right = 0.5
 	ability_caption.anchor_top = 1.0
 	ability_caption.anchor_bottom = 1.0
-	ability_caption.offset_left = -254
-	ability_caption.offset_right = -206
-	ability_caption.offset_top = -27
-	ability_caption.offset_bottom = -13
+	ability_caption.offset_left = -190
+	ability_caption.offset_right = -138
+	ability_caption.offset_top = -29
+	ability_caption.offset_bottom = -15
 	ability_caption.add_theme_color_override("font_color", Color("#c3a0ff"))
-	capsule_ammo_lbl = _label("ВОЛНЫ  ◆ ◆ ◆ ◆", 16, Vector2(18, 0), Vector2(220, 24), cl)
+	capsule_ammo_lbl = _label("ВОЛНЫ  ◆ ◆ ◆ ◆", 12, Vector2(18, 0), Vector2(190, 20), cl)
 	capsule_ammo_lbl.anchor_top = 1.0
 	capsule_ammo_lbl.anchor_bottom = 1.0
 	capsule_ammo_lbl.offset_top = -66
 	capsule_ammo_lbl.offset_bottom = -42
 	capsule_ammo_lbl.add_theme_color_override("font_color", Color("#75efff"))
-	capsule_reload_bar = _bar(Vector2(18, 0), Vector2(180, 6), Color(0.25, 0.95, 1.0), cl)
+	capsule_reload_bar = _bar(Vector2(18, 0), Vector2(150, 5), Color("#62eaff"), cl)
 	capsule_reload_bar.anchor_top = 1.0
 	capsule_reload_bar.anchor_bottom = 1.0
 	capsule_reload_bar.offset_top = -37
@@ -1139,14 +1142,11 @@ func _update_hud(dt: float) -> void:
 			rows.append(pd)
 	# Leaderboard follows the actual match objective: chaos first, then remaining light.
 	rows.sort_custom(func(a, b): return a.pt > b.pt if a.pt != b.pt else a.l > b.l)
-	var txt := "[font_size=17][color=#74edff][b]◈  РЕЙТИНГ МАТЧА[/b][/color][/font_size]\n"
-	txt += "[table=7]"
+	var txt := "[font_size=12][color=#74edff][b]◈  РЕЙТИНГ МАТЧА[/b][/color][/font_size]\n"
+	txt += "[table=4]"
 	txt += "[cell][color=#718ba5]#[/color][/cell]"
 	txt += "[cell][color=#718ba5]ИГРОК[/color][/cell]"
 	txt += "[cell][color=#718ba5]СВЕТ[/color][/cell]"
-	txt += "[cell][color=#718ba5]УРОН[/color][/cell]"
-	txt += "[cell][color=#718ba5]ХИЛ[/color][/cell]"
-	txt += "[cell][color=#718ba5]K[/color][/cell]"
 	txt += "[cell][color=#718ba5]ХАОС[/color][/cell]"
 	for rank_i in rows.size():
 		var pd: Dictionary = rows[rank_i]
@@ -1159,9 +1159,6 @@ func _update_hud(dt: float) -> void:
 		txt += "[cell][color=%s]%s%02d[/color][/cell]" % [rank_color, current_marker, rank_i + 1]
 		txt += "[cell][color=#%s]%s[/color][/cell]" % [hex, display_name]
 		txt += "[cell][color=#9aacc0]%s[/color][/cell]" % state_text
-		txt += "[cell][color=#ff9d75]%d[/color][/cell]" % int(pd.get("dm", 0.0))
-		txt += "[cell][color=#7df0bb]%d[/color][/cell]" % int(pd.get("hl", 0.0))
-		txt += "[cell][color=#f4e08a]%d[/color][/cell]" % int(pd.ki)
 		txt += "[cell][color=%s][b]%d[/b][/color][/cell]" % [chaos_color, int(pd.pt)]
 	txt += "[/table]"
 	if txt != last_score_text:  # re-parsing BBCode every frame was needless work
@@ -1214,9 +1211,12 @@ func _update_hud(dt: float) -> void:
 		heal_rank.sort_custom(func(a, b): return float(a.get("hl", 0.0)) > float(b.get("hl", 0.0)))
 		kill_rank.sort_custom(func(a, b): return int(a.ki) > int(b.ki))
 		chaos_rank.sort_custom(func(a, b): return int(a.pt) > int(b.pt))
-		var report := "ПОБЕДИТЕЛЬ: %s\n\n" % wn
-		report += "УРОН: %s  •  ХИЛ: %s\n" % [_rank_line(damage_rank, "dm"), _rank_line(heal_rank, "hl")]
-		report += "КИЛЛЫ: %s  •  ХАОС: %s" % [_rank_line(kill_rank, "ki"), _rank_line(chaos_rank, "pt")]
+		var report := "[center][color=#74edff][b]◈ ИТОГИ МАТЧА ◈[/b][/color]\n"
+		report += "[font_size=24][color=#ffe28a][b]ПОБЕДИТЕЛЬ: %s[/b][/color][/font_size][/center]\n\n" % wn
+		report += "[color=#ff9d75][b]ТОП ПО УРОНУ[/b][/color]\n%s\n\n" % _rank_line(damage_rank, "dm")
+		report += "[color=#7df0bb][b]ТОП ПО ХИЛУ[/b][/color]\n%s\n\n" % _rank_line(heal_rank, "hl")
+		report += "[color=#f4e08a][b]ТОП ПО УБИЙСТВАМ[/b][/color]\n%s\n\n" % _rank_line(kill_rank, "ki")
+		report += "[color=#c3a0ff][b]ТОП ПО ХАОСУ[/b][/color]\n%s[/center]" % _rank_line(chaos_rank, "pt")
 		over_lbl.text = report
 		over_lbl.modulate = Color(1.1, 1.35, 1.65)
 		_layout_game_over()
@@ -1272,8 +1272,8 @@ func _layout_game_over() -> void:
 	over_shape.polygon = points
 	over_outline.points = points
 	over_lbl.position = Vector2(pos.x + 28.0, pos.y + 34.0)
-	over_lbl.size = Vector2(panel_size.x - 56.0, 300.0)
-	over_lbl.add_theme_font_size_override("font_size", 19)
+	over_lbl.size = Vector2(panel_size.x - 56.0, 340.0)
+	over_lbl.add_theme_font_size_override("font_size", 14)
 	var buttons_y := pos.y + panel_size.y - 70.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 222.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 12.0, buttons_y)
