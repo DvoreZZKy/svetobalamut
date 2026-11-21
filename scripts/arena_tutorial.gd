@@ -254,6 +254,8 @@ func _show_ui_step(index: int) -> void:
 	stage = "ui_fade"
 	Engine.time_scale = SLOW_SPEED
 	var item: Dictionary = UI_STEPS[index]
+	if index == 2:
+		_spawn_tutorial_pickup()
 	title_label.text = str(item.title)
 	body_label.text = str(item.body)
 	_set_keys([])
@@ -266,6 +268,14 @@ func _show_ui_step(index: int) -> void:
 		part.modulate.a = 0.0
 	pointer_target = str(item.target)
 	_update_focus()
+
+
+func _spawn_tutorial_pickup() -> void:
+	if arena.sim == null:
+		return
+	# The pointer highlights the arena center; put a guaranteed, long-lived upgrade there.
+	arena.sim.pickups.append({"pos": Vector2(800.0, 450.0), "kind": "swift", "t": 60.0})
+	arena.view = arena.sim.snapshot()
 
 
 func _show_control_step(index: int) -> void:
