@@ -310,7 +310,7 @@ func _capsule_shockwave(p: Dictionary, charge_ratio: float) -> void:
 		else:
 			events.append({"t": "hit", "x": eater.pos.x, "y": eater.pos.y, "c": p.ci})
 	p.light -= SHOT_COST
-	p.fire_cd = p.fire_rate
+	p.fire_cd = 0.08 # Capsule can rapidly tap through its four stored charges.
 	events.append({"t": "shockwave", "x": center.x, "y": center.y, "c": p.ci, "r": wave_radius})
 	shake_req = maxf(shake_req, 5.0)
 
