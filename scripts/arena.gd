@@ -1326,8 +1326,8 @@ func _update_hud(dt: float) -> void:
 			for i in result_cards.size():
 				var card := result_cards[i]
 				var ranking: Array = category_ranks[i]
+				var leader: Dictionary = ranking[0] if not ranking.is_empty() else {} 
 				if not ranking.is_empty():
-					var leader: Dictionary = ranking[0]
 					card.text = "%s\n%s\n%s" % [category_names[i], str(leader.n), str(int(leader.get(stat_keys[i], 0)))]
 					if not card.has_meta("portrait_ready"):
 						var portrait := SubViewportContainer.new()
