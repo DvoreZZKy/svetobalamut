@@ -27,11 +27,14 @@ const REGEN_PASSIVE := 2.5
 const REGEN_STILL := 2.0
 const REGEN_ZONE := 5.0
 const KILL_BONUS := 24.0
+const CAPSULE_WAVE_MIN_RADIUS := 86.0
+const CAPSULE_WAVE_MAX_RADIUS := 280.0
+const CAPSULE_WAVE_CHARGE_TIME := 1.15
 const MATCH_TIME := 240.0
 const MIN_SURVIVAL_TIME := 60.0
 const P_RADIUS := 28.0
 const MAX_EATERS_RAIN := 8
-const ZONES := [Vector3(800, 450, 95)]
+const ZONES := [Vector3(400, 225, 95), Vector3(1200, 225, 95), Vector3(400, 675, 95), Vector3(1200, 675, 95)]
 const CHAOS := ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]
 const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog": 6.0, "magnet": 5.0}
 
@@ -96,6 +99,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"ability_cd": 0.0, "ability_t": 0.0,
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
+		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
 		"pts": 0, "kills": 0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
@@ -212,11 +216,20 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	_wall_bounce(p)
 
 	var shot_cost: float = SHOT_COST
-	if want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
-		if p.kind == 1:
-			_capsule_shockwave(p)
-		else:
-			var spread_count := 3 if p.kind == 0 else 1
+	if p.kind == 1:
+		if want_fire:
+			p.wave_charge = minf(CAPSULE_WAVE_CHARGE_TIME, float(p.wave_charge) + dt)
+			p.wave_released = false
+		elif p.fire_was_down:
+			p.wave_released = true
+		if p.wave_released and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
+			var charge_ratio := clampf(float(p.wave_charge) / CAPSULE_WAVE_CHARGE_TIME, 0.0, 1.0)
+			_capsule_shockwave(p, charge_ratio)
+			p.wave_charge = 0.0
+			p.wave_released = false
+		p.fire_was_down = want_fire
+	elif want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
+		var spread_count := 3 if p.kind == 0 else 1
 			for shot_i in spread_count:
 				var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
 				var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
@@ -250,27 +263,27 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		_make_shadow(p, p.last_hit if p.hit_age < 4.0 else 0, false)
 
 
-func _capsule_shockwave(p: Dictionary) -> void:
-	const WAVE_RADIUS := 172.0
+func _capsule_shockwave(p: Dictionary, charge_ratio: float) -> void:
 	const WAVE_DAMAGE := 24.0
 	const WAVE_PUSH := 760.0
+	var wave_radius := lerpf(CAPSULE_WAVE_MIN_RADIUS, CAPSULE_WAVE_MAX_RADIUS, charge_ratio)
 	var center: Vector2 = p.pos
 	for target in players.values():
 		if target.id == p.id or target.shadow or target.decoy or target.inv > 0.0:
 			continue
 		var offset: Vector2 = target.pos - center
 		var distance := offset.length()
-		if distance > WAVE_RADIUS:
+		if distance > wave_radius:
 			continue
 		var direction: Vector2 = offset.normalized() if distance > 0.01 else p.aim
 		_damage(target, WAVE_DAMAGE * p.attack, p.id, false)
-		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance / WAVE_RADIUS)
+		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance / wave_radius)
 	for eater in eaters:
 		if eater.dead:
 			continue
 		var offset: Vector2 = eater.pos - center
 		var distance := offset.length()
-		if distance > WAVE_RADIUS:
+		if distance > wave_radius:
 			continue
 		eater.hp -= 2
 		eater.flash = 0.18
@@ -287,7 +300,7 @@ func _capsule_shockwave(p: Dictionary) -> void:
 			events.append({"t": "hit", "x": eater.pos.x, "y": eater.pos.y, "c": p.ci})
 	p.light -= SHOT_COST
 	p.fire_cd = p.fire_rate
-	events.append({"t": "shockwave", "x": center.x, "y": center.y, "c": p.ci, "r": WAVE_RADIUS})
+	events.append({"t": "shockwave", "x": center.x, "y": center.y, "c": p.ci, "r": wave_radius})
 	shake_req = maxf(shake_req, 5.0)
 
 
@@ -858,7 +871,7 @@ func snapshot() -> Dictionary:
 	for p in players.values():
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
-			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts,
+			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": clampf(float(p.wave_charge) / CAPSULE_WAVE_CHARGE_TIME, 0.0, 1.0),
 			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
 			"ki": p.kills, "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var bl: Array = []
