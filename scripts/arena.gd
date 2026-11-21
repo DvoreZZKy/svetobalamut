@@ -49,6 +49,47 @@ const FacetButton = preload("res://scripts/facet_button.gd")
 const ArenaTutorial = preload("res://scripts/arena_tutorial.gd")
 var invert_cur := 0.0
 var blind_cur := 0.0
+var edge_feedback: EdgeFeedback
+
+
+class EdgeFeedback extends Control:
+	var damage_strength := 0.0
+	var heal_strength := 0.0
+
+	func ping_damage(amount: float) -> void:
+		damage_strength = maxf(damage_strength, clampf(amount / 24.0, 0.28, 1.0))
+		queue_redraw()
+
+	func ping_heal(amount: float) -> void:
+		heal_strength = maxf(heal_strength, clampf(amount / 18.0, 0.25, 0.85))
+		queue_redraw()
+
+	func _process(dt: float) -> void:
+		damage_strength = move_toward(damage_strength, 0.0, dt * 2.8)
+		heal_strength = move_toward(heal_strength, 0.0, dt * 2.2)
+		if damage_strength > 0.01 or heal_strength > 0.01:
+			queue_redraw()
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		for i in 8:
+			var inset := float(i) * 13.0
+			var alpha_fade := 1.0 - float(i) / 8.0
+			if damage_strength > 0.01:
+				var a := damage_strength * alpha_fade * 0.105
+				var red := Color(1.0, 0.055, 0.12, a)
+				draw_rect(Rect2(0.0, inset, w, 13.0), red)
+				draw_rect(Rect2(0.0, h - inset - 13.0, w, 13.0), red)
+				draw_rect(Rect2(inset, 0.0, 13.0, h), red)
+				draw_rect(Rect2(w - inset - 13.0, 0.0, 13.0, h), red)
+			if heal_strength > 0.01:
+				var a := heal_strength * alpha_fade * 0.095
+				var green := Color(0.08, 1.0, 0.48, a)
+				draw_rect(Rect2(0.0, inset, w, 13.0), green)
+				draw_rect(Rect2(0.0, h - inset - 13.0, w, 13.0), green)
+				draw_rect(Rect2(inset, 0.0, 13.0, h), green)
+				draw_rect(Rect2(w - inset - 13.0, 0.0, 13.0, h), green)
 
 var timer_lbl: Label
 var timer_shape: Polygon2D
@@ -177,6 +218,13 @@ func _build_resources() -> void:
 
 
 func _build_fx_overlay() -> void:
+	var edge_layer := CanvasLayer.new()
+	edge_layer.layer = 8
+	add_child(edge_layer)
+	edge_feedback = EdgeFeedback.new()
+	edge_feedback.set_anchors_preset(Control.PRESET_FULL_RECT)
+	edge_feedback.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	edge_layer.add_child(edge_feedback)
 	if _is_potato():
 		return
 	var cl := CanvasLayer.new()
@@ -1048,6 +1096,12 @@ func _handle_events(evs: Array) -> void:
 		var pos := Vector2(e.get("x", 0.0), e.get("y", 0.0))
 		var col := G.col(e.get("c", 0))
 		match e.t:
+			"hurt":
+				if int(e.get("id", 0)) == local_id and is_instance_valid(edge_feedback):
+					edge_feedback.ping_damage(float(e.get("amount", 8.0)))
+			"heal":
+				if int(e.get("id", 0)) == local_id and is_instance_valid(edge_feedback):
+					edge_feedback.ping_heal(float(e.get("amount", 8.0)))
 			"shockwave":
 				Sfx.play("dash", 1.0, -2.0)
 				flash(pos, float(e.get("r", 172.0)) * 2.0, col, 0.32)
