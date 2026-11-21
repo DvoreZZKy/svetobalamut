@@ -224,7 +224,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			p.wave_reload_t = maxf(0.0, float(p.wave_reload_t) - dt)
 			if p.wave_reload_t <= 0.0:
 				p.wave_ammo = int(p.wave_ammo) + 1
-				p.wave_reload_t = 2.4 if int(p.wave_ammo) < 4 else 0.0
+				p.wave_reload_t = 0.5 if int(p.wave_ammo) < 4 else 0.0
 		if want_fire and int(p.wave_ammo) > 0:
 			p.wave_charge = minf(CAPSULE_WAVE_CHARGE_TIME, float(p.wave_charge) + dt)
 			p.wave_released = false
@@ -235,7 +235,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			_capsule_shockwave(p, charge_ratio)
 			p.wave_ammo = int(p.wave_ammo) - 1
 			if float(p.wave_reload_t) <= 0.0:
-				p.wave_reload_t = 2.4
+				p.wave_reload_t = 0.5
 			p.wave_charge = 0.0
 			p.wave_released = false
 		p.fire_was_down = want_fire
