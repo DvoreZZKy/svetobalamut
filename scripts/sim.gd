@@ -8,8 +8,8 @@ const MAX_LIGHT := 125.0
 const CLASS_STATS := [
 	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.22, "ability": "Перегрузка"},
 	{"name": "Капсула", "hp": 155.0, "def": 0.72, "atk": 1.35, "speed": 0.78, "rate": 0.56, "ability": "Энергощит"},
-	{"name": "Призрак", "hp": 125.0, "def": 0.90, "atk": 0.95, "speed": 1.25, "rate": 0.26, "ability": "Фазовый скачок"},
-	{"name": "Кристалл", "hp": 120.0, "def": 0.92, "atk": 1.65, "speed": 0.88, "rate": 0.68, "ability": "Звёздный залп"}
+	{"name": "Призрак", "hp": 130.0, "def": 0.88, "atk": 1.0, "speed": 1.20, "rate": 0.26, "ability": "Фазовый скачок"},
+	{"name": "Кристалл", "hp": 125.0, "def": 0.92, "atk": 1.55, "speed": 0.90, "rate": 0.64, "ability": "Звёздный залп"}
 ]
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
@@ -19,16 +19,17 @@ const DASH_CD := 1.5
 const FIRE_CD := 0.1
 const BULLET_SPEED := 1300.0
 const BULLET_DMG := 9.0
-const SHOT_COST := 1.0
-const MOVE_COST := 1.8
-const DASH_COST := 4.0
-const REGEN_STILL := 10.0
+const SHOT_COST := 0.28
+const MOVE_COST := 0.65
+const DASH_COST := 2.0
+const REGEN_PASSIVE := 3.5
+const REGEN_STILL := 5.0
 const REGEN_ZONE := 30.0
 const KILL_BONUS := 24.0
 const MATCH_TIME := 240.0
 const MIN_SURVIVAL_TIME := 60.0
 const P_RADIUS := 28.0
-const MAX_EATERS_RAIN := 16
+const MAX_EATERS_RAIN := 8
 const ZONES := [Vector3(420, 250, 125), Vector3(1180, 250, 125), Vector3(420, 650, 125), Vector3(1180, 650, 125), Vector3(800, 450, 95)]
 const CHAOS := ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]
 const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog": 6.0, "magnet": 5.0}
@@ -65,8 +66,8 @@ func reset(cfg: Array) -> void:
 	time_left = MATCH_TIME
 	phase = "play"
 	winner = 0
-	chaos_timer = 10.0
-	eater_timer = 4.0
+	chaos_timer = 15.0
+	eater_timer = 7.0
 	bomb_id = 0
 	bomb_t = 0.0
 	next_id = 1
@@ -115,8 +116,8 @@ func step(dt: float) -> void:
 			effects.erase(k)
 	eater_timer -= dt
 	if eater_timer <= 0.0:
-		eater_timer = 5.0
-		if eaters.size() < 8:
+		eater_timer = 8.0
+		if eaters.size() < 5:
 			_spawn_eater(_edge_point(), rng.randi() % 100 < 60)
 	for p in players.values():
 		if not p.human:
@@ -233,6 +234,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	var in_zone := _in_zone(p.pos)
 	if effects.has("invert"):
 		in_zone = not in_zone
+	p.light += REGEN_PASSIVE * dt
 	if spd_ratio < 0.15:
 		p.light += REGEN_STILL * dt
 	if in_zone:
@@ -512,7 +514,7 @@ func _update_eaters(dt: float) -> void:
 		e.cd = maxf(0.0, e.cd - dt)
 		e.flash = maxf(0.0, e.flash - dt)
 		if not tgt.is_empty():
-			var sp := 250.0 if e.type == 0 else 430.0
+			var sp := 180.0 if e.type == 0 else 300.0
 			var dir: Vector2 = (tgt.pos - e.pos).normalized()
 			e.vel = e.vel.lerp(dir * sp, clampf(3.5 * dt, 0.0, 1.0))
 			if e.type == 1:
@@ -523,8 +525,8 @@ func _update_eaters(dt: float) -> void:
 				continue
 			if (p.pos - e.pos).length_squared() < pow(e.r + P_RADIUS - 6.0, 2):
 				if p.inv <= 0.0 and e.cd <= 0.0:
-					e.cd = 0.45
-					_damage(p, 10.0, 0, false)
+					e.cd = 0.85
+					_damage(p, 5.0, 0, false)
 					p.vel += (p.pos - e.pos).normalized() * 500.0
 		keep.append(e)
 	eaters = keep
@@ -535,9 +537,9 @@ func _chaos_tick(dt: float) -> void:
 	chaos_timer -= dt
 	if chaos_timer > 0.0:
 		return
-	chaos_timer = 9.5 + rng.randf_range(-2.5, 2.5)
+	chaos_timer = 14.0 + rng.randf_range(-3.0, 3.0)
 	trigger(CHAOS[rng.randi() % CHAOS.size()])
-	if time_left < MATCH_TIME * 0.4 and rng.randf() < 0.35:
+	if time_left < MATCH_TIME * 0.4 and rng.randf() < 0.12:
 		trigger(CHAOS[rng.randi() % CHAOS.size()])
 
 
@@ -550,7 +552,7 @@ func trigger(name: String) -> void:
 			lit.append(p)
 	match name:
 		"rain":
-			for i in 8:
+			for i in 4:
 				if eaters.size() >= MAX_EATERS_RAIN:
 					break  # repeated rains must not bury the arena in never-expiring eaters
 				_spawn_eater(Vector2(rng.randf_range(60, A.x - 60), -40.0 - i * 20.0), rng.randf() < 0.5)
@@ -625,7 +627,7 @@ func _bomb_tick(dt: float) -> void:
 				continue
 			var d: float = (p.pos - c).length()
 			if d < 260.0:
-				var dmg: float = 100.0 if p.id == holder else 65.0 * (1.0 - d / 330.0)
+				var dmg: float = 48.0 if p.id == holder else 36.0 * (1.0 - d / 330.0)
 				p.vel += (p.pos - c).normalized() * 800.0
 				_damage(p, dmg, holder, false)
 				if p.id != holder and players.has(holder):
