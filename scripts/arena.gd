@@ -115,6 +115,7 @@ var over_outline: Line2D
 var over_lbl: RichTextLabel
 var over_restart_btn: Button
 var over_menu_btn: Button
+var over_exit_btn: Button
 var wait_lbl: Label
 var objective_lbl: Label
 var pause_layer: CanvasLayer
@@ -524,6 +525,13 @@ func _build_hud() -> void:
 	_style_result_button(over_menu_btn, Color("#b58aff"))
 	over_menu_btn.pressed.connect(_to_menu)
 	cl.add_child(over_menu_btn)
+	over_exit_btn = FacetButton.new()
+	over_exit_btn.text = "В МЕНЮ"
+	over_exit_btn.custom_minimum_size = Vector2(180, 48)
+	_style_result_button(over_exit_btn, Color("#b58aff"))
+	over_exit_btn.pressed.connect(_to_menu)
+	cl.add_child(over_exit_btn)
+	over_exit_btn.visible = false
 	over_restart_btn.visible = false
 	over_menu_btn.visible = false
 	for category in ["УРОН", "ХИЛ", "УБИЙСТВА", "ХАОС"]:
@@ -1305,6 +1313,7 @@ func _update_hud(dt: float) -> void:
 		over_lbl.visible = true
 		over_restart_btn.visible = not is_client and not result_detail_open
 		over_menu_btn.visible = true
+		over_exit_btn.visible = result_detail_open
 		if not result_detail_open:
 			over_menu_btn.text = "В МЕНЮ"
 			if not over_menu_btn.pressed.is_connected(_to_menu):
@@ -1326,65 +1335,70 @@ func _update_hud(dt: float) -> void:
 			var report := "[center][font_size=30][b][color=#68edff]◈  ИТОГИ МАТЧА  ◈[/color][/b][/font_size]\n"
 			report += "[font_size=22][color=#ffffff]ПОБЕДИТЕЛЬ[/color]  [color=#ffd76a]%s[/color]\n" % winner_name
 			report += "[font_size=16][color=#9ab8d4]ВРЕМЯ МАТЧА  %02d:%02d[/color][/font_size][/center]" % [int(float(view.get("elapsed", 0.0))) / 60, int(float(view.get("elapsed", 0.0))) % 60]
+			over_lbl.scroll_active = false
+			report = report.replace("[center]", "").replace("[/center]", "")
 			over_lbl.text = report
 			over_lbl.modulate = Color.WHITE
 			for i in result_cards.size():
 				var card := result_cards[i]
 				var ranking: Array = category_ranks[i]
 				var leader: Dictionary = ranking[0] if not ranking.is_empty() else {} 
-				if not ranking.is_empty():
-					card.text = "%s\n%s\n%s" % [category_names[i], str(leader.n), str(int(leader.get(stat_keys[i], 0)))]
-					if not card.has_meta("portrait_ready"):
-						var portrait := SubViewportContainer.new()
-						portrait.position = Vector2(card.size.x * 0.5 - 66.0, 38.0)
-						portrait.size = Vector2(132, 142)
-						portrait.stretch = true
-						portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-						var portrait_vp := SubViewport.new()
-						portrait_vp.size = Vector2i(120, 120)
-						portrait_vp.transparent_bg = true
-						portrait_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-						portrait.add_child(portrait_vp)
-						var portrait_actor := VectorActor.new()
-						portrait_actor.position = Vector2(60, 66)
-						portrait_actor.scale = Vector2.ONE * 0.82
-						portrait_vp.add_child(portrait_actor)
+				var accents := [Color("#ff9b67"), Color("#72f0b1"), Color("#b58aff"), Color("#ffd76a")]
+				card.text = ""
+				card.custom_minimum_size = Vector2(190, 118)
+				if not card.has_meta("portrait_ready"):
+					var portrait := SubViewportContainer.new()
+					portrait.position = Vector2(card.size.x * 0.5 - 62.0, 48.0)
+					portrait.size = Vector2(124, 132)
+					portrait.stretch = true
+					portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+					var portrait_vp := SubViewport.new()
+					portrait_vp.size = Vector2i(120, 120)
+					portrait_vp.transparent_bg = true
+					portrait_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+					portrait.add_child(portrait_vp)
+					var portrait_actor := VectorActor.new()
+					portrait_actor.position = Vector2(60, 66)
+					portrait_actor.scale = Vector2.ONE * 0.82
+					portrait_vp.add_child(portrait_actor)
+					if not ranking.is_empty():
 						portrait_actor.setup(int(leader.k), G.col(int(leader.c)), int(leader.get("outfit", 0)), int(leader.get("hat", 0)))
-						card.add_child(portrait)
-						card.set_meta("portrait_ready", true)
-						var category_label := Label.new()
-						category_label.name = "CategoryTitle"
-						category_label.position = Vector2(8, 8)
-						category_label.size = Vector2(card.size.x - 16, 30)
-						category_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-						category_label.add_theme_font_size_override("font_size", 21)
-						category_label.add_theme_color_override("font_color", Color("#6cecff"))
-						category_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-						card.add_child(category_label)
-						var nick_label := Label.new()
-						nick_label.name = "LeaderNick"
-						nick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-						nick_label.position = Vector2(8, card.size.y - 88)
-						nick_label.size = Vector2(card.size.x - 16, 32)
-						nick_label.add_theme_font_size_override("font_size", 19)
-						nick_label.add_theme_color_override("font_color", Color("#f0f8ff"))
-						nick_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-						card.add_child(nick_label)
-						var value_label := Label.new()
-						value_label.name = "LeaderValue"
-						value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-						value_label.position = Vector2(8, card.size.y - 52)
-						value_label.size = Vector2(card.size.x - 16, 36)
-						value_label.add_theme_font_size_override("font_size", 25)
-						value_label.add_theme_color_override("font_color", Color("#ffd477"))
-						value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-						card.add_child(value_label)
-					card.text = ""
+					else:
+						portrait_actor.setup(0, Color("#64eaff"), 0, 0)
+					card.add_child(portrait)
+					card.set_meta("portrait_ready", true)
+					var category_label := Label.new()
+					category_label.name = "CategoryTitle"
+					category_label.position = Vector2(8, 8)
+					category_label.size = Vector2(card.size.x - 16, 30)
+					category_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					category_label.add_theme_font_size_override("font_size", 21)
+					category_label.add_theme_color_override("font_color", accents[i])
+					category_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+					card.add_child(category_label)
+					var nick_label := Label.new()
+					nick_label.name = "LeaderNick"
+					nick_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					nick_label.position = Vector2(8, card.size.y - 96)
+					nick_label.size = Vector2(card.size.x - 16, 30)
+					nick_label.add_theme_font_size_override("font_size", 19)
+					nick_label.add_theme_color_override("font_color", Color("#f0f8ff"))
+					nick_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+					card.add_child(nick_label)
+					var value_label := Label.new()
+					value_label.name = "LeaderValue"
+					value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					value_label.position = Vector2(8, card.size.y - 62)
+					value_label.size = Vector2(card.size.x - 16, 34)
+					value_label.add_theme_font_size_override("font_size", 24)
+					value_label.add_theme_color_override("font_color", accents[i].lightened(0.12))
+					value_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+					card.add_child(value_label)
 				var category_label := card.get_node_or_null("CategoryTitle") as Label
 				var nick_label := card.get_node_or_null("LeaderNick") as Label
 				var value_label := card.get_node_or_null("LeaderValue") as Label
 				if category_label: category_label.text = category_names[i]
-				if nick_label: nick_label.text = str(leader.n) if not ranking.is_empty() else "—"
+				if nick_label: nick_label.text = str(leader.n) if not ranking.is_empty() else "НЕТ ЛИДЕРА"
 				if value_label: value_label.text = str(int(leader.get(stat_keys[i], 0))) if not ranking.is_empty() else "0"
 				card.visible = true
 			_layout_game_over()
@@ -1398,6 +1412,7 @@ func _update_hud(dt: float) -> void:
 		result_detail_open = false
 		over_restart_btn.visible = false
 		over_menu_btn.visible = false
+		over_exit_btn.visible = false
 
 func _open_result_category(category: String) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -1407,16 +1422,22 @@ func _open_result_category(category: String) -> void:
 	for pd in view.get("pl", []):
 		rows.append(pd)
 	rows.sort_custom(func(a, b): return float(a.get(key, 0.0)) > float(b.get(key, 0.0)))
-	var lines := "[center][font_size=26][b][color=#70eaff]%s[/color][/b][/font_size]\n" % category
+	var accent := {"dm":"#ff9b67", "hl":"#72f0b1", "ki":"#b58aff", "pt":"#ffd76a"}.get(key, "#70eaff")
+	var lines := "[font_size=27][b][color=%s]◈  %s  ◈[/color][/b][/font_size]\n\n" % [accent, category]
+	lines += "[table=3][cell][color=#829bb5]# / ПЕРСОНАЖ[/color][/cell][cell][color=#829bb5]ИГРОК[/color][/cell][cell][color=#829bb5]РЕЗУЛЬТАТ[/color][/cell]"
 	for i in rows.size():
 		var p: Dictionary = rows[i]
-		lines += "%02d   %s   •   %s\n" % [i + 1, str(p.n), str(int(p.get(key, 0)))]
-	lines += "[/center]"
+		var player_color := G.col(int(p.get("c", 0))).to_html(false)
+		var amount := int(p.get(key, 0))
+		lines += "[cell][color=%s]%02d[/color][/cell][cell][color=#%s]%s%s[/color][/cell][cell][b][color=%s]%d[/color][/b][/cell]" % [accent, i + 1, player_color, str(p.n), "  [Б]" if bool(p.get("bot", false)) else "", accent, amount]
+	lines += "[/table]"
+	over_lbl.scroll_active = true
 	over_lbl.text = lines
 	for card in result_cards:
 		card.visible = false
 	over_restart_btn.visible = false
-	over_menu_btn.text = "ВЕРНУТЬСЯ"
+	over_menu_btn.text = "К КАРТОЧКАМ"
+	over_exit_btn.visible = true
 	if over_menu_btn.pressed.is_connected(_to_menu):
 		over_menu_btn.pressed.disconnect(_to_menu)
 	over_menu_btn.pressed.connect(_close_result_category, CONNECT_ONE_SHOT)
@@ -1431,7 +1452,8 @@ func _open_result_category(category: String) -> void:
 
 func _close_result_category() -> void:
 	result_detail_open = false
-	over_menu_btn.text = "В МЕНЮ"
+	over_menu_btn.text = "К КАРТОЧКАМ"
+	over_exit_btn.visible = false
 	if over_menu_btn.pressed.is_connected(_close_result_category):
 		over_menu_btn.pressed.disconnect(_close_result_category)
 	if not over_menu_btn.pressed.is_connected(_to_menu):
@@ -1498,7 +1520,7 @@ func _layout_game_over() -> void:
 	over_shape.polygon = points
 	over_outline.points = points
 	over_lbl.position = Vector2(pos.x + 52.0, pos.y + 38.0)
-	over_lbl.size = Vector2(panel_size.x - 104.0, panel_size.y - 150.0)
+	over_lbl.size = Vector2(panel_size.x - 104.0, panel_size.y - 190.0)
 	over_lbl.add_theme_font_size_override("normal_font_size", 20)
 	over_lbl.add_theme_constant_override("line_separation", 5)
 	var cards_y := pos.y + 168.0
@@ -1507,10 +1529,11 @@ func _layout_game_over() -> void:
 	for i in result_cards.size():
 		result_cards[i].position = Vector2(pos.x + 55.0 + float(i) * (card_width + 12.0), cards_y)
 		result_cards[i].size = Vector2(card_width, card_height)
-	over_lbl.size.y = 120.0
+	over_lbl.size.y = 120.0 if not result_detail_open else panel_size.y - 190.0
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 22.0, buttons_y)
+	over_exit_btn.position = Vector2(pos.x + panel_size.x - 218.0, buttons_y)
 
 
 func _restart_match() -> void:
