@@ -128,9 +128,9 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 	return {
 		"id": id, "name": pname, "human": human, "kind": kind, "ci": ci, "hat": hat, "outfit": outfit,
 		"pos": pos, "vel": Vector2.ZERO, "aim": (A / 2.0 - pos).normalized(),
-		"light": CLASS_STATS[posmod(kind, CLASS_STATS.size())].hp, "max_light": CLASS_STATS[kind % 4].hp, "shield_hp": 0.0, "max_shield": 0.0,
-		"defense": CLASS_STATS[kind % 4].def, "attack": CLASS_STATS[kind % 4].atk,
-		"speed_mult": CLASS_STATS[kind % 4].speed, "fire_rate": CLASS_STATS[kind % 4].rate,
+		"light": CLASS_STATS[posmod(kind, CLASS_STATS.size())].hp, "max_light": CLASS_STATS[posmod(kind, CLASS_STATS.size())].hp, "shield_hp": 0.0, "max_shield": 0.0,
+		"defense": CLASS_STATS[posmod(kind, CLASS_STATS.size())].def, "attack": CLASS_STATS[posmod(kind, CLASS_STATS.size())].atk,
+		"speed_mult": CLASS_STATS[posmod(kind, CLASS_STATS.size())].speed, "fire_rate": CLASS_STATS[posmod(kind, CLASS_STATS.size())].rate,
 		"ability_cd": 0.0, "ability_t": 0.0, "extra_cd": 0.0, "phase_t": 0.0, "absorb_t": 0.0, "prism_shots": 0,
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
