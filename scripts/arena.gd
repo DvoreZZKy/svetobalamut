@@ -57,6 +57,10 @@ var edge_feedback: EdgeFeedback
 class NeonProgressBar extends Control:
 	var tint := Color("#62eaff")
 	var fill_ratio := 1.0
+	var value: float = 100.0:
+		set(value_in):
+			fill_ratio = clampf(value_in / 100.0, 0.0, 1.0)
+			queue_redraw()
 
 	func set_fill_ratio(ratio: float) -> void:
 		fill_ratio = clampf(ratio, 0.0, 1.0)
@@ -1474,7 +1478,7 @@ func _update_hud(dt: float) -> void:
 				ammo_text += "◆ " if charge_i < ammo else "◇ "
 			capsule_ammo_lbl.text = "ВОЛНЫ  " + ammo_text + ("  +" + ("%.1f" % float(me.get("wr", 0.0))) + "с" if ammo < 4 else "  ГОТОВО")
 			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 1.5)
-			capsule_reload_bar.set_fill_ratio(1.0 - reload_left / 1.5 if ammo < 4 else 1.0)
+			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 1.5) if ammo < 4 else 100.0
 		var buff_names := {"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕННЫЙ УРОН", "shield": "ЗАЩИТА", "battery": "БАТАРЕЯ"}
 		if str(me.get("buff", "")) != "" and float(me.get("buff_t", 0.0)) > 0.0:
 			timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
