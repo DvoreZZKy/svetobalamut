@@ -1565,7 +1565,8 @@ func _update_hud(dt: float) -> void:
 		ability_bar.set_fill_ratio(1.0 - ability_cooldown / 9.0)
 		var extra_cooldown := clampf(float(me.get("excd", 0.0)), 0.0, 13.0)
 		extra_ability_bar.set_fill_ratio(1.0 - extra_cooldown / 13.0)
-		var ability_duration := clampf(float(me.get("ab", 0.0)), 0.0, 2.8)
+		var ability_duration_max := 0.65 if int(me.get("k", 0)) == 2 else 2.8
+		var ability_duration := clampf(float(me.get("ab", 0.0)), 0.0, ability_duration_max)
 		var extra_duration := 0.0
 		match int(me.get("k", 0)):
 			0:
@@ -1579,7 +1580,7 @@ func _update_hud(dt: float) -> void:
 		ability_duration_label.visible = ability_duration_bar.visible
 		extra_duration_label.visible = extra_duration_bar.visible
 		if ability_duration_bar.visible:
-			ability_duration_bar.set_fill_ratio(ability_duration / 2.8)
+			ability_duration_bar.set_fill_ratio(ability_duration / ability_duration_max)
 		if extra_duration_bar.visible:
 			var extra_duration_max := 3.8 if int(me.get("k", 0)) == 0 else (2.4 if int(me.get("k", 0)) == 1 else 1.25)
 			extra_duration_bar.set_fill_ratio(extra_duration / extra_duration_max)
