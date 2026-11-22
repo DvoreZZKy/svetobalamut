@@ -265,6 +265,7 @@ static func sanitize_input(d: Dictionary) -> Dictionary:
 		"dash": _flag(d.get("dash", false)),
 		"poss": _flag(d.get("poss", false)),
 		"ability": _flag(d.get("ability", false)),
+		"extra_ability": _flag(d.get("extra_ability", false)),
 	}
 
 
