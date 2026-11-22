@@ -135,6 +135,10 @@ var timer_shape: Polygon2D
 var timer_outline: Line2D
 var ability_bar: NeonProgressBar
 var extra_ability_bar: NeonProgressBar
+var ability_duration_bar: NeonProgressBar
+var extra_duration_bar: NeonProgressBar
+var ability_duration_label: Label
+var extra_duration_label: Label
 var extra_ability_latch := 0.0
 var capsule_ammo_lbl: Label
 var capsule_reload_bar: NeonProgressBar
@@ -517,6 +521,32 @@ func _build_hud() -> void:
 	extra_ability_bar.offset_right = 160
 	extra_ability_bar.offset_top = -16
 	extra_ability_bar.offset_bottom = -9
+	ability_duration_bar = _bar(Vector2(18, 0), Vector2(176, 7), Color("#c3a0ff"), cl)
+	ability_duration_bar.anchor_top = 1.0
+	ability_duration_bar.anchor_bottom = 1.0
+	ability_duration_bar.offset_top = -94
+	ability_duration_bar.offset_bottom = -87
+	ability_duration_bar.visible = false
+	extra_duration_bar = _bar(Vector2(18, 0), Vector2(176, 7), Color("#72f5b4"), cl)
+	extra_duration_bar.anchor_top = 1.0
+	extra_duration_bar.anchor_bottom = 1.0
+	extra_duration_bar.offset_top = -73
+	extra_duration_bar.offset_bottom = -66
+	extra_duration_bar.visible = false
+	ability_duration_label = _label("Q • ДЕЙСТВУЕТ", 9, Vector2(18, 0), Vector2(176, 13), cl)
+	ability_duration_label.anchor_top = 1.0
+	ability_duration_label.anchor_bottom = 1.0
+	ability_duration_label.offset_top = -108
+	ability_duration_label.offset_bottom = -95
+	ability_duration_label.add_theme_color_override("font_color", Color("#c3a0ff"))
+	ability_duration_label.visible = false
+	extra_duration_label = _label("F • ДЕЙСТВУЕТ", 9, Vector2(18, 0), Vector2(176, 13), cl)
+	extra_duration_label.anchor_top = 1.0
+	extra_duration_label.anchor_bottom = 1.0
+	extra_duration_label.offset_top = -87
+	extra_duration_label.offset_bottom = -74
+	extra_duration_label.add_theme_color_override("font_color", Color("#72f5b4"))
+	extra_duration_label.visible = false
 	var light_caption := _label("СВЕТ", 9, Vector2.ZERO, Vector2(54, 14), cl)
 	light_caption.anchor_left = 0.5
 	light_caption.anchor_right = 0.5
@@ -1535,6 +1565,26 @@ func _update_hud(dt: float) -> void:
 		ability_bar.set_fill_ratio(1.0 - ability_cooldown / 9.0)
 		var extra_cooldown := clampf(float(me.get("excd", 0.0)), 0.0, 13.0)
 		extra_ability_bar.set_fill_ratio(1.0 - extra_cooldown / 13.0)
+		var ability_duration := clampf(float(me.get("ab", 0.0)), 0.0, 2.8)
+		var extra_duration := 0.0
+		match int(me.get("k", 0)):
+			0:
+				extra_duration = clampf(float(me.get("lu_t", 0.0)), 0.0, 3.8)
+			1:
+				extra_duration = clampf(float(me.get("abs", 0.0)), 0.0, 2.4)
+			2:
+				extra_duration = clampf(float(me.get("phs", 0.0)), 0.0, 1.25)
+		ability_duration_bar.visible = not is_shadow and not over and ability_duration > 0.0
+		extra_duration_bar.visible = not is_shadow and not over and extra_duration > 0.0
+		ability_duration_label.visible = ability_duration_bar.visible
+		extra_duration_label.visible = extra_duration_bar.visible
+		if ability_duration_bar.visible:
+			ability_duration_bar.set_fill_ratio(ability_duration / 2.8)
+		if extra_duration_bar.visible:
+			var extra_duration_max := 3.8 if int(me.get("k", 0)) == 0 else (2.4 if int(me.get("k", 0)) == 1 else 1.25)
+			extra_duration_bar.set_fill_ratio(extra_duration / extra_duration_max)
+			textra_duration_label.text = "F • %.1fс" % extra_duration
+		ability_duration_label.text = "Q • %.1fс" % ability_duration
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
 		capsule_ammo_lbl.visible = is_capsule
 		capsule_reload_bar.visible = is_capsule
