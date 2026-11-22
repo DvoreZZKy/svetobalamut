@@ -71,14 +71,16 @@ class NeonProgressBar extends Control:
 			Vector2(0, h - cut), Vector2(0, cut)
 		])
 		draw_colored_polygon(frame, Color("#06101e", 0.96))
-		var fill_w := maxf(0.0, w * fill_ratio - 2.0)
-		if fill_w > 2.0:
-			var fill_cut := minf(cut, fill_w * 0.35)
+		var fill_w := clampf(w * fill_ratio - 2.0, 0.0, w - 2.0)
+		var inner_top := 1.5
+		var inner_bottom := maxf(inner_top + 1.0, h - 1.5)
+		if fill_w > 1.0 and inner_bottom > inner_top:
+			var fill_cut := minf(3.0, minf((inner_bottom - inner_top) * 0.45, fill_w * 0.3))
 			var fill := PackedVector2Array([
-				Vector2(1 + fill_cut, 2), Vector2(fill_w - fill_cut, 2),
-				Vector2(fill_w, 2 + fill_cut), Vector2(fill_w, h - 2 - fill_cut),
-				Vector2(fill_w - fill_cut, h - 2), Vector2(1 + fill_cut, h - 2),
-				Vector2(1, h - 2 - fill_cut), Vector2(1, 2 + fill_cut)
+				Vector2(1 + fill_cut, inner_top), Vector2(maxf(1 + fill_cut, fill_w - fill_cut), inner_top),
+				Vector2(fill_w, inner_top + fill_cut), Vector2(fill_w, inner_bottom - fill_cut),
+				Vector2(maxf(1 + fill_cut, fill_w - fill_cut), inner_bottom), Vector2(1 + fill_cut, inner_bottom),
+				Vector2(1, inner_bottom - fill_cut), Vector2(1, inner_top + fill_cut)
 			])
 			draw_colored_polygon(fill, tint.lightened(0.12))
 		draw_polyline(PackedVector2Array([frame[0], frame[1], frame[2], frame[3], frame[4], frame[5], frame[6], frame[7], frame[0]]), tint.darkened(0.22), 1.5, true)
@@ -444,24 +446,24 @@ func _build_hud() -> void:
 	light_bar.offset_right = 160
 	light_bar.offset_top = -65
 	light_bar.offset_bottom = -51
-	dash_bar = _bar(Vector2.ZERO, Vector2(292, 6), Color("#62eaff"), cl)
+	dash_bar = _bar(Vector2.ZERO, Vector2(292, 9), Color("#62eaff"), cl)
 	dash_bar.anchor_left = 0.5
 	dash_bar.anchor_right = 0.5
 	dash_bar.anchor_top = 1.0
 	dash_bar.anchor_bottom = 1.0
 	dash_bar.offset_left = -132
 	dash_bar.offset_right = 160
-	dash_bar.offset_top = -43
+	dash_bar.offset_top = -46
 	dash_bar.offset_bottom = -37
-	ability_bar = _bar(Vector2.ZERO, Vector2(292, 6), Color("#b68aff"), cl)
+	ability_bar = _bar(Vector2.ZERO, Vector2(292, 9), Color("#b68aff"), cl)
 	ability_bar.anchor_left = 0.5
 	ability_bar.anchor_right = 0.5
 	ability_bar.anchor_top = 1.0
 	ability_bar.anchor_bottom = 1.0
 	ability_bar.offset_left = -132
 	ability_bar.offset_right = 160
-	ability_bar.offset_top = -29
-	ability_bar.offset_bottom = -23
+	ability_bar.offset_top = -31
+	ability_bar.offset_bottom = -22
 	var light_caption := _label("СВЕТ", 9, Vector2.ZERO, Vector2(54, 14), cl)
 	light_caption.anchor_left = 0.5
 	light_caption.anchor_right = 0.5
@@ -479,8 +481,8 @@ func _build_hud() -> void:
 	dash_caption.anchor_bottom = 1.0
 	dash_caption.offset_left = -190
 	dash_caption.offset_right = -138
-	dash_caption.offset_top = -43
-	dash_caption.offset_bottom = -29
+	dash_caption.offset_top = -46
+	dash_caption.offset_bottom = -32
 	dash_caption.add_theme_color_override("font_color", Color("#76eaff"))
 	var ability_caption := _label("Q", 9, Vector2.ZERO, Vector2(54, 14), cl)
 	ability_caption.anchor_left = 0.5
@@ -489,8 +491,8 @@ func _build_hud() -> void:
 	ability_caption.anchor_bottom = 1.0
 	ability_caption.offset_left = -190
 	ability_caption.offset_right = -138
-	ability_caption.offset_top = -29
-	ability_caption.offset_bottom = -15
+	ability_caption.offset_top = -31
+	ability_caption.offset_bottom = -17
 	ability_caption.add_theme_color_override("font_color", Color("#c3a0ff"))
 	capsule_ammo_lbl = _label("ВОЛНЫ  ◆ ◆ ◆ ◆", 12, Vector2(18, 0), Vector2(190, 20), cl)
 	capsule_ammo_lbl.anchor_top = 1.0
@@ -1335,7 +1337,7 @@ func _update_hud(dt: float) -> void:
 	if not me.is_empty():
 		var is_shadow := bool(me.get("s", false))
 		# A shadow has no light reserve: never leave the previous light fill visible.
-		light_bar.visible = not is_shadow
+		light_bar.visible = true
 		light_bar.set_fill_ratio(0.0 if is_shadow else clampf(float(me.get("l", 0.0)) / maxf(float(me.get("hpmax", 1.0)), 1.0), 0.0, 1.0))
 		var dash_cooldown := clampf(float(me.get("dc", 0.0)), 0.0, Sim.DASH_CD)
 		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
@@ -1386,7 +1388,7 @@ func _update_hud(dt: float) -> void:
 			category_ranks[1].sort_custom(func(a, b): return float(a.get("hl", 0.0)) > float(b.get("hl", 0.0)))
 			category_ranks[2].sort_custom(func(a, b): return int(a.ki) > int(b.ki))
 			category_ranks[3].sort_custom(func(a, b): return int(a.pt) > int(b.pt))
-			var category_names := ["УРОН", "ХИЛ", "УБИЙСТВА", "ХАОС"]
+			var category_names := ["⚔️ УРОН", "💚 ЛЕЧЕНИЕ", "☠️ УБИЙСТВА", "🌪️ ХАОС"]
 			var stat_keys := ["dm", "hl", "ki", "pt"]
 			var report := "[center][font_size=30][b][color=#68edff]◈  ИТОГИ МАТЧА  ◈[/color][/b][/font_size]\n"
 			report += "[font_size=22][color=#ffffff]ПОБЕДИТЕЛЬ[/color]  [color=#ffd76a]%s[/color]\n" % winner_name
@@ -1480,7 +1482,9 @@ func _open_result_category(category: String) -> void:
 		rows.append(pd)
 	rows.sort_custom(func(a, b): return float(a.get(key, 0.0)) > float(b.get(key, 0.0)))
 	var accent: String = str({"dm":"#ff9b67", "hl":"#72f0b1", "ki":"#b58aff", "pt":"#ffd76a"}.get(key, "#70eaff"))
-	var lines := "[font_size=27][b][color=%s]◈  %s  ◈[/color][/b][/font_size]\n\n" % [accent, category]
+	var category_titles := {"УРОН":"⚔️  УРОН", "ХИЛ":"💚  ЛЕЧЕНИЕ", "УБИЙСТВА":"☠️  УБИЙСТВА", "ХАОС":"🌪️  ХАОС"}
+	var display_category: String = str(category_titles.get(category, category))
+	var lines := "[font_size=27][b][color=%s]%s[/color][/b][/font_size]\n\n" % [accent, display_category]
 	lines += "[table=3][cell][color=#829bb5]# / ПЕРСОНАЖ[/color][/cell][cell][color=#829bb5]ИГРОК[/color][/cell][cell][color=#829bb5]РЕЗУЛЬТАТ[/color][/cell]"
 	for i in rows.size():
 		var p: Dictionary = rows[i]
@@ -1489,7 +1493,7 @@ func _open_result_category(category: String) -> void:
 		lines += "[cell][color=%s]%02d[/color][/cell][cell][color=#%s]%s%s[/color][/cell][cell][b][color=%s]%d[/color][/b][/cell]" % [accent, i + 1, player_color, str(p.n), "  [Б]" if bool(p.get("bot", false)) else "", accent, amount]
 	lines += "[/table]"
 	over_lbl.scroll_active = false
-	over_lbl.text = "[center][font_size=27][b][color=%s]◈  %s  ◈[/color][/b][/font_size][/center]" % [accent, category]
+	over_lbl.text = "[center][font_size=27][b][color=%s]%s[/color][/b][/font_size][/center]" % [accent, display_category]
 	for child in result_list.get_children():
 		child.queue_free()
 	for i in rows.size():
@@ -1546,7 +1550,7 @@ func _open_result_category(category: String) -> void:
 		skin_label.add_theme_color_override("font_color", Color("#91a9c2"))
 		details.add_child(skin_label)
 		var score_label := Label.new()
-		score_label.text = "%s: %d" % [category, int(p.get(key, 0))]
+		score_label.text = "%s: %d" % [display_category, int(p.get(key, 0))]
 		score_label.custom_minimum_size.x = 150
 		score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		score_label.add_theme_font_size_override("font_size", 20)
