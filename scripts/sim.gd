@@ -387,6 +387,7 @@ func _use_ability(p: Dictionary) -> void:
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 1})
 		2:
 			p.pos = (p.pos + p.aim * 320.0).clamp(Vector2(40, 40), A - Vector2(40, 40))
+			p.ability_t = 0.65
 			p.inv = 0.65
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 2})
 		3:
