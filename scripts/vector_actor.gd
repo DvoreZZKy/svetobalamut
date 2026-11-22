@@ -25,7 +25,7 @@ func _shape(points: Array, fill: Color, edge: Color = Color.WHITE, width: float 
 func _draw() -> void:
 	var dark := tint.darkened(0.62)
 	var bright := tint.lightened(0.42)
-	match kind:
+	match posmod(kind, 4):
 		0: # Светляк: крылья и короткое светящееся тело.
 			_shape([Vector2(-8,-4),Vector2(-23,-18),Vector2(-27,-14),Vector2(-17,5),Vector2(-7,8)], bright, bright, 2.5)
 			_shape([Vector2(8,-4),Vector2(23,-18),Vector2(27,-14),Vector2(17,5),Vector2(7,8)], bright, bright, 2.5)
@@ -92,7 +92,7 @@ func _draw() -> void:
 				draw_arc(Vector2.ZERO, 19.0, 2.1, 4.2, 20, bright, 2.5, true)
 	if outfit > 0:
 		var cloth: Color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][outfit]
-		match kind:
+		match posmod(kind, 4):
 			0: _shape([Vector2(-7,-3),Vector2(7,-3),Vector2(5,10),Vector2(0,15),Vector2(-5,10)], cloth, cloth.lightened(0.35), 2.0)
 			1: _shape([Vector2(-14,4),Vector2(14,4),Vector2(10,17),Vector2(-10,17)], cloth, cloth.lightened(0.35), 2.0)
 			2: _shape([Vector2(-14,1),Vector2(14,1),Vector2(16,13),Vector2(0,20),Vector2(-16,13)], cloth, cloth.lightened(0.35), 2.0)
