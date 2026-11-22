@@ -1388,9 +1388,9 @@ func _update_hud(dt: float) -> void:
 			_:
 				stopwatch_lbl.modulate = Color("#ff6b9d") if step % 2 == 0 else Color("#74edff")
 	var active_chaos: Array[String] = []
-	for chaos_key in fx.keys():
-		if float(fx[chaos_key]) > 0.0 and CHAOS_RU.has(chaos_key):
-			active_chaos.append(str(CHAOS_RU[chaos_key]))
+	for active_key in fx.keys():
+		if float(fx[active_key]) > 0.0 and CHAOS_RU.has(active_key):
+			active_chaos.append(str(CHAOS_RU[active_key]))
 	if int(view.get("bomb", 0)) != 0:
 		active_chaos.append("НЕОНОВАЯ БОМБА")
 	var chaos_text := "[font_size=11][b][color=#74edff]АКТИВНЫЙ ХАОС[/color][/b][/font_size]\n[table=1]"
