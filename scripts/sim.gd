@@ -40,6 +40,7 @@ const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog
 var players := {}
 var bullets: Array = []
 var eaters: Array = []
+var lures: Array = []
 var pickups: Array = []
 var pickup_timer := 9.0
 var meteors: Array = []
@@ -72,6 +73,7 @@ func reset(cfg: Array) -> void:
 	players.clear()
 	bullets.clear()
 	eaters.clear()
+	lures.clear()
 	pickups.clear()
 	pickup_timer = rng.randf_range(8.0, 13.0)
 	meteors.clear()
@@ -114,7 +116,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"light": CLASS_STATS[kind % 4].hp, "max_light": CLASS_STATS[kind % 4].hp,
 		"defense": CLASS_STATS[kind % 4].def, "attack": CLASS_STATS[kind % 4].atk,
 		"speed_mult": CLASS_STATS[kind % 4].speed, "fire_rate": CLASS_STATS[kind % 4].rate,
-		"ability_cd": 0.0, "ability_t": 0.0,
+		"ability_cd": 0.0, "ability_t": 0.0, "extra_cd": 0.0, "phase_t": 0.0, "absorb_t": 0.0, "prism_shots": 0,
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
@@ -151,6 +153,7 @@ func step(dt: float) -> void:
 		_update_player(p, dt)
 	_collisions(dt)
 	_update_bullets(dt)
+	_update_lures(dt)
 	_update_eaters(dt)
 	_update_pickups(dt)
 	_meteor_tick(dt)
@@ -176,6 +179,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	var want_dash: bool = inp.get("dash", false)
 	var want_poss: bool = inp.get("poss", false)
 	var want_ability: bool = inp.get("ability", false)
+	var want_extra: bool = inp.get("extra_ability", false)
 	if effects.has("reverse") and not p.decoy:
 		mv = -mv
 	# A shadow possessing this player directly drives their movement and actions.
@@ -194,6 +198,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		possessor.poss_fire_was_down = want_fire
 		want_dash = bool(control.get("dash", false))
 		want_ability = bool(control.get("ability", false))
+		want_extra = bool(control.get("extra_ability", false))
 		want_poss = false
 	if p.derp_t > 0.0:
 		p.derp_t -= dt
@@ -227,6 +232,9 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.poss_protect_cd = maxf(0.0, p.poss_protect_cd - dt)
 	p.ability_cd = maxf(0.0, p.ability_cd - dt)
 	p.ability_t = maxf(0.0, p.ability_t - dt)
+	p.extra_cd = maxf(0.0, float(p.get("extra_cd", 0.0)) - dt)
+	p.phase_t = maxf(0.0, float(p.get("phase_t", 0.0)) - dt)
+	p.absorb_t = maxf(0.0, float(p.get("absorb_t", 0.0)) - dt)
 
 	if p.shadow:
 		_update_shadow(p, dt, mv, want_poss)
@@ -254,6 +262,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			events.append({"t": "dash", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
 	if want_ability and p.ability_cd <= 0.0:
 		_use_ability(p)
+	if want_extra and float(p.get("extra_cd", 0.0)) <= 0.0:
+		_use_extra_ability(p)
 	if effects.has("magnet"):
 		var b := _brightest(p.id)
 		if not b.is_empty():
@@ -279,18 +289,21 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.wave_released = false
 		p.fire_was_down = want_fire
 	elif want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
-		var spread_count := 3 if p.kind == 0 else 1
+		var prism_active: bool = p.kind == 3 and int(p.get("prism_shots", 0)) > 0
+		var spread_count := 3 if p.kind == 0 or prism_active else 1
 		for shot_i in spread_count:
-			var spread := (float(shot_i) - 1.0) * 0.12 if spread_count == 3 else 0.0
+			var spread := (float(shot_i) - 1.0) * (0.12 if p.kind == 0 else 0.24) if spread_count == 3 else 0.0
 			var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
 			var dir := Vector2.from_angle(ang)
 			var bolt_speed := 1180.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED)
 			var bolt_radius := 11.0 if p.kind == 3 else 6.0
-			var damage_mult := 0.42 if p.kind == 0 else 1.0
+			var damage_mult := 0.42 if p.kind == 0 else (0.72 if prism_active else 1.0)
 			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
 				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3, "dmg": BULLET_DMG * p.attack * damage_mult * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
 				"radius": bolt_radius})
 			next_id += 1
+		if prism_active:
+			p.prism_shots = int(p.prism_shots) - 1
 		p.light -= shot_cost
 		var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
 		p.fire_cd = p.fire_rate * haste
@@ -383,6 +396,41 @@ func _use_ability(p: Dictionary) -> void:
 					"owner": p.id, "life": 1.25, "bn": 0, "ricochet": true, "dmg": BULLET_DMG * p.attack * 0.82 * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0), "radius": 10.0})
 				next_id += 1
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
+
+
+
+func _use_extra_ability(p: Dictionary) -> void:
+	p.extra_cd = 13.0
+	match int(p.kind):
+		0:
+			# Fireflies use bioluminescent signals: lure eaters to a bright decoy.
+			var lure_pos: Vector2 = (p.pos + p.aim * 145.0).clamp(Vector2(55, 55), A - Vector2(55, 55))
+			lures.append({"pos": lure_pos, "t": 3.8, "owner": p.id})
+			p.light = maxf(0.0, float(p.light) - 3.0)
+			events.append({"t": "extra_ability", "x": lure_pos.x, "y": lure_pos.y, "c": p.ci, "kind": 0})
+		1:
+			# A sealed capsule catches incoming energy and converts it into light.
+			p.absorb_t = 2.4
+			p.absorb_count = 0
+			events.append({"t": "extra_ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 1})
+		2:
+			# Ghost matter briefly stops interacting with projectiles and eaters.
+			p.phase_t = 1.25
+			p.inv = maxf(float(p.inv), 1.25)
+			events.append({"t": "extra_ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 2})
+		3:
+			# A prism splits the next three shots into refracted rays.
+			p.prism_shots = 3
+			events.append({"t": "extra_ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
+
+
+func _update_lures(dt: float) -> void:
+	var keep: Array = []
+	for lure in lures:
+		lure.t = float(lure.t) - dt
+		if float(lure.t) > 0.0:
+			keep.append(lure)
+	lures = keep
 
 
 func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> void:
@@ -518,6 +566,8 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 		reduced *= 0.72
 	p.light -= reduced
 	events.append({"t": "hurt", "id": p.id, "amount": reduced})
+	if float(p.get("phase_t", 0.0)) > 0.0:
+		return
 	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
 		players[src].damage_total = float(players[src].get("damage_total", 0.0)) + reduced
 		var damage_by: Dictionary = p.get("damage_by", {})
@@ -702,7 +752,7 @@ func _update_bullets(dt: float) -> void:
 		b.vel = bv
 		if not dead:
 			for p in players.values():
-				if p.shadow or p.inv > 0.0:
+				if p.shadow or p.inv > 0.0 or float(p.get("phase_t", 0.0)) > 0.0:
 					continue
 				if p.id == b.owner and b.bn == 0:
 					continue
@@ -712,6 +762,21 @@ func _update_bullets(dt: float) -> void:
 						hit_damage *= 2.0
 					_damage(p, hit_damage, b.owner, b.bn > 0)
 					dead = true
+					break
+		if not dead:
+			for p in players.values():
+				if p.shadow or int(p.kind) != 1 or float(p.get("absorb_t", 0.0)) <= 0.0 or int(p.id) == int(b.owner):
+					continue
+				if p.pos.distance_squared_to(b.pos) <= 118.0 * 118.0:
+					p.absorb_count = int(p.get("absorb_count", 0)) + 1
+					var light_before: float = float(p.light)
+					p.light = minf(float(p.max_light), float(p.light) + 4.0)
+					var gained: float = float(p.light) - light_before
+					if gained > 0.01:
+						p.healing_total = float(p.get("healing_total", 0.0)) + gained
+						events.append({"t": "heal", "id": p.id, "amount": gained})
+					dead = true
+					events.append({"t": "capsule_absorb", "x": b.pos.x, "y": b.pos.y, "c": p.ci, "id": p.id})
 					break
 		if not dead:
 			for e in eaters:
@@ -761,15 +826,22 @@ func _update_eaters(dt: float) -> void:
 			continue
 		e.cd = maxf(0.0, e.cd - dt)
 		e.flash = maxf(0.0, e.flash - dt)
-		if not tgt.is_empty():
+		var target_pos: Vector2 = tgt.pos if not tgt.is_empty() else e.pos
+		var lure_distance := 430.0 * 430.0
+		for lure in lures:
+			var lure_d: float = e.pos.distance_squared_to(lure.pos)
+			if lure_d < lure_distance:
+				lure_distance = lure_d
+				target_pos = lure.pos
+		if not tgt.is_empty() or lure_distance < 430.0 * 430.0:
 			var sp := 180.0 if e.type == 0 else 300.0
-			var dir: Vector2 = (tgt.pos - e.pos).normalized()
+			var dir: Vector2 = (target_pos - e.pos).normalized()
 			e.vel = e.vel.lerp(dir * sp, clampf(3.5 * dt, 0.0, 1.0))
 			if e.type == 1:
 				e.vel += dir.orthogonal() * sin(time_left * 9.0 + e.id) * 260.0 * dt * 8.0
 		e.pos += e.vel * dt
 		for p in players.values():
-			if p.shadow:
+			if p.shadow or float(p.get("phase_t", 0.0)) > 0.0:
 				continue
 			if (p.pos - e.pos).length_squared() < pow(e.r + P_RADIUS - 6.0, 2):
 				if p.inv <= 0.0 and e.cd <= 0.0:
@@ -936,7 +1008,7 @@ func _bomb_tick(dt: float) -> void:
 
 # ---------------------------------------------------------------- боты ---
 func _bot_think(p: Dictionary, dt: float) -> void:
-	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false, "ability": false}
+	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false, "ability": false, "extra_ability": false}
 	var b: Dictionary = p.bot
 	# Bots stay deliberately imperfect: they improve a little, but never become expert marksmen.
 	b.skill = minf(0.38, float(b.get("skill", 0.04)) + dt * 0.0008)
@@ -984,6 +1056,8 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 		var d := to.length()
 		if p.ability_cd <= 0.0 and rng.randf() < dt * lerpf(0.10, 0.24, skill):
 			inp.ability = true
+		if float(p.get("extra_cd", 0.0)) <= 0.0 and rng.randf() < dt * 0.12:
+			inp.extra_ability = true
 		var dirv := to / maxf(d, 1.0)
 		mv += dirv.orthogonal() * b.strafe * lerpf(0.35, 0.62, skill)
 		if d > b.want + 90.0:
@@ -1078,11 +1152,14 @@ func snapshot() -> Dictionary:
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
-			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "bot": not p.human,
+			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "excd": float(p.get("extra_cd", 0.0)), "phs": float(p.get("phase_t", 0.0)), "abs": float(p.get("absorb_t", 0.0)), "pr": int(p.get("prism_shots", 0)), "bot": not p.human,
 			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var pu: Array = []
 	for pickup in pickups:
 		pu.append([pickup.pos, pickup.kind, pickup.t])
+	var lu: Array = []
+	for lure in lures:
+		lu.append([lure.pos, float(lure.t)])
 	var mt: Array = []
 	for meteor in meteors:
 		mt.append([meteor.pos, float(meteor.t)])
@@ -1095,5 +1172,5 @@ func snapshot() -> Dictionary:
 	var ea: Array = []
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
-	return {"pl": pl, "bl": bl, "ea": ea, "fx": effects.duplicate(), "tl": time_left,
+	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "fx": effects.duplicate(), "tl": time_left,
 		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time}
