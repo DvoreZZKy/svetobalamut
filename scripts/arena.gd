@@ -135,6 +135,8 @@ var cursor_layer: CanvasLayer
 var cursor_canvas: Control
 var aim_screen_pos := Vector2.ZERO
 var stopwatch_lbl: Label
+var stopwatch_shape: Polygon2D
+var stopwatch_outline: Line2D
 var result_cards: Array[Button] = []
 var result_detail_open := false
 var result_list_scroll: ScrollContainer
@@ -368,6 +370,28 @@ func _build_hud() -> void:
 	stopwatch_lbl.offset_top = 14
 	stopwatch_lbl.offset_bottom = 48
 	stopwatch_lbl.add_theme_color_override("font_color", Color("#b7f7ff"))
+	stopwatch_lbl.add_theme_font_size_override("font_size", 24)
+	stopwatch_lbl.add_theme_color_override("font_shadow_color", Color("#39d9f0", 0.85))
+	stopwatch_lbl.add_theme_constant_override("shadow_offset_x", 0)
+	stopwatch_lbl.add_theme_constant_override("shadow_offset_y", 0)
+	stopwatch_shape = Polygon2D.new()
+	stopwatch_shape.position = Vector2(640, 31)
+	stopwatch_shape.polygon = PackedVector2Array([
+		Vector2(-102, -25), Vector2(102, -25), Vector2(110, -17),
+		Vector2(110, 17), Vector2(102, 25), Vector2(-102, 25),
+		Vector2(-110, 17), Vector2(-110, -17)
+	])
+	stopwatch_shape.color = Color("#0c1d31", 0.94)
+	stopwatch_shape.z_index = -1
+	cl.add_child(stopwatch_shape)
+	stopwatch_outline = Line2D.new()
+	stopwatch_outline.position = stopwatch_shape.position
+	stopwatch_outline.points = stopwatch_shape.polygon
+	stopwatch_outline.closed = true
+	stopwatch_outline.width = 2.0
+	stopwatch_outline.default_color = Color("#39d9f0", 0.92)
+	stopwatch_outline.z_index = -1
+	cl.add_child(stopwatch_outline)
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
 	banner.anchor_left = 0.5
 	banner.anchor_right = 0.5
