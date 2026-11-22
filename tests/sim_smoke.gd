@@ -57,7 +57,7 @@ func _run() -> void:
 		sim.trigger("steal")
 	for pid in sim.players:
 		var p: Dictionary = sim.players[pid]
-		var st: Dictionary = Sim.CLASS_STATS[int(p.kind) % 4]
+		var st: Dictionary = Sim.CLASS_STATS[int(p.kind)]
 		if not is_equal_approx(float(p.max_light), float(st.hp)) or not is_equal_approx(float(p.defense), float(st.def)):
 			_fail("player %s has stats that don't match class %d after steal" % [str(pid), int(p.kind)])
 
@@ -247,6 +247,29 @@ func _run() -> void:
 	sim._update_player(crystal_charge_player, 1.0 / 60.0)
 	if int(crystal_charge_player.get("prism_shots", 0)) != 2:
 		_fail("crystal did not consume exactly one prism charge per shot")
+
+	# Expanded character roster: every new class has a distinct profile and both abilities activate.
+	if Sim.CLASS_STATS.size() != 18:
+		_fail("expected 18 playable classes, found %d" % Sim.CLASS_STATS.size())
+	var class_names: Array[String] = []
+	for kind in Sim.CLASS_STATS.size():
+		var class_data: Dictionary = Sim.CLASS_STATS[kind]
+		if class_names.has(str(class_data.name)):
+			_fail("duplicate class name: %s" % str(class_data.name))
+		class_names.append(str(class_data.name))
+		if kind < 4:
+			continue
+		sim.reset([{"id": 1, "name": "Roster QA", "human": true, "color": 0, "kind": kind, "outfit": 0, "hat": 0}])
+		sim.chaos_enabled = false
+		var roster_player: Dictionary = sim.players[1]
+		sim._use_ability(roster_player)
+		if float(roster_player.ability_cd) <= 0.0:
+			_fail("class %d Q ability did not start cooldown" % kind)
+		sim._use_extra_ability(roster_player)
+		if float(roster_player.extra_cd) <= 0.0:
+			_fail("class %d F ability did not start cooldown" % kind)
+		if float(roster_player.max_light) < 100.0 or float(roster_player.max_light) > 160.0:
+			_fail("class %d has invalid max light" % kind)
 
 	# Capsule shell absorbs an incoming shot and converts it into light.
 	sim.reset(melee_cfg)
