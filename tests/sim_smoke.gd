@@ -137,6 +137,22 @@ func _run() -> void:
 			_fail("class %d takes excessive damage from a single eater" % kind)
 	sim.chaos_enabled = true
 
+	# 2aa) Timed ability durations are exposed to the HUD snapshot and count down.
+	sim.reset(cfg)
+	sim.chaos_enabled = false
+	var duration_player: Dictionary = sim.players[1]
+	duration_player.ability_t = 2.8
+	sim.lures.append({"pos": duration_player.pos, "t": 3.8, "owner": duration_player.id})
+	var duration_snapshot: Dictionary = sim.snapshot()
+	var duration_snapshot_player: Dictionary = duration_snapshot.pl[0]
+	if not is_equal_approx(float(duration_snapshot_player.get("ab", 0.0)), 2.8) or not is_equal_approx(float(duration_snapshot_player.get("lu_t", 0.0)), 3.8):
+		_fail("active ability durations were not included in the player snapshot")
+	sim.step(0.5)
+	duration_snapshot = sim.snapshot()
+	duration_snapshot_player = duration_snapshot.pl[0]
+	if not is_equal_approx(float(duration_snapshot_player.get("ab", 0.0)), 2.3) or not is_equal_approx(float(duration_snapshot_player.get("lu_t", 0.0)), 3.3):
+		_fail("active ability duration indicators did not count down")
+
 	# 2ab) Meteor impact removes half of the player's maximum light reserve.
 	sim.reset(cfg)
 	sim.chaos_enabled = false
