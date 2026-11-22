@@ -206,7 +206,7 @@ func load_settings() -> void:
 		return
 	player_name = c.get_value("s", "name", player_name)
 	profile_color = c.get_value("s", "profile_color", profile_color)
-	profile_kind = c.get_value("s", "profile_kind", profile_kind)
+	profile_kind = clampi(int(c.get_value("s", "profile_kind", profile_kind)), 0, 17)
 	profile_outfit = c.get_value("s", "profile_outfit", profile_outfit)
 	profile_hat = c.get_value("s", "profile_hat", profile_hat)
 	vol_music = c.get_value("s", "music", vol_music)
