@@ -915,7 +915,7 @@ func _process(dt: float) -> void:
 	inp["extra_ability"] = extra_ability_latch > 0.0
 	if pause_open:
 		inp = {"mv": Vector2.ZERO, "aim": get_canvas_transform().affine_inverse() * aim_screen_pos,
-			"fire": false, "dash": false, "poss": false, "ability": false, "extra_ability": false
+			"fire": false, "dash": false, "poss": false, "ability": false, "extra_ability": false}
 	if not is_client:
 		sim.inputs[local_id] = inp
 		if not G.tutorial_active:
