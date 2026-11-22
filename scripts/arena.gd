@@ -138,6 +138,7 @@ var stopwatch_lbl: Label
 var result_cards: Array[Button] = []
 var result_detail_open := false
 var result_list_scroll: ScrollContainer
+var result_category_header: Label
 var result_list: VBoxContainer
 var banner: Label
 var score_lbl: RichTextLabel
@@ -547,6 +548,13 @@ func _build_hud() -> void:
 	over_lbl.add_theme_color_override("default_color", Color("#f0fbff"))
 	cl.add_child(over_lbl)
 	over_lbl.visible = false
+	result_category_header = Label.new()
+	result_category_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	result_category_header.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	result_category_header.add_theme_font_size_override("font_size", 25)
+	result_category_header.add_theme_font_override("font", _bold_hud_font())
+	result_category_header.visible = false
+	cl.add_child(result_category_header)
 	result_list_scroll = ScrollContainer.new()
 	result_list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	result_list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -1493,7 +1501,11 @@ func _open_result_category(category: String) -> void:
 		lines += "[cell][color=%s]%02d[/color][/cell][cell][color=#%s]%s%s[/color][/cell][cell][b][color=%s]%d[/color][/b][/cell]" % [accent, i + 1, player_color, str(p.n), "  [Б]" if bool(p.get("bot", false)) else "", accent, amount]
 	lines += "[/table]"
 	over_lbl.scroll_active = false
-	over_lbl.text = "[center][font_size=27][b][color=%s]%s[/color][/b][/font_size][/center]" % [accent, display_category]
+	over_lbl.text = ""
+	result_category_header.text = display_category
+	result_category_header.add_theme_color_override("font_color", Color(accent))
+	result_category_header.add_theme_color_override("font_shadow_color", Color(accent, 0.3))
+	result_category_header.visible = true
 	for child in result_list.get_children():
 		child.queue_free()
 	for i in rows.size():
@@ -1585,6 +1597,7 @@ func _close_result_category() -> void:
 	for card in result_cards:
 		card.visible = true
 	result_list_scroll.visible = false
+	result_category_header.visible = false
 	over_lbl.visible = true
 	over_restart_btn.visible = not is_client
 	over_lbl.modulate.a = 1.0
@@ -1673,8 +1686,10 @@ func _layout_game_over() -> void:
 			value_label.position = Vector2(8, card_height - 62)
 			value_label.size = Vector2(card_width - 16, 34)
 	over_lbl.size.y = 120.0
-	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 142.0)
-	result_list_scroll.size = Vector2(panel_size.x - 96.0, panel_size.y - 238.0)
+	result_category_header.position = Vector2(pos.x + 48.0, pos.y + 112.0)
+	result_category_header.size = Vector2(panel_size.x - 96.0, 38.0)
+	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 158.0)
+	result_list_scroll.size = Vector2(panel_size.x - 96.0, panel_size.y - 254.0)
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
 	over_menu_btn.position = Vector2(pos.x + panel_size.x * 0.5 + 22.0, buttons_y)
