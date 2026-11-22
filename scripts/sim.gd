@@ -117,7 +117,7 @@ func reset(cfg: Array) -> void:
 		var ang := TAU * i / n
 		var pos := A / 2.0 + Vector2(cos(ang) * 620.0, sin(ang) * 330.0)
 		var ci: int = int(c.get("color", shuffled[i])) if c.human else shuffled[i] % G.PROFILE_COLORS.size()
-		var kind: int = int(c.get("kind", ci % 4)) if c.human else ci % 4
+		var kind: int = int(c.get("kind", ci % CLASS_STATS.size())) if c.human else rng.randi_range(0, CLASS_STATS.size() - 1)
 		var bot_hat := rng.randi_range(1, 4) if not c.human else int(c.get("hat", 0))
 		players[c.id] = _new_player(c.id, c.name, c.human, kind, ci, pos,
 			bot_hat, int(c.get("outfit", 0)))
@@ -127,14 +127,15 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 	return {
 		"id": id, "name": pname, "human": human, "kind": kind, "ci": ci, "hat": hat, "outfit": outfit,
 		"pos": pos, "vel": Vector2.ZERO, "aim": (A / 2.0 - pos).normalized(),
-		"light": CLASS_STATS[kind % 4].hp, "max_light": CLASS_STATS[kind % 4].hp, "shield_hp": 0.0, "max_shield": 0.0,
+		"light": CLASS_STATS[posmod(kind, CLASS_STATS.size())].hp, "max_light": CLASS_STATS[kind % 4].hp, "shield_hp": 0.0, "max_shield": 0.0,
 		"defense": CLASS_STATS[kind % 4].def, "attack": CLASS_STATS[kind % 4].atk,
 		"speed_mult": CLASS_STATS[kind % 4].speed, "fire_rate": CLASS_STATS[kind % 4].rate,
 		"ability_cd": 0.0, "ability_t": 0.0, "extra_cd": 0.0, "phase_t": 0.0, "absorb_t": 0.0, "prism_shots": 0,
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
-		"wave_ammo": 4, "wave_reload_t": 0.0, "buff": "", "buff_t": 0.0,\n\t\t"field_t": 0.0, "field_mode": 0, "special_shots": 0, "turret_t": 0.0, "turret_cd": 0.0,
+		"wave_ammo": 4, "wave_reload_t": 0.0, "buff": "", "buff_t": 0.0,
+		"field_t": 0.0, "field_mode": 0, "special_shots": 0, "turret_t": 0.0, "turret_cd": 0.0,
 		"pts": 0, "kills": 0, "damage_total": 0.0, "healing_total": 0.0, "kill_streak": 0, "kill_streak_t": 0.0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
@@ -248,7 +249,10 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.ability_t = maxf(0.0, p.ability_t - dt)
 	p.extra_cd = maxf(0.0, float(p.get("extra_cd", 0.0)) - dt)
 	p.phase_t = maxf(0.0, float(p.get("phase_t", 0.0)) - dt)
-	p.absorb_t = maxf(0.0, float(p.get("absorb_t", 0.0)) - dt)\n\tp.field_t = maxf(0.0, float(p.get("field_t", 0.0)) - dt)\n\tp.turret_t = maxf(0.0, float(p.get("turret_t", 0.0)) - dt)\n\tp.turret_cd = maxf(0.0, float(p.get("turret_cd", 0.0)) - dt)
+	p.absorb_t = maxf(0.0, float(p.get("absorb_t", 0.0)) - dt)
+	p.field_t = maxf(0.0, float(p.get("field_t", 0.0)) - dt)
+	p.turret_t = maxf(0.0, float(p.get("turret_t", 0.0)) - dt)
+	p.turret_cd = maxf(0.0, float(p.get("turret_cd", 0.0)) - dt)
 
 	if p.shadow:
 		_update_shadow(p, dt, mv, want_poss)
@@ -313,7 +317,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			var bolt_radius := 11.0 if p.kind == 3 else 6.0
 			var damage_mult := 0.42 if p.kind == 0 else (0.72 if prism_active else 1.0)
 			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
-				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3 or special_active or p.kind == 11, "dmg": BULLET_DMG * p.attack * damage_mult * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
+				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3 or special_active or p.kind == 11, "dmg": BULLET_DMG * p.attack * damage_mult * (1.25 if special_active and p.kind == 11 else 1.0) * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
 				"radius": bolt_radius})
 			next_id += 1
 		if prism_active:
