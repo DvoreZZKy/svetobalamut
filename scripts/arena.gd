@@ -1346,7 +1346,7 @@ func _update_hud(dt: float) -> void:
 		stopwatch_lbl.text = glitch_text
 	else:
 		stopwatch_lbl.text = stopwatch_text
-	stopwatch_lbl.position = Vector2.ZERO
+	stopwatch_lbl.position = Vector2(-80.0, 14.0)
 	stopwatch_lbl.rotation = 0.0
 	stopwatch_lbl.scale = Vector2.ONE
 	stopwatch_lbl.modulate = Color.WHITE
@@ -1357,7 +1357,7 @@ func _update_hud(dt: float) -> void:
 		var flame := 0.5 + 0.5 * sin(glitch_now * 0.025)
 		stopwatch_lbl.modulate = Color(1.0, 0.42 + flame * 0.28, 0.16)
 		stopwatch_lbl.scale = Vector2(1.0 + flame * 0.07, 1.0 + flame * 0.12)
-		stopwatch_lbl.position = Vector2(randf_range(-2.0, 2.0), randf_range(-3.0, 1.0))
+		stopwatch_lbl.position += Vector2(randf_range(-2.0, 2.0), randf_range(-3.0, 1.0))
 		stopwatch_lbl.add_theme_color_override("font_shadow_color", Color(1.0, 0.19, 0.025, 1.0))
 		stopwatch_shape.color = Color("#35170e", 0.98)
 		stopwatch_outline.default_color = Color("#ff6a24", 1.0)
@@ -1375,19 +1375,19 @@ func _update_hud(dt: float) -> void:
 			"blind":
 				stopwatch_lbl.modulate.a = 0.18 if step % 3 == 0 else 1.0
 			"bounce":
-				stopwatch_lbl.position.x = sin(glitch_now * 0.035) * 8.0
+				stopwatch_lbl.position.x += sin(glitch_now * 0.035) * 8.0
 			"zerog":
-				stopwatch_lbl.position.y = sin(glitch_now * 0.006) * 6.0
+				stopwatch_lbl.position.y += sin(glitch_now * 0.006) * 6.0
 			"rain":
 				stopwatch_lbl.modulate = Color("#7cf7ff")
-				stopwatch_lbl.position = Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0))
+				stopwatch_lbl.position += Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0))
 			"steal":
 				stopwatch_lbl.modulate = Color("#b7ff79") if step % 2 == 0 else Color("#ff6bcb")
 			"doubles":
 				stopwatch_lbl.modulate = Color("#ff8be8")
 				stopwatch_lbl.scale = Vector2(1.08, 0.94)
 			"magnet":
-				stopwatch_lbl.position.x = sin(glitch_now * 0.02) * 4.0
+				stopwatch_lbl.position.x += sin(glitch_now * 0.02) * 4.0
 				stopwatch_lbl.scale = Vector2(1.0 + 0.08 * sin(glitch_now * 0.02), 1.0)
 			"bomb":
 				stopwatch_lbl.modulate = Color("#ffb34d") if step % 2 == 0 else Color("#ff4e3d")
