@@ -137,6 +137,14 @@ func _run() -> void:
 			_fail("class %d takes excessive damage from a single eater" % kind)
 	sim.chaos_enabled = true
 
+	# 2a9) Ghost's Q phase window is timed and exposed like other active abilities.
+	sim.reset([{"id": 1, "name": "Ghost", "human": true, "color": 0, "kind": 2, "outfit": 0, "hat": 0}])
+	sim.chaos_enabled = false
+	var ghost_duration_player: Dictionary = sim.players[1]
+	sim._use_ability(ghost_duration_player)
+	if not is_equal_approx(float(ghost_duration_player.ability_t), 0.65):
+		_fail("ghost's timed Q ability duration was not started")
+
 	# 2aa) Timed ability durations are exposed to the HUD snapshot and count down.
 	sim.reset(cfg)
 	sim.chaos_enabled = false
