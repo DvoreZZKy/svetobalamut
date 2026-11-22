@@ -239,7 +239,7 @@ static func _clamp_int(value: Variant, low: int, high: int) -> int:
 static func sanitize_profile(p: Dictionary) -> Dictionary:
 	return {
 		"color": _clamp_int(p.get("color", 0), 0, 7),
-		"kind": _clamp_int(p.get("kind", 0), 0, 3),
+		"kind": _clamp_int(p.get("kind", 0), 0, 17),
 		"outfit": _clamp_int(p.get("outfit", 0), 0, 4),
 		"hat": _clamp_int(p.get("hat", 0), 0, 4),
 	}
