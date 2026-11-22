@@ -532,7 +532,7 @@ func _character_pulse(p: Dictionary, radius: float, damage: float, push: float) 
 		var offset: Vector2 = target.pos - p.pos
 		var distance := offset.length()
 		if distance <= radius:
-			var direction := offset.normalized() if distance > 0.01 else p.aim
+			var direction: Vector2 = offset.normalized() if distance > 0.01 else p.aim
 			_damage(target, damage * float(p.attack) * (1.0 - 0.35 * distance / radius), p.id, false)
 			target.vel += direction * push * (1.0 - 0.3 * distance / radius)
 	events.append({"t":"ability","x":p.pos.x,"y":p.pos.y,"c":p.ci,"kind":p.kind})
