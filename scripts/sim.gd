@@ -559,6 +559,8 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	var global_state := (Engine.get_main_loop() as SceneTree).root.get_node_or_null("G")
 	if global_state != null and bool(global_state.get("tutorial_active")) and bool(p.get("human", false)):
 		return
+	if float(p.get("phase_t", 0.0)) > 0.0:
+		return
 	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.90
 	if str(p.get("buff", "")) == "shield":
 		reduced *= 0.62
@@ -566,8 +568,6 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 		reduced *= 0.72
 	p.light -= reduced
 	events.append({"t": "hurt", "id": p.id, "amount": reduced})
-	if float(p.get("phase_t", 0.0)) > 0.0:
-		return
 	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
 		players[src].damage_total = float(players[src].get("damage_total", 0.0)) + reduced
 		var damage_by: Dictionary = p.get("damage_by", {})
@@ -752,19 +752,6 @@ func _update_bullets(dt: float) -> void:
 		b.vel = bv
 		if not dead:
 			for p in players.values():
-				if p.shadow or p.inv > 0.0 or float(p.get("phase_t", 0.0)) > 0.0:
-					continue
-				if p.id == b.owner and b.bn == 0:
-					continue
-				if (p.pos - b.pos).length_squared() < pow(P_RADIUS + float(b.get("radius", 6.0)), 2):
-					var hit_damage := float(b.get("dmg", BULLET_DMG))
-					if players.has(b.owner) and int(players[b.owner].get("kind", -1)) == 1 and int(p.get("kind", -1)) == 1:
-						hit_damage *= 2.0
-					_damage(p, hit_damage, b.owner, b.bn > 0)
-					dead = true
-					break
-		if not dead:
-			for p in players.values():
 				if p.shadow or int(p.kind) != 1 or float(p.get("absorb_t", 0.0)) <= 0.0 or int(p.id) == int(b.owner):
 					continue
 				if p.pos.distance_squared_to(b.pos) <= 118.0 * 118.0:
@@ -777,6 +764,19 @@ func _update_bullets(dt: float) -> void:
 						events.append({"t": "heal", "id": p.id, "amount": gained})
 					dead = true
 					events.append({"t": "capsule_absorb", "x": b.pos.x, "y": b.pos.y, "c": p.ci, "id": p.id})
+					break
+		if not dead:
+			for p in players.values():
+				if p.shadow or p.inv > 0.0 or float(p.get("phase_t", 0.0)) > 0.0:
+					continue
+				if p.id == b.owner and b.bn == 0:
+					continue
+				if (p.pos - b.pos).length_squared() < pow(P_RADIUS + float(b.get("radius", 6.0)), 2):
+					var hit_damage := float(b.get("dmg", BULLET_DMG))
+					if players.has(b.owner) and int(players[b.owner].get("kind", -1)) == 1 and int(p.get("kind", -1)) == 1:
+						hit_damage *= 2.0
+					_damage(p, hit_damage, b.owner, b.bn > 0)
+					dead = true
 					break
 		if not dead:
 			for e in eaters:
