@@ -6,10 +6,24 @@ extends RefCounted
 const A := Vector2(1600, 900)
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
-	{"name": "Светляк", "hp": 125.0, "def": 0.95, "atk": 0.82, "speed": 1.12, "rate": 0.22, "ability": "Перегрузка"},
-	{"name": "Капсула", "hp": 140.0, "def": 0.88, "atk": 1.35, "speed": 0.78, "rate": 0.56, "ability": "Энергощит"},
-	{"name": "Призрак", "hp": 130.0, "def": 0.88, "atk": 1.0, "speed": 1.20, "rate": 0.26, "ability": "Фазовый скачок"},
-	{"name": "Кристалл", "hp": 140.0, "def": 0.96, "atk": 1.65, "speed": 1.00, "rate": 0.46, "ability": "Звёздный залп"}
+	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.82,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
+	{"name":"Капсула","hp":140.0,"def":0.88,"atk":1.35,"speed":0.78,"rate":0.56,"ability":"Энергощит"},
+	{"name":"Призрак","hp":130.0,"def":0.88,"atk":1.0,"speed":1.20,"rate":0.26,"ability":"Фазовый скачок"},
+	{"name":"Кристалл","hp":140.0,"def":0.96,"atk":1.65,"speed":1.0,"rate":0.46,"ability":"Звёздный залп"},
+	{"name":"Импульс","hp":118.0,"def":1.02,"atk":0.95,"speed":1.22,"rate":0.24,"ability":"Разгон"},
+	{"name":"Магнит","hp":132.0,"def":0.96,"atk":0.95,"speed":0.96,"rate":0.32,"ability":"Притяжение"},
+	{"name":"Слизень","hp":155.0,"def":0.84,"atk":0.86,"speed":0.82,"rate":0.34,"ability":"Липкая броня"},
+	{"name":"Сверхнова","hp":112.0,"def":1.08,"atk":1.18,"speed":0.94,"rate":0.38,"ability":"Вспышка"},
+	{"name":"Мираж","hp":120.0,"def":1.0,"atk":0.96,"speed":1.16,"rate":0.28,"ability":"Смещение"},
+	{"name":"Осколок","hp":126.0,"def":0.98,"atk":1.08,"speed":1.04,"rate":0.30,"ability":"Гранёный залп"},
+	{"name":"Сингулярность","hp":138.0,"def":0.94,"atk":0.98,"speed":0.88,"rate":0.36,"ability":"Гравитационная яма"},
+	{"name":"Рикошет","hp":122.0,"def":1.0,"atk":1.0,"speed":1.08,"rate":0.29,"ability":"Отскок"},
+	{"name":"Вулкан","hp":145.0,"def":0.92,"atk":1.12,"speed":0.90,"rate":0.40,"ability":"Перегрев"},
+	{"name":"Паразит","hp":128.0,"def":0.98,"atk":1.02,"speed":1.02,"rate":0.31,"ability":"Высасывание"},
+	{"name":"Маятник","hp":130.0,"def":0.97,"atk":1.0,"speed":1.06,"rate":0.30,"ability":"Размах"},
+	{"name":"Губка","hp":150.0,"def":0.86,"atk":0.90,"speed":0.88,"rate":0.35,"ability":"Поглощение"},
+	{"name":"Генератор","hp":124.0,"def":0.98,"atk":0.92,"speed":0.98,"rate":0.33,"ability":"Автотурель"},
+	{"name":"Полярность","hp":134.0,"def":0.94,"atk":1.0,"speed":1.0,"rate":0.32,"ability":"Отталкивание"}
 ]
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
@@ -120,7 +134,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
-		"wave_ammo": 4, "wave_reload_t": 0.0, "buff": "", "buff_t": 0.0,
+		"wave_ammo": 4, "wave_reload_t": 0.0, "buff": "", "buff_t": 0.0,\n\t\t"field_t": 0.0, "field_mode": 0, "special_shots": 0, "turret_t": 0.0, "turret_cd": 0.0,
 		"pts": 0, "kills": 0, "damage_total": 0.0, "healing_total": 0.0, "kill_streak": 0, "kill_streak_t": 0.0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
@@ -234,7 +248,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.ability_t = maxf(0.0, p.ability_t - dt)
 	p.extra_cd = maxf(0.0, float(p.get("extra_cd", 0.0)) - dt)
 	p.phase_t = maxf(0.0, float(p.get("phase_t", 0.0)) - dt)
-	p.absorb_t = maxf(0.0, float(p.get("absorb_t", 0.0)) - dt)
+	p.absorb_t = maxf(0.0, float(p.get("absorb_t", 0.0)) - dt)\n\tp.field_t = maxf(0.0, float(p.get("field_t", 0.0)) - dt)\n\tp.turret_t = maxf(0.0, float(p.get("turret_t", 0.0)) - dt)\n\tp.turret_cd = maxf(0.0, float(p.get("turret_cd", 0.0)) - dt)
 
 	if p.shadow:
 		_update_shadow(p, dt, mv, want_poss)
@@ -249,7 +263,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.vel = p.dash_dir * DASH_SPEED
 	else:
 		var k := 0.9 if effects.has("zerog") else 15.0
-		var speed_boost := 1.55 if p.kind == 0 and p.ability_t > 0.0 else 1.0
+		var speed_boost := 1.55 if p.kind == 0 and p.ability_t > 0.0 else (1.42 if (p.kind == 4 or p.kind == 14) and p.ability_t > 0.0 else 1.0)
 		if str(p.get("buff", "")) == "swift":
 			speed_boost *= 1.28
 		p.vel = p.vel.lerp(mv.limit_length(1.0) * SPEED * p.speed_mult * speed_boost, clampf(k * dt, 0.0, 1.0))
@@ -289,7 +303,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.wave_released = false
 		p.fire_was_down = want_fire
 	elif want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
-		var prism_active: bool = p.kind == 3 and int(p.get("prism_shots", 0)) > 0
+		var prism_active: bool = p.kind == 3 and int(p.get("prism_shots", 0)) > 0\n\t\tvar special_active: bool = int(p.get("special_shots", 0)) > 0
 		var spread_count := 3 if p.kind == 0 or prism_active else 1
 		for shot_i in spread_count:
 			var spread := (float(shot_i) - 1.0) * (0.12 if p.kind == 0 else 0.24) if spread_count == 3 else 0.0
@@ -299,7 +313,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			var bolt_radius := 11.0 if p.kind == 3 else 6.0
 			var damage_mult := 0.42 if p.kind == 0 else (0.72 if prism_active else 1.0)
 			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
-				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3, "dmg": BULLET_DMG * p.attack * damage_mult * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
+				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3 or special_active or p.kind == 11, "dmg": BULLET_DMG * p.attack * damage_mult * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
 				"radius": bolt_radius})
 			next_id += 1
 		if prism_active:
@@ -398,6 +412,42 @@ func _use_ability(p: Dictionary) -> void:
 				next_id += 1
 			events.append({"t": "ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
 
+		4:
+			p.ability_t = 2.2
+		5:
+			p.field_t = 2.8
+			p.field_mode = 1
+		6:
+			p.max_shield = 22.0
+			p.shield_hp = 22.0
+		7:
+			_character_pulse(p, 230.0, 28.0, 420.0)
+		8:
+			p.pos = (p.pos + p.aim * 280.0).clamp(Vector2(40,40), A - Vector2(40,40))
+			p.inv = 0.28
+		9:
+			p.special_shots = 5
+		10:
+			p.field_t = 3.2
+			p.field_mode = 1
+		11:
+			p.special_shots = 5
+		12:
+			p.buff = "overdrive"
+			p.buff_t = 3.0
+		13:
+			_drain_nearest(p, 20.0, 12.0)
+		14:
+			p.ability_t = 3.2
+		15:
+			p.absorb_t = 2.8
+			p.absorb_count = 0
+		16:
+			p.turret_t = 5.0
+			p.turret_cd = 0.1
+		17:
+			p.field_t = 2.5
+			p.field_mode = 2
 
 
 func _use_extra_ability(p: Dictionary) -> void:
@@ -423,7 +473,109 @@ func _use_extra_ability(p: Dictionary) -> void:
 			# A prism splits the next three shots into refracted rays.
 			p.prism_shots = 3
 			events.append({"t": "extra_ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
+		4:
+			_chain_lightning(p)
+		5, 6:
+			p.field_t = 2.5
+			p.field_mode = 2
+		7:
+			_character_pulse(p, 280.0, 34.0, 520.0)
+		8:
+			p.pos = (p.pos + p.aim * 390.0).clamp(Vector2(40,40), A - Vector2(40,40))
+			p.inv = 0.35
+		9, 15:
+			p.max_shield = 30.0
+			p.shield_hp = 30.0
+		10:
+			p.field_t = 2.5
+			p.field_mode = 1
+		11:
+			for i in 5:
+				var dir := Vector2.from_angle(p.aim.angle() + (float(i) - 2.0) * 0.22)
+				bullets.append({"id":next_id,"pos":p.pos + dir * 34.0,"vel":dir * 1050.0,"owner":p.id,"life":1.35,"bn":0,"ricochet":true,"dmg":BULLET_DMG * p.attack * 0.58,"radius":6.0})
+				next_id += 1
+		12:
+			_character_pulse(p, 205.0, 22.0, 620.0)
+		13:
+			_drain_nearest(p, 28.0, 18.0)
+		14:
+			_character_pulse(p, 220.0, 20.0, 760.0)
+		15:
+			var recovered := minf(float(p.get("shield_hp",0.0)), 24.0)
+			p.shield_hp = maxf(0.0, float(p.get("shield_hp",0.0)) - recovered)
+			p.light = minf(float(p.max_light), float(p.light) + recovered)
+		16:
+			p.turret_t = 8.0
+			p.turret_cd = 0.1
+		17:
+			p.field_t = 2.8
+			p.field_mode = 1 if int(p.get("field_mode",0)) == 2 else 2
 
+
+
+func _character_pulse(p: Dictionary, radius: float, damage: float, push: float) -> void:
+	for target in players.values():
+		if target.id == p.id or target.shadow or target.decoy or target.inv > 0.0:
+			continue
+		var offset: Vector2 = target.pos - p.pos
+		var distance := offset.length()
+		if distance <= radius:
+			var direction := offset.normalized() if distance > 0.01 else p.aim
+			_damage(target, damage * float(p.attack) * (1.0 - 0.35 * distance / radius), p.id, false)
+			target.vel += direction * push * (1.0 - 0.3 * distance / radius)
+	events.append({"t":"ability","x":p.pos.x,"y":p.pos.y,"c":p.ci,"kind":p.kind})
+	shake_req = maxf(shake_req, 9.0)
+
+
+func _drain_nearest(p: Dictionary, damage: float, healing: float) -> void:
+	var target := _nearest(p, false)
+	if target.is_empty() or (target.pos as Vector2).distance_to(p.pos) > 360.0:
+		return
+	_damage(target, damage * float(p.attack), p.id, false)
+	var old_light: float = float(p.light)
+	p.light = minf(float(p.max_light), float(p.light) + healing)
+	var restored := float(p.light) - old_light
+	if restored > 0.01:
+		p.healing_total = float(p.get("healing_total",0.0)) + restored
+		events.append({"t":"heal","id":p.id,"amount":restored})
+
+
+func _chain_lightning(p: Dictionary) -> void:
+	var first := _nearest(p, false)
+	if first.is_empty() or (first.pos as Vector2).distance_to(p.pos) > 300.0:
+		return
+	var origin: Vector2 = first.pos
+	_damage(first, 24.0 * float(p.attack), p.id, false)
+	var second: Dictionary = {}
+	var best_distance := 220.0 * 220.0
+	for candidate in players.values():
+		if candidate.id == p.id or candidate.id == first.id or candidate.shadow or candidate.decoy:
+			continue
+		var distance: float = candidate.pos.distance_squared_to(origin)
+		if distance < best_distance:
+			best_distance = distance
+			second = candidate
+	if not second.is_empty():
+		_damage(second, 15.0 * float(p.attack), p.id, false)
+
+
+func _tick_character_fields(p: Dictionary, dt: float) -> void:
+	if p.field_t > 0.0:
+		for target in players.values():
+			if target.id == p.id or target.shadow or target.decoy:
+				continue
+			var offset: Vector2 = p.pos - target.pos
+			var distance := offset.length()
+			if distance < 310.0 and distance > 1.0:
+				var strength := (1.0 - distance / 310.0) * 520.0
+				target.vel += offset.normalized() * strength * dt * (1.0 if int(p.field_mode) == 1 else -1.0)
+	if p.turret_t > 0.0 and p.turret_cd <= 0.0:
+		var target := _nearest(p, false)
+		if not target.is_empty():
+			var direction: Vector2 = (target.pos - p.pos).normalized()
+			bullets.append({"id":next_id,"pos":p.pos + direction * 38.0,"vel":direction * 1050.0,"owner":p.id,"life":1.0,"bn":0,"ricochet":false,"dmg":BULLET_DMG * float(p.attack) * 0.55,"radius":5.0})
+			next_id += 1
+			p.turret_cd = 0.72
 
 func _update_lures(dt: float) -> void:
 	var keep: Array = []
