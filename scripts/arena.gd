@@ -128,7 +128,7 @@ var timer_shape: Polygon2D
 var timer_outline: Line2D
 var ability_bar: NeonProgressBar
 var capsule_ammo_lbl: Label
-var capsule_reload_bar: ProgressBar
+var capsule_reload_bar: NeonProgressBar
 var cursor_layer: CanvasLayer
 var cursor_canvas: Control
 var aim_screen_pos := Vector2.ZERO
