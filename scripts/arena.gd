@@ -1319,14 +1319,15 @@ func _update_hud(dt: float) -> void:
 	var stopwatch_text := "%02d:%02d" % [elapsed / 60, elapsed % 60]
 	var glitch_now := Time.get_ticks_msec()
 	var fx: Dictionary = view.get("fx", {})
-	var meteor_active := not view.get("mt", []).is_empty()
-	var meteor_burning := meteor_active or glitch_now < meteor_impact_until
+	var meteors: Array = view.get("mt", [])
+	var meteor_active: bool = not meteors.is_empty()
+	var meteor_burning: bool = meteor_active or glitch_now < meteor_impact_until
 	var chaos_key := ""
 	for candidate in ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]:
 		if float(fx.get(candidate, 0.0)) > 0.0:
 			chaos_key = candidate
 			break
-	var glitching := glitch_now < timer_glitch_until or meteor_active or not chaos_key.is_empty()
+	var glitching: bool = glitch_now < timer_glitch_until or meteor_active or not chaos_key.is_empty()
 	var step := int(glitch_now / (42 if meteor_burning else 65))
 	if glitching:
 		if step != glitch_step:
