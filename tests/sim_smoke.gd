@@ -161,6 +161,49 @@ func _run() -> void:
 	if not sim.bullets.is_empty():
 		_fail("capsule shockwave unexpectedly spawned a projectile")
 
+	# 2e) Every class has a working secondary ability on the dedicated F input.
+	for kind in 4:
+		var extra_cfg: Array = [{"id": 1, "name": "Extra QA", "human": true, "color": 0, "kind": kind, "outfit": 0, "hat": 0}]
+		sim.reset(extra_cfg)
+		sim.chaos_enabled = false
+		var extra_player: Dictionary = sim.players[1]
+		sim._use_extra_ability(extra_player)
+		if float(extra_player.extra_cd) <= 0.0:
+			_fail("class %d secondary ability did not start its cooldown" % kind)
+		match kind:
+			0:
+				if sim.lures.size() != 1:
+					_fail("firefly bioluminescence did not create a lure")
+			1:
+				if float(extra_player.absorb_t) <= 0.0:
+					_fail("capsule shell did not activate")
+			2:
+				if float(extra_player.phase_t) <= 0.0:
+					_fail("ghost phasing did not activate")
+			3:
+				if int(extra_player.prism_shots) != 3:
+					_fail("crystal prism did not charge three refracted shots")
+	# Capsule shell absorbs an incoming shot and converts it into light.
+	sim.reset(melee_cfg)
+	sim.chaos_enabled = false
+	capsule = sim.players[1]
+	capsule.pos = Vector2(800, 450)
+	capsule.absorb_t = 1.0
+	var shell_light: float = float(capsule.light)
+	sim.bullets.append({"id": 99, "pos": capsule.pos + Vector2(70, 0), "vel": Vector2.ZERO, "owner": 2, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 10.0, "radius": 6.0})
+	sim._update_bullets(1.0 / 60.0)
+	if not sim.bullets.is_empty() or float(capsule.light) <= shell_light:
+		_fail("capsule shell failed to absorb a nearby projectile")
+	# Ghost phase must reject direct damage as well as projectile/eater collisions.
+	sim.reset(melee_cfg)
+	sim.chaos_enabled = false
+	var ghost: Dictionary = sim.players[1]
+	ghost.phase_t = 1.0
+	var ghost_light: float = float(ghost.light)
+	sim._damage(ghost, 20.0, 2, false)
+	if not is_equal_approx(float(ghost.light), ghost_light):
+		_fail("ghost took damage while phased")
+
 	# 2c) A match does not end because of elapsed time; the last glowing player wins.
 	var winner_cfg: Array = [
 		{"id": 1, "name": "Last Light", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0},
