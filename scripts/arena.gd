@@ -26,6 +26,7 @@ var last_score_text := ""
 var timer_glitch_until := 0
 var glitch_step := -1
 var glitch_text := "0:00"
+var meteor_impact_until := 0
 
 var pviews := {}
 var eviews := {}
@@ -375,7 +376,7 @@ func _build_hud() -> void:
 	stopwatch_lbl.add_theme_constant_override("shadow_offset_x", 0)
 	stopwatch_lbl.add_theme_constant_override("shadow_offset_y", 0)
 	stopwatch_shape = Polygon2D.new()
-	stopwatch_shape.position = Vector2(640, 31)
+	stopwatch_shape.position = Vector2(ARENA.x * 0.5, 31)
 	stopwatch_shape.polygon = PackedVector2Array([
 		Vector2(-102, -25), Vector2(102, -25), Vector2(110, -17),
 		Vector2(110, 17), Vector2(102, 25), Vector2(-102, 25),
@@ -1313,26 +1314,76 @@ func _update_hud(dt: float) -> void:
 	var elapsed := int(float(view.get("elapsed", 0.0)))
 	var stopwatch_text := "%02d:%02d" % [elapsed / 60, elapsed % 60]
 	var glitch_now := Time.get_ticks_msec()
-	if glitch_now < timer_glitch_until:
-		var step := int(glitch_now / 65)
+	var fx: Dictionary = view.get("fx", {})
+	var meteor_active := not view.get("mt", []).is_empty()
+	var meteor_burning := meteor_active or glitch_now < meteor_impact_until
+	var chaos_key := ""
+	for candidate in ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]:
+		if float(fx.get(candidate, 0.0)) > 0.0:
+			chaos_key = candidate
+			break
+	var glitching := glitch_now < timer_glitch_until or meteor_active
+	var step := int(glitch_now / (42 if meteor_burning else 65))
+	if glitching:
 		if step != glitch_step:
 			glitch_step = step
 			var chars := stopwatch_text.split("")
+			var chance := 0.58 if meteor_burning or chaos_key == "rain" else 0.32
 			for i in chars.size():
-				if randf() < 0.58:
-					chars[i] = str(randi_range(0, 9)) if i != 2 else ":"
+				if i != 2 and randf() < chance:
+					chars[i] = str(randi_range(0, 9))
 			glitch_text = "".join(chars)
 		stopwatch_lbl.text = glitch_text
-		stopwatch_lbl.modulate = Color("#ff6b9d") if (step % 2 == 0) else Color("#74edff")
-		stopwatch_lbl.position = Vector2(randf_range(-3.0, 3.0), randf_range(-2.0, 2.0))
-		stopwatch_lbl.rotation = randf_range(-0.035, 0.035)
 	else:
 		stopwatch_lbl.text = stopwatch_text
-		stopwatch_lbl.modulate = Color.WHITE
-		stopwatch_lbl.position = Vector2.ZERO
-		stopwatch_lbl.rotation = 0.0
+	stopwatch_lbl.position = Vector2.ZERO
+	stopwatch_lbl.rotation = 0.0
+	stopwatch_lbl.scale = Vector2.ONE
+	stopwatch_lbl.modulate = Color.WHITE
+	stopwatch_shape.color = Color("#0c1d31", 0.94)
+	stopwatch_outline.default_color = Color("#39d9f0", 0.92)
+	stopwatch_lbl.add_theme_color_override("font_shadow_color", Color("#39d9f0", 0.85))
+	if meteor_burning:
+		var flame := 0.5 + 0.5 * sin(glitch_now * 0.025)
+		stopwatch_lbl.modulate = Color(1.0, 0.42 + flame * 0.28, 0.16)
+		stopwatch_lbl.scale = Vector2(1.0 + flame * 0.07, 1.0 + flame * 0.12)
+		stopwatch_lbl.position = Vector2(randf_range(-2.0, 2.0), randf_range(-3.0, 1.0))
+		stopwatch_lbl.add_theme_color_override("font_shadow_color", Color(1.0, 0.19, 0.025, 1.0))
+		stopwatch_shape.color = Color("#35170e", 0.98)
+		stopwatch_outline.default_color = Color("#ff6a24", 1.0)
+		if glitch_now < meteor_impact_until:
+			stopwatch_lbl.position += Vector2(randf_range(-7.0, 7.0), randf_range(-5.0, 5.0))
+			stopwatch_lbl.rotation = randf_range(-0.055, 0.055)
+	elif glitching:
+		match chaos_key:
+			"invert":
+				stopwatch_lbl.modulate = Color("#f5f5ff") if step % 2 == 0 else Color("#9b8cff")
+				stopwatch_lbl.rotation = 0.025 * sin(glitch_now * 0.012)
+			"reverse":
+				stopwatch_lbl.rotation = 0.10 * sin(glitch_now * 0.018)
+				stopwatch_lbl.modulate = Color("#ff7be5")
+			"blind":
+				stopwatch_lbl.modulate.a = 0.18 if step % 3 == 0 else 1.0
+			"bounce":
+				stopwatch_lbl.position.x = sin(glitch_now * 0.035) * 8.0
+			"zerog":
+				stopwatch_lbl.position.y = sin(glitch_now * 0.006) * 6.0
+			"rain":
+				stopwatch_lbl.modulate = Color("#7cf7ff")
+				stopwatch_lbl.position = Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0))
+			"steal":
+				stopwatch_lbl.modulate = Color("#b7ff79") if step % 2 == 0 else Color("#ff6bcb")
+			"doubles":
+				stopwatch_lbl.modulate = Color("#ff8be8")
+				stopwatch_lbl.scale = Vector2(1.08, 0.94)
+			"magnet":
+				stopwatch_lbl.position.x = sin(glitch_now * 0.02) * 4.0
+				stopwatch_lbl.scale = Vector2(1.0 + 0.08 * sin(glitch_now * 0.02), 1.0)
+			"bomb":
+				stopwatch_lbl.modulate = Color("#ffb34d") if step % 2 == 0 else Color("#ff4e3d")
+			_:
+				stopwatch_lbl.modulate = Color("#ff6b9d") if step % 2 == 0 else Color("#74edff")
 	var active_chaos: Array[String] = []
-	var fx: Dictionary = view.get("fx", {})
 	for chaos_key in fx.keys():
 		if float(fx[chaos_key]) > 0.0 and CHAOS_RU.has(chaos_key):
 			active_chaos.append(str(CHAOS_RU[chaos_key]))
@@ -1839,6 +1890,7 @@ func _handle_events(evs: Array) -> void:
 				_show_banner("МЕТЕОРИТНЫЙ ДОЖДЬ")
 				flash(pos, 110.0, Color(1.0, 0.32, 0.12), 0.35)
 			"meteor_impact":
+				meteor_impact_until = Time.get_ticks_msec() + 520
 				Sfx.play("boom", 1.15, -1.0)
 				flash(pos, float(e.get("r", 138.0)) * 1.5, Color(1.0, 0.3, 0.08), 0.55)
 				burst(pos, Color(1.0, 0.38, 0.12), 72, 820.0, 0.75, true)
