@@ -1511,6 +1511,7 @@ func _open_result_category(category: String) -> void:
 	result_category_header.text = "✦  %s  ✦" % display_category
 	result_category_header.add_theme_color_override("font_shadow_color", Color(accent, 0.82))
 	result_category_header.visible = true
+	_layout_game_over()
 	for child in result_list.get_children():
 		child.queue_free()
 	for i in rows.size():
@@ -1691,9 +1692,9 @@ func _layout_game_over() -> void:
 			value_label.position = Vector2(8, card_height - 62)
 			value_label.size = Vector2(card_width - 16, 34)
 	over_lbl.size.y = 120.0
-	result_category_header.position = Vector2(pos.x + 48.0, pos.y + 98.0)
+	result_category_header.position = Vector2(pos.x + 48.0, pos.y + 76.0)
 	result_category_header.size = Vector2(panel_size.x - 96.0, 40.0)
-	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 148.0)
+	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 132.0)
 	result_list_scroll.size = Vector2(panel_size.x - 96.0, panel_size.y - 254.0)
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
