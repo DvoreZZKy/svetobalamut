@@ -189,6 +189,7 @@ func _run() -> void:
 	capsule = sim.players[1]
 	capsule.pos = Vector2(800, 450)
 	capsule.absorb_t = 1.0
+	capsule.light = 80.0
 	var shell_light: float = float(capsule.light)
 	sim.bullets.append({"id": 99, "pos": capsule.pos + Vector2(70, 0), "vel": Vector2.ZERO, "owner": 2, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 10.0, "radius": 6.0})
 	sim._update_bullets(1.0 / 60.0)
