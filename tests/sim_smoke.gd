@@ -82,8 +82,8 @@ func _run() -> void:
 	sim._damage(victim, 10.0, 1, false)
 	sim._damage(victim, 30.0, 2, false)
 	sim._damage(victim, 25.0, 2, false)
-	var damage_a := 10.0 * float(victim.defense) * 0.70
-	var damage_b := 55.0 * float(victim.defense) * 0.70
+	var damage_a := 10.0 * float(victim.defense) * 0.90
+	var damage_b := 55.0 * float(victim.defense) * 0.90
 	var total_damage := damage_a + damage_b
 	var expected_a := 80.0 + damage_a * 0.35 + Sim.KILL_BONUS * (damage_a / total_damage)
 	var expected_b := 80.0 + damage_b * 0.35 + Sim.KILL_BONUS * (damage_b / total_damage)
