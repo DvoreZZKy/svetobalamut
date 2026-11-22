@@ -7,7 +7,7 @@ var outfit := 0
 var hat := 0
 
 func setup(p_kind: int, p_tint: Color, p_outfit: int, p_hat: int) -> void:
-	kind = posmod(p_kind, 4)
+	kind = maxi(0, p_kind)
 	tint = p_tint
 	outfit = posmod(p_outfit, 5)
 	hat = posmod(p_hat, 5)
@@ -46,6 +46,47 @@ func _draw() -> void:
 			_shape([Vector2(0,-21),Vector2(12,-8),Vector2(0,2),Vector2(-12,-8)], bright, bright, 1.0)
 			_shape([Vector2(-12,-5),Vector2(0,4),Vector2(0,21),Vector2(-13,10)], tint, bright, 1.5)
 			_shape([Vector2(12,-5),Vector2(13,10),Vector2(0,21),Vector2(0,4)], tint.darkened(0.2), bright, 1.5)
+	if kind >= 4:
+		var emblem_id := posmod(kind - 4, 14)
+		match emblem_id:
+			0:
+				draw_arc(Vector2.ZERO, 25.0, -1.2, 1.2, 18, bright, 3.0, true)
+			1:
+				draw_circle(Vector2.ZERO, 5.0, bright)
+				draw_arc(Vector2.ZERO, 18.0, 0.0, TAU, 24, bright, 2.0, true)
+			2:
+				_shape([Vector2(-9,-8),Vector2(9,-8),Vector2(15,8),Vector2(0,18),Vector2(-15,8)], bright, bright, 2.0)
+			3:
+				for i in 8:
+					draw_line(Vector2.ZERO, Vector2.from_angle(TAU * float(i) / 8.0) * 25.0, bright, 2.5, true)
+			4:
+				draw_arc(Vector2.ZERO, 24.0, 0.0, TAU, 24, bright, 3.0, true)
+				draw_circle(Vector2.ZERO, 4.0, Color.WHITE)
+			5:
+				for i in 3:
+					draw_line(Vector2(-18, -12 + i * 12), Vector2(18, -12 + i * 12), bright, 2.0, true)
+			6:
+				_shape([Vector2(0,-20),Vector2(17,0),Vector2(0,20),Vector2(-17,0)], bright, bright, 2.0)
+			7:
+				draw_arc(Vector2.ZERO, 24.0, -0.8, 0.8, 16, bright, 4.0, true)
+			8:
+				draw_line(Vector2(-18,-18), Vector2(18,18), bright, 4.0, true)
+				draw_line(Vector2(-18,18), Vector2(18,-18), bright, 4.0, true)
+			9:
+				for i in 4:
+					draw_circle(Vector2.from_angle(TAU * float(i) / 4.0) * 22.0, 4.0, bright)
+			10:
+				draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 24, bright, 3.0, true)
+				draw_circle(Vector2.ZERO, 8.0, dark)
+			11:
+				for i in 3:
+					draw_line(Vector2(-18, -12 + i * 12), Vector2(18, -12 + i * 12), bright, 3.0, true)
+			12:
+				draw_circle(Vector2.ZERO, 8.0, bright)
+				draw_arc(Vector2.ZERO, 23.0, 0.0, TAU, 24, bright, 2.5, true)
+			13:
+				draw_line(Vector2(-20,0), Vector2(20,0), bright, 4.0, true)
+				draw_line(Vector2(0,-20), Vector2(0,20), bright, 4.0, true)
 	if outfit > 0:
 		var cloth: Color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][outfit]
 		match kind:
