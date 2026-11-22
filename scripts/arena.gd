@@ -1314,6 +1314,11 @@ func _update_fx(dt: float) -> void:
 func _update_hud(dt: float) -> void:
 	if pause_open:
 		_layout_pause_menu()
+	# Stopwatch frame and text use the same viewport-centered UI coordinates.
+	var hud_center_x: float = get_viewport().get_visible_rect().size.x * 0.5
+	var stopwatch_center := Vector2(hud_center_x, 31.0)
+	stopwatch_shape.position = stopwatch_center
+	stopwatch_outline.position = stopwatch_center
 	var over: bool = view.get("ph", "play") == "over"
 	var elapsed := int(float(view.get("elapsed", 0.0)))
 	var stopwatch_text := "%02d:%02d" % [elapsed / 60, elapsed % 60]
