@@ -1587,8 +1587,9 @@ func _update_hud(dt: float) -> void:
 			extra_duration_label.text = "F • %.1fс" % extra_duration
 		ability_duration_label.text = "Q • %.1fс" % ability_duration
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
-		capsule_ammo_lbl.visible = is_capsule
-		capsule_reload_bar.visible = is_capsule
+		var is_crystal := int(me.k) == 3 and not bool(me.s) and not over
+		capsule_ammo_lbl.visible = is_capsule or is_crystal
+		capsule_reload_bar.visible = is_capsule or is_crystal
 		if is_capsule:
 			var ammo := clampi(int(me.get("wa", 4)), 0, 4)
 			var ammo_text := ""
@@ -1597,6 +1598,16 @@ func _update_hud(dt: float) -> void:
 			capsule_ammo_lbl.text = "ВОЛНЫ  " + ammo_text + ("  +" + ("%.1f" % float(me.get("wr", 0.0))) + "с" if ammo < 4 else "  ГОТОВО")
 			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 1.5)
 			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 1.5) if ammo < 4 else 100.0
+		elif is_crystal:
+			var prism_charges := clampi(int(me.get("pr", 0)), 0, 3)
+			var prism_text := ""
+			for charge_i in 3:
+				prism_text += "◆ " if charge_i < prism_charges else "◇ "
+			capsule_ammo_lbl.text = "ПРИЗМЫ  " + prism_text
+			capsule_ammo_lbl.add_theme_color_override("font_color", Color("#8cf7ff"))
+			capsule_reload_bar.value = 100.0 * float(prism_charges) / 3.0
+		else:
+			capsule_ammo_lbl.add_theme_color_override("font_color", Color("#75efff"))
 		var buff_names := {"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕННЫЙ УРОН", "shield": "ЗАЩИТА", "battery": "БАТАРЕЯ"}
 		if str(me.get("buff", "")) != "" and float(me.get("buff_t", 0.0)) > 0.0:
 			timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
