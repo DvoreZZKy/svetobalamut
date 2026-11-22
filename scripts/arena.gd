@@ -368,12 +368,12 @@ func _build_hud() -> void:
 	timer_lbl.modulate = Color("#a9efff")
 	cl.add_child(timer_lbl)
 	stopwatch_lbl = _label("00:00", 20, Vector2.ZERO, Vector2(160, 34), cl, true)
-	stopwatch_lbl.anchor_left = 0.5
-	stopwatch_lbl.anchor_right = 0.5
-	stopwatch_lbl.offset_left = -80
-	stopwatch_lbl.offset_right = 80
-	stopwatch_lbl.offset_top = 14
-	stopwatch_lbl.offset_bottom = 48
+	# Keep the label in viewport coordinates; its position is set alongside the frame.
+	stopwatch_lbl.anchor_left = 0.0
+	stopwatch_lbl.anchor_right = 0.0
+	stopwatch_lbl.anchor_top = 0.0
+	stopwatch_lbl.anchor_bottom = 0.0
+	stopwatch_lbl.size = Vector2(160.0, 34.0)
 	stopwatch_lbl.add_theme_color_override("font_color", Color("#b7f7ff"))
 	stopwatch_lbl.add_theme_font_size_override("font_size", 24)
 	stopwatch_lbl.add_theme_color_override("font_shadow_color", Color("#39d9f0", 0.85))
@@ -1314,8 +1314,9 @@ func _update_fx(dt: float) -> void:
 func _update_hud(dt: float) -> void:
 	if pause_open:
 		_layout_pause_menu()
-	# Stopwatch frame and text use the same viewport-centered UI coordinates.
-	var hud_center_x: float = get_viewport().get_visible_rect().size.x * 0.5
+	# The CanvasLayer HUD uses viewport coordinates. Place frame and label from
+	# the same center value instead of mixing viewport and arena coordinates.
+	var hud_center_x: float = get_viewport_rect().size.x * 0.5
 	var stopwatch_center := Vector2(hud_center_x, 31.0)
 	stopwatch_shape.position = stopwatch_center
 	stopwatch_outline.position = stopwatch_center
@@ -1346,7 +1347,7 @@ func _update_hud(dt: float) -> void:
 		stopwatch_lbl.text = glitch_text
 	else:
 		stopwatch_lbl.text = stopwatch_text
-	stopwatch_lbl.position = Vector2(-80.0, 14.0)
+	stopwatch_lbl.position = Vector2(hud_center_x - 80.0, 14.0)
 	stopwatch_lbl.rotation = 0.0
 	stopwatch_lbl.scale = Vector2.ONE
 	stopwatch_lbl.modulate = Color.WHITE
