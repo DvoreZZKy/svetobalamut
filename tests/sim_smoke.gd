@@ -236,6 +236,18 @@ func _run() -> void:
 			3:
 				if int(extra_player.prism_shots) != 3:
 					_fail("crystal prism did not charge three refracted shots")
+	# Crystal's prism charges are visible in the HUD snapshot and consumed one per shot.
+	sim.reset([{"id": 1, "name": "Crystal", "human": true, "color": 0, "kind": 3, "outfit": 0, "hat": 0}])
+	sim.chaos_enabled = false
+	var crystal_charge_player: Dictionary = sim.players[1]
+	sim._use_extra_ability(crystal_charge_player)
+	if int(sim.snapshot().pl[0].get("pr", 0)) != 3:
+		_fail("crystal prism charges were not exposed to the HUD snapshot")
+	sim.inputs[1] = {"fire": true, "aim": crystal_charge_player.pos + Vector2.RIGHT * 300.0}
+	sim._update_player(crystal_charge_player, 1.0 / 60.0)
+	if int(crystal_charge_player.get("prism_shots", 0)) != 2:
+		_fail("crystal did not consume exactly one prism charge per shot")
+
 	# Capsule shell absorbs an incoming shot and converts it into light.
 	sim.reset(melee_cfg)
 	sim.chaos_enabled = false
