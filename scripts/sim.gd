@@ -331,7 +331,10 @@ func _capsule_shockwave(p: Dictionary) -> void:
 		if distance > wave_radius:
 			continue
 		var direction: Vector2 = offset.normalized() if distance > 0.01 else p.aim
-		_damage(target, WAVE_DAMAGE * p.attack * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0), p.id, false)
+		var wave_damage := WAVE_DAMAGE * p.attack * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0)
+		if p.kind == 1 and int(target.get("kind", -1)) == 1:
+			wave_damage *= 2.0
+		_damage(target, wave_damage, p.id, false)
 		target.vel += direction * WAVE_PUSH * (1.0 - 0.25 * distance / wave_radius)
 	for eater in eaters:
 		if eater.dead:
@@ -508,11 +511,11 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	var global_state := (Engine.get_main_loop() as SceneTree).root.get_node_or_null("G")
 	if global_state != null and bool(global_state.get("tutorial_active")) and bool(p.get("human", false)):
 		return
-	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.70
+	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.90
 	if str(p.get("buff", "")) == "shield":
 		reduced *= 0.62
 	if p.kind == 1 and p.ability_t > 0.0:
-		reduced *= 0.50
+		reduced *= 0.72
 	p.light -= reduced
 	events.append({"t": "hurt", "id": p.id, "amount": reduced})
 	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
@@ -704,7 +707,10 @@ func _update_bullets(dt: float) -> void:
 				if p.id == b.owner and b.bn == 0:
 					continue
 				if (p.pos - b.pos).length_squared() < pow(P_RADIUS + float(b.get("radius", 6.0)), 2):
-					_damage(p, float(b.get("dmg", BULLET_DMG)), b.owner, b.bn > 0)
+					var hit_damage := float(b.get("dmg", BULLET_DMG))
+					if players.has(b.owner) and int(players[b.owner].get("kind", -1)) == 1 and int(p.get("kind", -1)) == 1:
+						hit_damage *= 2.0
+					_damage(p, hit_damage, b.owner, b.bn > 0)
 					dead = true
 					break
 		if not dead:
@@ -952,7 +958,19 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 		b.t = lerpf(1.45, 0.85, skill) * rng.randf_range(0.75, 1.35)
 		b.strafe = -1.0 if rng.randf() < 0.5 else 1.0
 		b.want = lerpf(500.0, 420.0, skill) + rng.randf_range(-110.0, 110.0)
+		b.seek_pickup = not pickups.is_empty() and rng.randf() < 0.48
 	var mv := Vector2.ZERO
+	if bool(b.get("seek_pickup", false)) and not pickups.is_empty():
+		var nearest_pickup: Dictionary = {}
+		var nearest_pickup_d := 520.0 * 520.0
+		for pickup in pickups:
+			var pickup_d: float = p.pos.distance_squared_to(pickup.pos)
+			if pickup_d < nearest_pickup_d:
+				nearest_pickup_d = pickup_d
+				nearest_pickup = pickup
+		if not nearest_pickup.is_empty():
+			var pickup_dir: Vector2 = (nearest_pickup.pos - p.pos).normalized()
+			mv += pickup_dir * 1.55
 	for ghost in players.values():
 		if ghost.id == p.id or not ghost.shadow:
 			continue
