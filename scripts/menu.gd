@@ -526,7 +526,9 @@ func _box(key: String) -> VBoxContainer:
 
 func _refresh_profile() -> void:
 	var colors := ["Неоновый голубой", "Розовый", "Золотой", "Фиолетовый", "Мятный", "Оранжевый", "Белый", "Маджента"]
-	var kinds: Array[String] = []\n\tfor class_data in Sim.CLASS_STATS:\n\t\tkinds.append(str(class_data.name))
+	var kinds: Array[String] = []
+	for class_data in Sim.CLASS_STATS:
+		kinds.append(str(class_data.name))
 	var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
 	var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
 	profile_preview.setup(G.profile_kind, G.col(G.profile_color), G.profile_outfit, G.profile_hat)
