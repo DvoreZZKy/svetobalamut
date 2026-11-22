@@ -290,7 +290,7 @@ func _ready() -> void:
 	controls.position = Vector2(390, 95)
 	controls.size = Vector2(500, 610)
 	_title(controls, "НАСТРОЙКА УПРАВЛЕНИЯ")
-	for action in ["up", "down", "left", "right", "dash", "ability", "possess"]:
+	for action in ["up", "down", "left", "right", "dash", "ability", "extra_ability", "possess"]:
 		var bind_btn := _btn("", controls, func(): _begin_rebind(action))
 		bind_btn.custom_minimum_size = Vector2(450, 48)
 		bind_btn.add_theme_font_size_override("font_size", 17)
@@ -382,7 +382,7 @@ func _begin_rebind(action: String) -> void:
 func _update_bind_button(action: String) -> void:
 	if not control_buttons.has(action):
 		return
-	var names := {"up": "ВВЕРХ", "down": "ВНИЗ", "left": "ВЛЕВО", "right": "ВПРАВО", "dash": "РЫВОК", "ability": "СПОСОБНОСТЬ", "possess": "ВСЕЛЕНИЕ"}
+	var names := {"up": "ВВЕРХ", "down": "ВНИЗ", "left": "ВЛЕВО", "right": "ВПРАВО", "dash": "РЫВОК", "ability": "СПОСОБНОСТЬ Q", "extra_ability": "ДОП. СПОСОБНОСТЬ F", "possess": "ВСЕЛЕНИЕ"}
 	var key_name := OS.get_keycode_string(int(G.control_keys[action]))
 	control_buttons[action].text = "%s  —  %s" % [names[action], key_name.to_upper()]
 
