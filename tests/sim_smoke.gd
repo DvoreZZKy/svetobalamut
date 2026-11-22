@@ -156,12 +156,14 @@ func _run() -> void:
 	shield_target.shield_hp = 20.0
 	shield_target.max_shield = 50.0
 	var shield_light_before := float(shield_target.light)
+	var expected_shield_damage := 10.0 * float(shield_target.defense) * 0.90
 	sim._damage(shield_target, 10.0, 0, false)
-	if not is_equal_approx(float(shield_target.shield_hp), 11.0) or not is_equal_approx(float(shield_target.light), shield_light_before):
+	var expected_shield_left := 20.0 - expected_shield_damage
+	if not is_equal_approx(float(shield_target.shield_hp), expected_shield_left) or not is_equal_approx(float(shield_target.light), shield_light_before):
 		_fail("shield did not absorb incoming damage before light")
 	var shield_snapshot: Dictionary = sim.snapshot()
 	var shield_snapshot_player: Dictionary = shield_snapshot.pl[0]
-	if not is_equal_approx(float(shield_snapshot_player.get("sh", 0.0)), 11.0) or not is_equal_approx(float(shield_snapshot_player.get("shmax", 0.0)), 50.0):
+	if not is_equal_approx(float(shield_snapshot_player.get("sh", 0.0)), expected_shield_left) or not is_equal_approx(float(shield_snapshot_player.get("shmax", 0.0)), 50.0):
 		_fail("shield durability was not included in the player snapshot")
 
 	# 2d) Capsule's primary attack is a radial melee shockwave, not a projectile.
