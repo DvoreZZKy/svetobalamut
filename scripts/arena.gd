@@ -1322,7 +1322,7 @@ func _update_hud(dt: float) -> void:
 		if float(fx.get(candidate, 0.0)) > 0.0:
 			chaos_key = candidate
 			break
-	var glitching := glitch_now < timer_glitch_until or meteor_active
+	var glitching := glitch_now < timer_glitch_until or meteor_active or not chaos_key.is_empty()
 	var step := int(glitch_now / (42 if meteor_burning else 65))
 	if glitching:
 		if step != glitch_step:
