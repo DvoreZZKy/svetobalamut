@@ -139,6 +139,7 @@ var result_cards: Array[Button] = []
 var result_detail_open := false
 var result_list_scroll: ScrollContainer
 var result_category_header: Label
+var result_category_frame: PanelContainer
 var result_list: VBoxContainer
 var banner: Label
 var score_lbl: RichTextLabel
@@ -548,6 +549,18 @@ func _build_hud() -> void:
 	over_lbl.add_theme_color_override("default_color", Color("#f0fbff"))
 	cl.add_child(over_lbl)
 	over_lbl.visible = false
+	result_category_frame = PanelContainer.new()
+	result_category_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var category_frame_style := StyleBoxFlat.new()
+	category_frame_style.bg_color = Color("#081a2b", 0.96)
+	category_frame_style.border_color = Color("#31d9ed", 0.95)
+	category_frame_style.set_border_width_all(2)
+	category_frame_style.set_corner_radius_all(0)
+	category_frame_style.shadow_color = Color("#31d9ed", 0.42)
+	category_frame_style.shadow_size = 8
+	result_category_frame.add_theme_stylebox_override("panel", category_frame_style)
+	result_category_frame.visible = false
+	cl.add_child(result_category_frame)
 	result_category_header = Label.new()
 	result_category_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_category_header.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1510,6 +1523,15 @@ func _open_result_category(category: String) -> void:
 	over_lbl.text = ""
 	result_category_header.text = "✦  %s  ✦" % display_category
 	result_category_header.add_theme_color_override("font_shadow_color", Color(accent, 0.82))
+	var category_frame_style := StyleBoxFlat.new()
+	category_frame_style.bg_color = Color("#081a2b", 0.96)
+	category_frame_style.border_color = Color(accent, 0.98)
+	category_frame_style.set_border_width_all(2)
+	category_frame_style.set_corner_radius_all(0)
+	category_frame_style.shadow_color = Color(accent, 0.42)
+	category_frame_style.shadow_size = 8
+	result_category_frame.add_theme_stylebox_override("panel", category_frame_style)
+	result_category_frame.visible = true
 	result_category_header.visible = true
 	_layout_game_over()
 	for child in result_list.get_children():
@@ -1594,6 +1616,7 @@ func _open_result_category(category: String) -> void:
 
 func _close_result_category() -> void:
 	result_detail_open = false
+	result_category_frame.visible = false
 	over_menu_btn.text = "К КАРТОЧКАМ"
 	over_exit_btn.visible = false
 	if over_menu_btn.pressed.is_connected(_close_result_category):
@@ -1692,9 +1715,11 @@ func _layout_game_over() -> void:
 			value_label.position = Vector2(8, card_height - 62)
 			value_label.size = Vector2(card_width - 16, 34)
 	over_lbl.size.y = 120.0
-	result_category_header.position = Vector2(pos.x + 48.0, pos.y + 76.0)
-	result_category_header.size = Vector2(panel_size.x - 96.0, 40.0)
-	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 132.0)
+	result_category_frame.position = Vector2(pos.x + 42.0, pos.y + 42.0)
+	result_category_frame.size = Vector2(panel_size.x - 84.0, 52.0)
+	result_category_header.position = result_category_frame.position
+	result_category_header.size = result_category_frame.size
+	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 112.0)
 	result_list_scroll.size = Vector2(panel_size.x - 96.0, panel_size.y - 254.0)
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
