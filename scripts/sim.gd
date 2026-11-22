@@ -113,7 +113,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 	return {
 		"id": id, "name": pname, "human": human, "kind": kind, "ci": ci, "hat": hat, "outfit": outfit,
 		"pos": pos, "vel": Vector2.ZERO, "aim": (A / 2.0 - pos).normalized(),
-		"light": CLASS_STATS[kind % 4].hp, "max_light": CLASS_STATS[kind % 4].hp,
+		"light": CLASS_STATS[kind % 4].hp, "max_light": CLASS_STATS[kind % 4].hp, "shield_hp": 0.0, "max_shield": 0.0,
 		"defense": CLASS_STATS[kind % 4].def, "attack": CLASS_STATS[kind % 4].atk,
 		"speed_mult": CLASS_STATS[kind % 4].speed, "fire_rate": CLASS_STATS[kind % 4].rate,
 		"ability_cd": 0.0, "ability_t": 0.0, "extra_cd": 0.0, "phase_t": 0.0, "absorb_t": 0.0, "prism_shots": 0,
@@ -562,12 +562,17 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 	if float(p.get("phase_t", 0.0)) > 0.0:
 		return
 	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.90
-	if str(p.get("buff", "")) == "shield":
-		reduced *= 0.62
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.72
-	p.light -= reduced
-	events.append({"t": "hurt", "id": p.id, "amount": reduced})
+	var shield_before: float = float(p.get("shield_hp", 0.0))
+	var shield_absorbed: float = minf(shield_before, reduced)
+	p.shield_hp = maxf(0.0, shield_before - shield_absorbed)
+	var health_damage: float = reduced - shield_absorbed
+	p.light -= health_damage
+	if shield_absorbed > 0.01:
+		events.append({"t": "shield_hit", "id": p.id, "amount": shield_absorbed, "remaining": p.shield_hp})
+	if health_damage > 0.01:
+		events.append({"t": "hurt", "id": p.id, "amount": health_damage})
 	if src != 0 and src != p.id and players.has(src) and not players[src].shadow and not players[src].decoy:
 		players[src].damage_total = float(players[src].get("damage_total", 0.0)) + reduced
 		var damage_by: Dictionary = p.get("damage_by", {})
@@ -682,7 +687,9 @@ func _meteor_tick(dt: float) -> void:
 			var distance := offset.length()
 			if distance < RADIUS:
 				var strength := 1.0 - distance / RADIUS
-				_damage(p, 42.0 * (0.45 + strength * 0.55), 0, false)
+				var meteor_reduction: float = float(p.get("defense", 1.0)) * 0.90 * (0.72 if p.kind == 1 and p.ability_t > 0.0 else 1.0)
+				var meteor_damage: float = float(p.max_light) * 0.5 / maxf(meteor_reduction, 0.01)
+				_damage(p, meteor_damage, 0, false)
 				p.vel += (offset.normalized() if distance > 0.01 else Vector2.UP) * (420.0 + 520.0 * strength)
 		for eater in eaters:
 			if not eater.dead and eater.pos.distance_to(center) < RADIUS:
@@ -875,6 +882,9 @@ func _update_pickups(dt: float) -> void:
 				continue
 			p.buff = pickup.kind
 			p.buff_t = 9.0
+			if pickup.kind == "shield":
+				p.max_shield = float(p.max_light) * 0.40
+				p.shield_hp = p.max_shield
 			if pickup.kind == "battery":
 				var old_light: float = float(p.light)
 				p.light = minf(p.max_light, p.light + 32.0)
@@ -892,6 +902,8 @@ func _update_pickups(dt: float) -> void:
 		p.buff_t = maxf(0.0, float(p.get("buff_t", 0.0)) - dt)
 		if p.buff_t <= 0.0:
 			p.buff = ""
+			p.shield_hp = 0.0
+			p.max_shield = 0.0
 
 
 # --------------------------------------------------------------- хаос ----
@@ -1152,7 +1164,7 @@ func snapshot() -> Dictionary:
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
-			"hpmax": p.max_light, "acd": p.ability_cd, "ab": p.ability_t, "excd": float(p.get("extra_cd", 0.0)), "phs": float(p.get("phase_t", 0.0)), "abs": float(p.get("absorb_t", 0.0)), "pr": int(p.get("prism_shots", 0)), "bot": not p.human,
+			"hpmax": p.max_light, "sh": float(p.get("shield_hp", 0.0)), "shmax": float(p.get("max_shield", 0.0)), "acd": p.ability_cd, "ab": p.ability_t, "excd": float(p.get("extra_cd", 0.0)), "phs": float(p.get("phase_t", 0.0)), "abs": float(p.get("absorb_t", 0.0)), "pr": int(p.get("prism_shots", 0)), "bot": not p.human,
 			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var pu: Array = []
 	for pickup in pickups:
