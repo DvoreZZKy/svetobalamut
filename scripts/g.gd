@@ -20,7 +20,7 @@ var match_mouse_sensitivity := true
 var shake_on := true
 var fullscreen := false
 var graphics_quality := 0 # 0: high, 1: medium, 2: low, 3: potato
-var control_keys := {"up": KEY_W, "down": KEY_S, "left": KEY_A, "right": KEY_D, "dash": KEY_SPACE, "ability": KEY_Q, "possess": KEY_E}
+var control_keys := {"up": KEY_W, "down": KEY_S, "left": KEY_A, "right": KEY_D, "dash": KEY_SPACE, "ability": KEY_Q, "extra_ability": KEY_F, "possess": KEY_E}
 const GRAPHICS_PRESETS := ["Высокая", "Средняя", "Низкая", "Режим картошки"]
 var tutorial_done := false
 const TUTORIAL_VERSION := 4
@@ -50,8 +50,9 @@ func _setup_input() -> void:
 		"left": [KEY_A, KEY_LEFT],
 		"right": [KEY_D, KEY_RIGHT],
 		"dash": [KEY_SPACE, KEY_SHIFT],
-		"possess": [KEY_E, KEY_F],
+		"possess": [KEY_E],
 		"ability": [KEY_Q],
+		"extra_ability": [KEY_F],
 		"restart": [KEY_ENTER, KEY_KP_ENTER],
 	}
 	for a in keys:
