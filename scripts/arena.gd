@@ -551,8 +551,14 @@ func _build_hud() -> void:
 	result_category_header = Label.new()
 	result_category_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	result_category_header.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	result_category_header.add_theme_font_size_override("font_size", 25)
+	result_category_header.add_theme_font_size_override("font_size", 27)
 	result_category_header.add_theme_font_override("font", _bold_hud_font())
+	result_category_header.add_theme_color_override("font_color", Color("#eafaff"))
+	result_category_header.add_theme_color_override("font_outline_color", Color("#071625", 0.98))
+	result_category_header.add_theme_color_override("font_shadow_color", Color("#31d9ed", 0.72))
+	result_category_header.add_theme_constant_override("outline_size", 4)
+	result_category_header.add_theme_constant_override("shadow_offset_x", 0)
+	result_category_header.add_theme_constant_override("shadow_offset_y", 3)
 	result_category_header.visible = false
 	cl.add_child(result_category_header)
 	result_list_scroll = ScrollContainer.new()
@@ -1502,9 +1508,8 @@ func _open_result_category(category: String) -> void:
 	lines += "[/table]"
 	over_lbl.scroll_active = false
 	over_lbl.text = ""
-	result_category_header.text = display_category
-	result_category_header.add_theme_color_override("font_color", Color(accent))
-	result_category_header.add_theme_color_override("font_shadow_color", Color(accent, 0.3))
+	result_category_header.text = "✦  %s  ✦" % display_category
+	result_category_header.add_theme_color_override("font_shadow_color", Color(accent, 0.82))
 	result_category_header.visible = true
 	for child in result_list.get_children():
 		child.queue_free()
@@ -1686,9 +1691,9 @@ func _layout_game_over() -> void:
 			value_label.position = Vector2(8, card_height - 62)
 			value_label.size = Vector2(card_width - 16, 34)
 	over_lbl.size.y = 120.0
-	result_category_header.position = Vector2(pos.x + 48.0, pos.y + 112.0)
-	result_category_header.size = Vector2(panel_size.x - 96.0, 38.0)
-	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 158.0)
+	result_category_header.position = Vector2(pos.x + 48.0, pos.y + 98.0)
+	result_category_header.size = Vector2(panel_size.x - 96.0, 40.0)
+	result_list_scroll.position = Vector2(pos.x + 48.0, pos.y + 148.0)
 	result_list_scroll.size = Vector2(panel_size.x - 96.0, panel_size.y - 254.0)
 	var buttons_y := pos.y + panel_size.y - 82.0
 	over_restart_btn.position = Vector2(pos.x + panel_size.x * 0.5 - 232.0, buttons_y)
