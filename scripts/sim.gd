@@ -331,7 +331,7 @@ func _capsule_shockwave(p: Dictionary) -> void:
 		if distance > wave_radius:
 			continue
 		var direction: Vector2 = offset.normalized() if distance > 0.01 else p.aim
-		var wave_damage := WAVE_DAMAGE * p.attack * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0)
+		var wave_damage: float = WAVE_DAMAGE * float(p.attack) * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0)
 		if p.kind == 1 and int(target.get("kind", -1)) == 1:
 			wave_damage *= 2.0
 		_damage(target, wave_damage, p.id, false)
