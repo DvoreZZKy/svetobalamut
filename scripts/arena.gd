@@ -1583,7 +1583,7 @@ func _update_hud(dt: float) -> void:
 		if extra_duration_bar.visible:
 			var extra_duration_max := 3.8 if int(me.get("k", 0)) == 0 else (2.4 if int(me.get("k", 0)) == 1 else 1.25)
 			extra_duration_bar.set_fill_ratio(extra_duration / extra_duration_max)
-			textra_duration_label.text = "F • %.1fс" % extra_duration
+			extra_duration_label.text = "F • %.1fс" % extra_duration
 		ability_duration_label.text = "Q • %.1fс" % ability_duration
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
 		capsule_ammo_lbl.visible = is_capsule
