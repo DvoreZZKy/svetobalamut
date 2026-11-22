@@ -308,7 +308,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.wave_released = false
 		p.fire_was_down = want_fire
 	elif want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
-		var prism_active: bool = p.kind == 3 and int(p.get("prism_shots", 0)) > 0\n\t\tvar special_active: bool = int(p.get("special_shots", 0)) > 0
+		var prism_active: bool = p.kind == 3 and int(p.get("prism_shots", 0)) > 0
+		var special_active: bool = int(p.get("special_shots", 0)) > 0
 		var spread_count := 3 if p.kind == 0 or prism_active else 1
 		for shot_i in spread_count:
 			var spread := (float(shot_i) - 1.0) * (0.12 if p.kind == 0 else 0.24) if spread_count == 3 else 0.0
