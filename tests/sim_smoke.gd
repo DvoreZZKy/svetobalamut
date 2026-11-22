@@ -249,8 +249,8 @@ func _run() -> void:
 		_fail("crystal did not consume exactly one prism charge per shot")
 
 	# Expanded character roster: every new class has a distinct profile and both abilities activate.
-	if Sim.CLASS_STATS.size() != 18:
-		_fail("expected 18 playable classes, found %d" % Sim.CLASS_STATS.size())
+	if Sim.CLASS_STATS.size() != 19:
+		_fail("expected 19 playable classes, found %d" % Sim.CLASS_STATS.size())
 	var class_names: Array[String] = []
 	for kind in Sim.CLASS_STATS.size():
 		var class_data: Dictionary = Sim.CLASS_STATS[kind]

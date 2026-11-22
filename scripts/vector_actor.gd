@@ -47,7 +47,7 @@ func _draw() -> void:
 			_shape([Vector2(-12,-5),Vector2(0,4),Vector2(0,21),Vector2(-13,10)], tint, bright, 1.5)
 			_shape([Vector2(12,-5),Vector2(13,10),Vector2(0,21),Vector2(0,4)], tint.darkened(0.2), bright, 1.5)
 	if kind >= 4:
-		var emblem_id := posmod(kind - 4, 14)
+		var emblem_id := posmod(kind - 4, 15)
 		match emblem_id:
 			0:
 				draw_arc(Vector2.ZERO, 25.0, -1.2, 1.2, 18, bright, 3.0, true)
@@ -87,6 +87,9 @@ func _draw() -> void:
 			13:
 				draw_line(Vector2(-20,0), Vector2(20,0), bright, 4.0, true)
 				draw_line(Vector2(0,-20), Vector2(0,20), bright, 4.0, true)
+			14:
+				draw_arc(Vector2.ZERO, 27.0, -1.0, 1.0, 20, bright, 3.5, true)
+				draw_arc(Vector2.ZERO, 19.0, 2.1, 4.2, 20, bright, 2.5, true)
 	if outfit > 0:
 		var cloth: Color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][outfit]
 		match kind:

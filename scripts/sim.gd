@@ -23,7 +23,8 @@ const CLASS_STATS := [
 	{"name":"Маятник","hp":130.0,"def":0.97,"atk":1.0,"speed":1.06,"rate":0.30,"ability":"Размах"},
 	{"name":"Губка","hp":150.0,"def":0.86,"atk":0.90,"speed":0.88,"rate":0.35,"ability":"Поглощение"},
 	{"name":"Генератор","hp":124.0,"def":0.98,"atk":0.92,"speed":0.98,"rate":0.33,"ability":"Автотурель"},
-	{"name":"Полярность","hp":134.0,"def":0.94,"atk":1.0,"speed":1.0,"rate":0.32,"ability":"Отталкивание"}
+	{"name":"Полярность","hp":134.0,"def":0.94,"atk":1.0,"speed":1.0,"rate":0.32,"ability":"Отталкивание"},
+	{"name":"Фантом","hp":116.0,"def":0.90,"atk":1.08,"speed":1.24,"rate":0.28,"ability":"Фазирование"}
 ]
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
@@ -452,6 +453,9 @@ func _use_ability(p: Dictionary) -> void:
 		17:
 			p.field_t = 2.5
 			p.field_mode = 2
+		18:
+			p.phase_t = 1.0
+			p.inv = maxf(float(p.inv), 1.0)
 
 
 func _use_extra_ability(p: Dictionary) -> void:
@@ -514,6 +518,9 @@ func _use_extra_ability(p: Dictionary) -> void:
 		17:
 			p.field_t = 2.8
 			p.field_mode = 1 if int(p.get("field_mode",0)) == 2 else 2
+		18:
+			p.pos = (p.pos + p.aim * 260.0).clamp(Vector2(40,40), A - Vector2(40,40))
+			p.inv = maxf(float(p.inv), 0.55)
 
 
 
