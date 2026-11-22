@@ -1535,7 +1535,6 @@ func _update_hud(dt: float) -> void:
 			timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
 		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
-		var extra_names := ["Биолюминесценция", "Герметичный панцирь", "Бестелесность", "Призматическое преломление"]
 		var extra_ready := "ГОТОВО" if float(me.get("excd", 0.0)) <= 0.0 else "%.1fс" % float(me.get("excd", 0.0))
 		help_lbl.text = "%s  /  %s\nQ: %s   •   F: %s" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready, extra_ready]
 		if me.s:
