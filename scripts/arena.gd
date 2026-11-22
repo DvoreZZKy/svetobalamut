@@ -134,6 +134,8 @@ var timer_lbl: RichTextLabel
 var timer_shape: Polygon2D
 var timer_outline: Line2D
 var ability_bar: NeonProgressBar
+var extra_ability_bar: NeonProgressBar
+var extra_ability_latch := 0.0
 var capsule_ammo_lbl: Label
 var capsule_reload_bar: NeonProgressBar
 var cursor_layer: CanvasLayer
@@ -495,6 +497,15 @@ func _build_hud() -> void:
 	ability_bar.offset_right = 160
 	ability_bar.offset_top = -31
 	ability_bar.offset_bottom = -22
+	extra_ability_bar = _bar(Vector2.ZERO, Vector2(292, 7), Color("#72f5b4"), cl)
+	extra_ability_bar.anchor_left = 0.5
+	extra_ability_bar.anchor_right = 0.5
+	extra_ability_bar.anchor_top = 1.0
+	extra_ability_bar.anchor_bottom = 1.0
+	extra_ability_bar.offset_left = -132
+	extra_ability_bar.offset_right = 160
+	extra_ability_bar.offset_top = -16
+	extra_ability_bar.offset_bottom = -9
 	var light_caption := _label("СВЕТ", 9, Vector2.ZERO, Vector2(54, 14), cl)
 	light_caption.anchor_left = 0.5
 	light_caption.anchor_right = 0.5
@@ -525,6 +536,16 @@ func _build_hud() -> void:
 	ability_caption.offset_top = -31
 	ability_caption.offset_bottom = -17
 	ability_caption.add_theme_color_override("font_color", Color("#c3a0ff"))
+	var extra_ability_caption := _label("F", 9, Vector2.ZERO, Vector2(54, 14), cl)
+	extra_ability_caption.anchor_left = 0.5
+	extra_ability_caption.anchor_right = 0.5
+	extra_ability_caption.anchor_top = 1.0
+	extra_ability_caption.anchor_bottom = 1.0
+	extra_ability_caption.offset_left = -190
+	extra_ability_caption.offset_right = -138
+	extra_ability_caption.offset_top = -16
+	extra_ability_caption.offset_bottom = -2
+	extra_ability_caption.add_theme_color_override("font_color", Color("#72f5b4"))
 	capsule_ammo_lbl = _label("ВОЛНЫ  ◆ ◆ ◆ ◆", 12, Vector2(18, 0), Vector2(190, 20), cl)
 	capsule_ammo_lbl.anchor_top = 1.0
 	capsule_ammo_lbl.anchor_bottom = 1.0
@@ -799,6 +820,21 @@ func _draw_bullets() -> void:
 		bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
 		bullet_layer.draw_line(tail, pos, G.hdr(col, 2.0), width * 0.4, true)
 		bullet_layer.draw_circle(pos, 6.0, Color(4, 4, 4))
+	for lure in view.get("lu", []):
+		var lure_pos: Vector2 = lure[0]
+		var lure_pulse := 1.0 if _is_potato() else 0.78 + 0.22 * sin(t * 13.0)
+		bullet_layer.draw_arc(lure_pos, 28.0 * lure_pulse, 0.0, TAU, 32, Color("#b9ff69"), 4.0, true)
+		bullet_layer.draw_circle(lure_pos, 9.0, Color("#caff83"))
+		if not _is_potato():
+			bullet_layer.draw_arc(lure_pos, 48.0, 0.0, TAU, 40, Color(0.55, 1.0, 0.35, 0.45), 2.0, true)
+	for pd in view.get("pl", []):
+		var effect_pos: Vector2 = pd.p
+		if float(pd.get("abs", 0.0)) > 0.0:
+			bullet_layer.draw_arc(effect_pos, 118.0, 0.0, TAU, 48, Color("#ffca63"), 3.0, true)
+		if float(pd.get("phs", 0.0)) > 0.0:
+			bullet_layer.draw_arc(effect_pos, 43.0, 0.0, TAU, 40, Color("#c18cff"), 4.0, true)
+		if int(pd.get("pr", 0)) > 0:
+			bullet_layer.draw_arc(effect_pos, 48.0, -0.65, 0.65, 24, Color("#8cf7ff"), 4.0, true)
 
 
 # ----------------------------------------------------------------- цикл ---
@@ -844,6 +880,7 @@ func _read_input() -> Dictionary:
 		"dash": Input.is_action_pressed("dash"),
 		"poss": Input.is_action_pressed("possess") or (bool(view.get("pl", []).filter(func(p): return int(p.i) == local_id and p.s).size() > 0) and Input.is_action_pressed("fire")),
 		"ability": Input.is_action_just_pressed("ability"),
+		"extra_ability": Input.is_action_just_pressed("extra_ability"),
 	}
 
 
@@ -872,9 +909,13 @@ func _process(dt: float) -> void:
 		ability_latch = 0.18
 	ability_latch = maxf(0.0, ability_latch - dt)
 	inp["ability"] = ability_latch > 0.0
+	if Input.is_action_just_pressed("extra_ability"):
+		extra_ability_latch = 0.18
+	extra_ability_latch = maxf(0.0, extra_ability_latch - dt)
+	inp["extra_ability"] = extra_ability_latch > 0.0
 	if pause_open:
 		inp = {"mv": Vector2.ZERO, "aim": get_canvas_transform().affine_inverse() * aim_screen_pos,
-			"fire": false, "dash": false, "poss": false, "ability": false}
+			"fire": false, "dash": false, "poss": false, "ability": false, "extra_ability": false
 	if not is_client:
 		sim.inputs[local_id] = inp
 		if not G.tutorial_active:
@@ -1476,6 +1517,8 @@ func _update_hud(dt: float) -> void:
 		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
 		dash_bar.set_fill_ratio(1.0 - dash_cooldown / Sim.DASH_CD)
 		ability_bar.set_fill_ratio(1.0 - ability_cooldown / 9.0)
+		var extra_cooldown := clampf(float(me.get("excd", 0.0)), 0.0, 13.0)
+		extra_ability_bar.set_fill_ratio(1.0 - extra_cooldown / 13.0)
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
 		capsule_ammo_lbl.visible = is_capsule
 		capsule_reload_bar.visible = is_capsule
@@ -1492,7 +1535,9 @@ func _update_hud(dt: float) -> void:
 			timer_lbl.text += "\nВАШ БУСТ: %s (%.1fс)" % [buff_names.get(str(me.buff), "УЛУЧШЕНИЕ"), float(me.get("buff_t", 0.0))]
 		var class_names := ["СВЕТЛЯК", "КАПСУЛА", "ПРИЗРАК", "КРИСТАЛЛ"]
 		var ability_ready := "ГОТОВО" if me.acd <= 0.0 else "%.1fс" % me.acd
-		help_lbl.text = "%s  /  %s\nСПОСОБНОСТЬ [Q]: %s" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready]
+		var extra_names := ["Биолюминесценция", "Герметичный панцирь", "Бестелесность", "Призматическое преломление"]
+		var extra_ready := "ГОТОВО" if float(me.get("excd", 0.0)) <= 0.0 else "%.1fс" % float(me.get("excd", 0.0))
+		help_lbl.text = "%s  /  %s\nQ: %s   •   F: %s" % [class_names[int(me.k) % 4], ["Перегрузка", "Энергощит", "Фазовый скачок", "Звёздный залп"][int(me.k) % 4], ability_ready, extra_ready]
 		if me.s:
 			help_lbl.text = "ТЫ — ТЕНЬ\nПКМ / E рядом с игроком — вселение"
 	if over:
@@ -1935,6 +1980,13 @@ func _handle_events(evs: Array) -> void:
 				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
 				flash(pos, 190.0, ability_color, 0.45)
 				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55, true)
+			"extra_ability":
+				var extra_color: Color = [Color("#baff6a"), Color("#ffca63"), Color("#c18cff"), Color("#8cf7ff")][int(e.get("kind", 0)) % 4]
+				Sfx.play("dash", 1.15, -1.0)
+				flash(pos, 145.0, extra_color, 0.38)
+				burst(pos, extra_color, 34, 470.0, 0.5, true)
+			"capsule_absorb":
+				burst(pos, Color("#ffca63"), 5, 190.0, 0.2)
 			"win":
 				Sfx.play("win")
 
