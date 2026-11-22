@@ -1824,6 +1824,13 @@ func _layout_game_over() -> void:
 func _restart_match() -> void:
 	if sim == null:
 		return
+	pause_open = false
+	if is_instance_valid(pause_layer):
+		pause_layer.visible = false
+	if is_instance_valid(cursor_canvas):
+		cursor_canvas.visible = true
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	result_detail_open = false
 	sim.reset(G.cfg)
 	_clear_views()
 	view = sim.snapshot()
@@ -1883,7 +1890,10 @@ func _handle_events(evs: Array) -> void:
 					_show_banner("ОХОТА ПОЖИРАТЕЛЕЙ")
 					flash(Vector2(800, 450), 220.0, Color(1.0, 0.2, 0.55), 0.45)
 			"upgrade_pick":
-				_show_banner({"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕНИЕ УРОНА", "shield": "ЭНЕРГОЩИТ", "battery": "ЗАРЯД СВЕТА"}.get(str(e.get("kind", "")), "УЛУЧШЕНИЕ"))
+				# Показываем подбор только локального игрока, а не остальных участников матча.
+				if int(e.get("id", 0)) != local_id:
+					continue
+				_show_banner({"swift": "УСКОРЕНИЕ", "overdrive": "УСИЛЕНИЕ УРОНА", "shield": "ЗАЩИТА", "battery": "БАТАРЕЯ"}.get(str(e.get("kind", "")), "УЛУЧШЕНИЕ"))
 				flash(pos, 90.0, col, 0.35)
 			"meteor_warn":
 				Sfx.play("chaos", 0.75, -5.0)
