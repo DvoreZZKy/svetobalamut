@@ -137,6 +137,33 @@ func _run() -> void:
 			_fail("class %d takes excessive damage from a single eater" % kind)
 	sim.chaos_enabled = true
 
+	# 2ab) Meteor impact removes half of the player's maximum light reserve.
+	sim.reset(cfg)
+	sim.chaos_enabled = false
+	sim.meteor_timer = 9999.0
+	var meteor_target: Dictionary = sim.players[1]
+	meteor_target.pos = Vector2(800, 450)
+	var meteor_light_before := float(meteor_target.light)
+	sim.meteors.append({"pos": meteor_target.pos, "t": 0.0, "id": 500})
+	sim._meteor_tick(1.0 / 60.0)
+	if not is_equal_approx(meteor_light_before - float(meteor_target.light), float(meteor_target.max_light) * 0.5):
+		_fail("meteor impact did not remove 50% of maximum light")
+
+	# 2ac) Shield durability absorbs damage before light and is replicated in snapshots.
+	sim.reset(cfg)
+	sim.chaos_enabled = false
+	var shield_target: Dictionary = sim.players[1]
+	shield_target.shield_hp = 20.0
+	shield_target.max_shield = 50.0
+	var shield_light_before := float(shield_target.light)
+	sim._damage(shield_target, 10.0, 0, false)
+	if not is_equal_approx(float(shield_target.shield_hp), 11.0) or not is_equal_approx(float(shield_target.light), shield_light_before):
+		_fail("shield did not absorb incoming damage before light")
+	var shield_snapshot: Dictionary = sim.snapshot()
+	var shield_snapshot_player: Dictionary = shield_snapshot.players[0]
+	if not is_equal_approx(float(shield_snapshot_player.get("sh", 0.0)), 11.0) or not is_equal_approx(float(shield_snapshot_player.get("shmax", 0.0)), 50.0):
+		_fail("shield durability was not included in the player snapshot")
+
 	# 2d) Capsule's primary attack is a radial melee shockwave, not a projectile.
 	var melee_cfg: Array = [
 		{"id": 1, "name": "Capsule", "human": true, "color": 0, "kind": 1, "outfit": 0, "hat": 0},
