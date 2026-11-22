@@ -154,6 +154,7 @@ var banner: Label
 var score_lbl: RichTextLabel
 var help_lbl: Label
 var light_bar: NeonProgressBar
+var shield_bar: NeonProgressBar
 var dash_bar: NeonProgressBar
 var over_rect: ColorRect
 var over_shape: Polygon2D
@@ -479,6 +480,16 @@ func _build_hud() -> void:
 	light_bar.offset_right = 160
 	light_bar.offset_top = -65
 	light_bar.offset_bottom = -51
+	shield_bar = _bar(Vector2.ZERO, Vector2(292, 7), Color("#b68aff"), cl)
+	shield_bar.anchor_left = 0.5
+	shield_bar.anchor_right = 0.5
+	shield_bar.anchor_top = 1.0
+	shield_bar.anchor_bottom = 1.0
+	shield_bar.offset_left = -132
+	shield_bar.offset_right = 160
+	shield_bar.offset_top = -77
+	shield_bar.offset_bottom = -70
+	shield_bar.visible = false
 	dash_bar = _bar(Vector2.ZERO, Vector2(292, 9), Color("#62eaff"), cl)
 	dash_bar.anchor_left = 0.5
 	dash_bar.anchor_right = 0.5
@@ -1513,6 +1524,11 @@ func _update_hud(dt: float) -> void:
 		# A shadow has no light reserve: never leave the previous light fill visible.
 		light_bar.visible = true
 		light_bar.set_fill_ratio(0.0 if is_shadow else clampf(float(me.get("l", 0.0)) / maxf(float(me.get("hpmax", 1.0)), 1.0), 0.0, 1.0))
+		var shield_max := maxf(float(me.get("shmax", 0.0)), 0.0)
+		var shield_now := clampf(float(me.get("sh", 0.0)), 0.0, shield_max)
+		shield_bar.visible = not is_shadow and shield_max > 0.0 and shield_now > 0.0
+		if shield_bar.visible:
+			shield_bar.set_fill_ratio(shield_now / shield_max)
 		var dash_cooldown := clampf(float(me.get("dc", 0.0)), 0.0, Sim.DASH_CD)
 		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
 		dash_bar.set_fill_ratio(1.0 - dash_cooldown / Sim.DASH_CD)
