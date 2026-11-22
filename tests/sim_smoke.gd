@@ -160,7 +160,7 @@ func _run() -> void:
 	if not is_equal_approx(float(shield_target.shield_hp), 11.0) or not is_equal_approx(float(shield_target.light), shield_light_before):
 		_fail("shield did not absorb incoming damage before light")
 	var shield_snapshot: Dictionary = sim.snapshot()
-	var shield_snapshot_player: Dictionary = shield_snapshot.players[0]
+	var shield_snapshot_player: Dictionary = shield_snapshot.pl[0]
 	if not is_equal_approx(float(shield_snapshot_player.get("sh", 0.0)), 11.0) or not is_equal_approx(float(shield_snapshot_player.get("shmax", 0.0)), 50.0):
 		_fail("shield durability was not included in the player snapshot")
 
