@@ -1333,8 +1333,10 @@ func _update_hud(dt: float) -> void:
 		last_score_text = txt
 		score_lbl.text = txt
 	if not me.is_empty():
-		var light_ratio := 0.0 if bool(me.get("s", false)) else clampf(float(me.get("l", 0.0)) / maxf(float(me.get("hpmax", 1.0)), 1.0), 0.0, 1.0)
-		light_bar.set_fill_ratio(light_ratio)
+		var is_shadow := bool(me.get("s", false))
+		# A shadow has no light reserve: never leave the previous light fill visible.
+		light_bar.visible = not is_shadow
+		light_bar.set_fill_ratio(0.0 if is_shadow else clampf(float(me.get("l", 0.0)) / maxf(float(me.get("hpmax", 1.0)), 1.0), 0.0, 1.0))
 		var dash_cooldown := clampf(float(me.get("dc", 0.0)), 0.0, Sim.DASH_CD)
 		var ability_cooldown := clampf(float(me.get("acd", 0.0)), 0.0, 9.0)
 		dash_bar.set_fill_ratio(1.0 - dash_cooldown / Sim.DASH_CD)
