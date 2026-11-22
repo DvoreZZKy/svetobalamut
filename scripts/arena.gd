@@ -1311,7 +1311,26 @@ func _update_hud(dt: float) -> void:
 		_layout_pause_menu()
 	var over: bool = view.get("ph", "play") == "over"
 	var elapsed := int(float(view.get("elapsed", 0.0)))
-	stopwatch_lbl.text = "%02d:%02d" % [elapsed / 60, elapsed % 60]
+	var stopwatch_text := "%02d:%02d" % [elapsed / 60, elapsed % 60]
+	var glitch_now := Time.get_ticks_msec()
+	if glitch_now < timer_glitch_until:
+		var step := int(glitch_now / 65)
+		if step != glitch_step:
+			glitch_step = step
+			var chars := stopwatch_text.split("")
+			for i in chars.size():
+				if randf() < 0.58:
+					chars[i] = str(randi_range(0, 9)) if i != 2 else ":"
+			glitch_text = "".join(chars)
+		stopwatch_lbl.text = glitch_text
+		stopwatch_lbl.modulate = Color("#ff6b9d") if (step % 2 == 0) else Color("#74edff")
+		stopwatch_lbl.position = Vector2(randf_range(-3.0, 3.0), randf_range(-2.0, 2.0))
+		stopwatch_lbl.rotation = randf_range(-0.035, 0.035)
+	else:
+		stopwatch_lbl.text = stopwatch_text
+		stopwatch_lbl.modulate = Color.WHITE
+		stopwatch_lbl.position = Vector2.ZERO
+		stopwatch_lbl.rotation = 0.0
 	var active_chaos: Array[String] = []
 	var fx: Dictionary = view.get("fx", {})
 	for chaos_key in fx.keys():
