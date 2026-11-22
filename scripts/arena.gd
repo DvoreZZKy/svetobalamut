@@ -1496,16 +1496,6 @@ func _open_result_category(category: String) -> void:
 	over_lbl.text = "[center][font_size=27][b][color=%s]%s[/color][/b][/font_size][/center]" % [accent, display_category]
 	for child in result_list.get_children():
 		child.queue_free()
-	var category_header := Label.new()
-	category_header.text = display_category
-	category_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	category_header.custom_minimum_size = Vector2(0, 42)
-	category_header.add_theme_font_size_override("font_size", 24)
-	category_header.add_theme_color_override("font_color", Color(accent))
-	category_header.add_theme_color_override("font_shadow_color", Color(accent, 0.28))
-	category_header.add_theme_constant_override("shadow_offset_x", 0)
-	category_header.add_theme_constant_override("shadow_offset_y", 2)
-	result_list.add_child(category_header)
 	for i in rows.size():
 		var p: Dictionary = rows[i]
 		var row_card := PanelContainer.new()
@@ -1560,7 +1550,7 @@ func _open_result_category(category: String) -> void:
 		skin_label.add_theme_color_override("font_color", Color("#91a9c2"))
 		details.add_child(skin_label)
 		var score_label := Label.new()
-		score_label.text = "%s: %d" % [display_category, int(p.get(key, 0))]
+		score_label.text = "%d" % int(p.get(key, 0))
 		score_label.custom_minimum_size.x = 150
 		score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		score_label.add_theme_font_size_override("font_size", 20)
