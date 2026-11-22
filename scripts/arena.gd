@@ -857,10 +857,10 @@ func _process(dt: float) -> void:
 		_update_views(dt)
 		_update_fx(dt)
 		_update_hud(dt)
-	var bullet_count: int = view.get("bl", []).size()
-	if bullet_count > 0 or bullet_count != last_bullet_count:
-		bullet_layer.queue_redraw()
-	last_bullet_count = bullet_count
+	# Markers (meteors and upgrades) must redraw even when no bullets are flying.
+	# Otherwise the last bullet disappearing can freeze the layer and hide later warnings.
+	bullet_layer.queue_redraw()
+	last_bullet_count = view.get("bl", []).size()
 	if is_instance_valid(cursor_canvas):
 		cursor_canvas.visible = not G.tutorial_active and not pause_open and view.get("ph", "play") != "over"
 		if cursor_canvas.visible:
@@ -1495,66 +1495,63 @@ func _open_result_category(category: String) -> void:
 	for i in rows.size():
 		var p: Dictionary = rows[i]
 		var row_card := PanelContainer.new()
-		row_card.custom_minimum_size = Vector2(0, 236)
+		row_card.custom_minimum_size = Vector2(0, 94)
 		row_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var row_style := StyleBoxFlat.new()
-		row_style.bg_color = Color("#0b1b2d", 0.94)
-		row_style.border_color = Color(accent, 0.92)
-		row_style.set_border_width_all(2)
+		row_style.bg_color = Color("#0b1b2d", 0.82)
+		row_style.border_color = Color("#287e91", 0.82)
+		row_style.set_border_width_all(1)
 		row_style.set_corner_radius_all(0)
-		row_style.content_margin_left = 10
-		row_style.content_margin_right = 10
-		row_style.content_margin_top = 8
-		row_style.content_margin_bottom = 8
+		row_style.content_margin_left = 8
+		row_style.content_margin_right = 12
+		row_style.content_margin_top = 4
+		row_style.content_margin_bottom = 4
 		row_card.add_theme_stylebox_override("panel", row_style)
 		result_list.add_child(row_card)
-		var card_content := VBoxContainer.new()
-		card_content.alignment = BoxContainer.ALIGNMENT_CENTER
-		card_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		card_content.add_theme_constant_override("separation", 2)
-		row_card.add_child(card_content)
-		var crown_label := Label.new()
-		crown_label.text = "♛" if i == 0 else "№ %02d" % (i + 1)
-		crown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		crown_label.add_theme_font_size_override("font_size", 24 if i == 0 else 16)
-		crown_label.add_theme_color_override("font_color", Color("#ffd76a") if i == 0 else Color("#91a9c2"))
-		card_content.add_child(crown_label)
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 12)
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row_card.add_child(row)
 		var portrait := SubViewportContainer.new()
-		portrait.custom_minimum_size = Vector2(0, 124)
-		portrait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		portrait.custom_minimum_size = Vector2(88, 82)
+		portrait.size = Vector2(88, 82)
 		portrait.stretch = true
 		portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var portrait_vp := SubViewport.new()
-		portrait_vp.size = Vector2i(180, 124)
+		portrait_vp.size = Vector2i(120, 110)
 		portrait_vp.transparent_bg = true
 		portrait_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		portrait.add_child(portrait_vp)
 		var portrait_actor := VectorActor.new()
-		portrait_actor.position = Vector2(90, 91)
-		portrait_actor.scale = Vector2.ONE * 1.18
+		portrait_actor.position = Vector2(60, 58)
+		portrait_actor.scale = Vector2.ONE * 0.72
 		portrait_vp.add_child(portrait_actor)
 		portrait_actor.setup(int(p.get("k", 0)), G.col(int(p.get("c", 0))), int(p.get("outfit", 0)), int(p.get("hat", 0)))
-		card_content.add_child(portrait)
+		row.add_child(portrait)
+		var details := VBoxContainer.new()
+		details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		details.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(details)
 		var name_label := Label.new()
-		name_label.text = "%s%s" % [str(p.get("n", "Игрок")), "  •  БОТ" if bool(p.get("bot", false)) else ""]
-		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		name_label.add_theme_font_size_override("font_size", 20)
+		name_label.text = "%02d   %s%s" % [i + 1, str(p.get("n", "Игрок")), "  •  БОТ" if bool(p.get("bot", false)) else ""]
+		name_label.add_theme_font_size_override("font_size", 18)
 		name_label.add_theme_color_override("font_color", G.col(int(p.get("c", 0))))
-		card_content.add_child(name_label)
+		details.add_child(name_label)
 		var skin_label := Label.new()
 		var outfits := ["Без костюма", "Броня", "Полосатый", "Неоновый", "Плащ"]
 		var hats := ["Без шапки", "Корона", "Кепка", "Рожки", "Ауреол"]
 		skin_label.text = "%s  •  %s" % [outfits[clampi(int(p.get("outfit", 0)), 0, outfits.size() - 1)], hats[clampi(int(p.get("hat", 0)), 0, hats.size() - 1)]]
-		skin_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		skin_label.add_theme_font_size_override("font_size", 13)
+		skin_label.add_theme_font_size_override("font_size", 12)
 		skin_label.add_theme_color_override("font_color", Color("#91a9c2"))
-		card_content.add_child(skin_label)
+		details.add_child(skin_label)
 		var score_label := Label.new()
 		score_label.text = "%s: %d" % [category, int(p.get(key, 0))]
-		score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		score_label.add_theme_font_size_override("font_size", 23)
+		score_label.custom_minimum_size.x = 150
+		score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		score_label.add_theme_font_size_override("font_size", 20)
 		score_label.add_theme_color_override("font_color", Color(accent))
-		card_content.add_child(score_label)
+		row.add_child(score_label)
 	result_list_scroll.visible = true
 	for card in result_cards:
 		card.visible = false
