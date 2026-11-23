@@ -750,6 +750,7 @@ func _use_extra_ability(p: Dictionary) -> void:
 
 
 func _spawn_mirage_doubles(p: Dictionary) -> void:
+	p.ability_t = 4.2
 	for clone_index in 2:
 		var side := -1.0 if clone_index == 0 else 1.0
 		var offset := p.aim.orthogonal() * side * 92.0
