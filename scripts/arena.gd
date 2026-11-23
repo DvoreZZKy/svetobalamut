@@ -859,6 +859,20 @@ func _draw_bullets() -> void:
 		bullet_layer.draw_circle(turret_pos, 16.0, Color("#10273c"))
 		bullet_layer.draw_arc(turret_pos, 20.0, 0.0, TAU, 24, turret_col, 3.0, true)
 		bullet_layer.draw_line(turret_pos, turret_pos + Vector2(0, -23), Color.WHITE, 4.0, true)
+	for beam in view.get("abm", []):
+		var beam_start: Vector2 = beam[0]
+		var beam_end: Vector2 = beam[1]
+		var beam_kind: int = int(beam[2])
+		var beam_alpha: float = clampf(float(beam[3]) / 0.14, 0.0, 1.0)
+		var beam_dir: Vector2 = (beam_end - beam_start).normalized()
+		var beam_side: Vector2 = beam_dir.orthogonal()
+		var beam_mid: Vector2 = beam_start.lerp(beam_end, 0.32) + beam_side * sin(t * 70.0) * 8.0
+		var beam_mid2: Vector2 = beam_start.lerp(beam_end, 0.68) - beam_side * sin(t * 63.0) * 7.0
+		var beam_color := Color("#fff27a") if beam_kind == 4 else Color("#86ffb5")
+		var beam_points := PackedVector2Array([beam_start, beam_mid, beam_mid2, beam_end])
+		bullet_layer.draw_polyline(beam_points, Color(beam_color, 0.25 * beam_alpha), 13.0, true)
+		bullet_layer.draw_polyline(beam_points, Color(beam_color, beam_alpha), 4.5, true)
+		bullet_layer.draw_circle(beam_end, 5.0, Color(beam_color, beam_alpha))
 	for b in view.get("bl", []):
 		var vel: Vector2 = b[2]
 		var pos: Vector2 = b[1] + vel * snap_age
