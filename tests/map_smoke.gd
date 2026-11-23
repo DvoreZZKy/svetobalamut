@@ -31,8 +31,15 @@ func _run() -> void:
 				push_error("Cave map name or dimensions are incorrect")
 				quit(1)
 				return
-			if (map_item.get("objects", []) as Array).size() < 30:
-				push_error("Cave map is still too empty to form winding passages")
+			var cave_objects: Array = map_item.get("objects", [])
+			if cave_objects.size() < 180:
+				push_error("Cave formations are not dense enough to create continuous cave walls")
+				quit(1)
+			var cave_types := {}
+			for cave_object in cave_objects:
+				cave_types[str(cave_object.get("type", ""))] = true
+			if not cave_types.has("rock") or not cave_types.has("crystal") or not cave_types.has("plant"):
+				push_error("Cave walls must combine rocks, crystals and vegetation")
 				quit(1)
 	if not cave_found or builtin_sizes.size() != 6 or unique_sizes.size() != 6:
 		push_error("Built-in maps do not have six distinct layouts and dimensions")

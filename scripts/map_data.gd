@@ -2,12 +2,12 @@ extends Node
 signal maps_changed
 const SAVE_DIR := "user://maps"
 const MAPS := [
- {"id":"arena_original","name":"Первая арена","size":Vector2(1600,900),"theme":"cyan","zone_delay":35.0,"zone_duration":170.0,"objects":[{"type":"rock","x":800.0,"y":450.0,"r":54.0},{"type":"crystal","x":400.0,"y":225.0,"r":34.0},{"type":"crystal","x":1200.0,"y":675.0,"r":34.0}]},
- {"id":"neon_canyon","name":"Неоновый каньон","size":Vector2(2400,1500),"theme":"violet","zone_delay":38.0,"zone_duration":185.0,"objects":[{"type":"rock","x":760.0,"y":750.0,"r":82.0},{"type":"rock","x":1640.0,"y":750.0,"r":82.0},{"type":"cover","x":1200.0,"y":470.0,"r":65.0}]},
- {"id":"pulse_grid","name":"Импульсная сетка","size":Vector2(2400,1500),"theme":"cyan","zone_delay":32.0,"zone_duration":175.0,"objects":[{"type":"generator","x":1200.0,"y":750.0,"r":58.0},{"type":"cover","x":650.0,"y":750.0,"r":72.0},{"type":"cover","x":1750.0,"y":750.0,"r":72.0}]},
- {"id":"shard_labyrinth","name":"Лабиринт осколков","size":Vector2(2600,1600),"theme":"pink","zone_delay":40.0,"zone_duration":190.0,"objects":[{"type":"rock","x":780.0,"y":500.0,"r":72.0},{"type":"rock","x":1050.0,"y":800.0,"r":72.0},{"type":"rock","x":1350.0,"y":500.0,"r":72.0},{"type":"rock","x":1620.0,"y":800.0,"r":72.0}]},
- {"id":"dark_orbit","name":"Тёмная орбита","size":Vector2(2800,1700),"theme":"violet","zone_delay":45.0,"zone_duration":200.0,"objects":[{"type":"rock","x":1400.0,"y":850.0,"r":110.0},{"type":"teleporter","x":650.0,"y":850.0,"r":48.0},{"type":"teleporter","x":2150.0,"y":850.0,"r":48.0},{"type":"generator","x":1400.0,"y":400.0,"r":52.0}]},
- {"id":"light_garden","name":"Сад света","size":Vector2(2600,1600),"theme":"green","zone_delay":36.0,"zone_duration":180.0,"objects":[{"type":"plant","x":800.0,"y":500.0,"r":56.0},{"type":"plant","x":1800.0,"y":500.0,"r":56.0},{"type":"plant","x":800.0,"y":1100.0,"r":56.0},{"type":"plant","x":1800.0,"y":1100.0,"r":56.0},{"type":"generator","x":1300.0,"y":800.0,"r":58.0}]}
+ {"id":"arena_original","name":"Первая арена","size":Vector2(1600,900),"theme":"cyan","zone_delay":120.0,"zone_duration":60.0,"objects":[{"type":"rock","x":800.0,"y":450.0,"r":54.0},{"type":"crystal","x":400.0,"y":225.0,"r":34.0},{"type":"crystal","x":1200.0,"y":675.0,"r":34.0}]},
+ {"id":"neon_canyon","name":"Неоновый каньон","size":Vector2(2400,1500),"theme":"violet","zone_delay":120.0,"zone_duration":60.0,"objects":[{"type":"rock","x":760.0,"y":750.0,"r":82.0},{"type":"rock","x":1640.0,"y":750.0,"r":82.0},{"type":"cover","x":1200.0,"y":470.0,"r":65.0}]},
+ {"id":"pulse_grid","name":"Импульсная сетка","size":Vector2(2400,1500),"theme":"cyan","zone_delay":120.0,"zone_duration":60.0,"objects":[{"type":"generator","x":1200.0,"y":750.0,"r":58.0},{"type":"cover","x":650.0,"y":750.0,"r":72.0},{"type":"cover","x":1750.0,"y":750.0,"r":72.0}]},
+ {"id":"shard_labyrinth","name":"Лабиринт осколков","size":Vector2(2600,1600),"theme":"pink","zone_delay":120.0,"zone_duration":60.0,"objects":[{"type":"rock","x":780.0,"y":500.0,"r":72.0},{"type":"rock","x":1050.0,"y":800.0,"r":72.0},{"type":"rock","x":1350.0,"y":500.0,"r":72.0},{"type":"rock","x":1620.0,"y":800.0,"r":72.0}]},
+ {"id":"dark_orbit","name":"Тёмная орбита","size":Vector2(2800,1700),"theme":"violet","zone_delay":120.0,"zone_duration":60.0,"objects":[{"type":"rock","x":1400.0,"y":850.0,"r":110.0},{"type":"teleporter","x":650.0,"y":850.0,"r":48.0},{"type":"teleporter","x":2150.0,"y":850.0,"r":48.0},{"type":"generator","x":1400.0,"y":400.0,"r":52.0}]},
+ {"id":"light_garden","name":"Сад света","size":Vector2(2600,1600),"theme":"green","zone_delay":120.0,"zone_duration":60.0,"objects":[{"type":"plant","x":800.0,"y":500.0,"r":56.0},{"type":"plant","x":1800.0,"y":500.0,"r":56.0},{"type":"plant","x":800.0,"y":1100.0,"r":56.0},{"type":"plant","x":1800.0,"y":1100.0,"r":56.0},{"type":"generator","x":1300.0,"y":800.0,"r":58.0}]}
 ]
 var selected_id := "arena_original"
 var custom_maps: Array[Dictionary] = []
@@ -69,31 +69,41 @@ func _pulse_grid_objects() -> Array:
 
 
 func _cave_objects() -> Array:
- var result: Array = []
- var wall_xs: Array[float] = [560.0, 1100.0, 1640.0]
- var gap_centers: Array[float] = [650.0, 1085.0, 430.0]
- for wall_index in wall_xs.size():
-  for row in 10:
-   var y := 150.0 + float(row) * 145.0
-   if absf(y - gap_centers[wall_index]) < 215.0:
-    continue
-   result.append({"type": "rock", "x": wall_xs[wall_index], "y": y, "r": 43.0})
-  result.append({"type": "crystal", "x": wall_xs[wall_index] + 125.0, "y": gap_centers[wall_index], "r": 32.0})
- for x in range(760, 1000, 110):
-  result.append({"type": "rock", "x": float(x), "y": 820.0, "r": 38.0})
- for x in range(1280, 1510, 110):
-  result.append({"type": "rock", "x": float(x), "y": 790.0, "r": 38.0})
- for item in [
-  {"type": "generator", "x": 350.0, "y": 800.0, "r": 46.0},
-  {"type": "generator", "x": 1880.0, "y": 800.0, "r": 46.0},
-  {"type": "container", "x": 880.0, "y": 300.0, "r": 34.0},
-  {"type": "container", "x": 1370.0, "y": 1320.0, "r": 34.0},
-  {"type": "plant", "x": 2050.0, "y": 250.0, "r": 42.0},
-  {"type": "plant", "x": 190.0, "y": 1350.0, "r": 42.0}
- ]:
-  result.append(item)
- return result
-
+	var result: Array = []
+	# Dense, overlapping mineral formations form cave walls around winding passages.
+	for column in range(1, 27):
+		var x := float(column) * 82.0
+		var main_y := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
+		var upper_branch := 470.0 + sin(x * 0.0045 + 1.2) * 95.0
+		var lower_branch := 1190.0 + sin(x * 0.0038 + 2.0) * 100.0
+		for row in range(1, 20):
+			var y := float(row) * 78.0
+			var in_main_passage := absf(y - main_y) < 142.0
+			var in_upper_chamber := absf(y - upper_branch) < 86.0 and x > 420.0 and x < 1780.0
+			var in_lower_chamber := absf(y - lower_branch) < 92.0 and x > 520.0 and x < 1880.0
+			var in_side_cut := (absf(x - 520.0) < 105.0 or absf(x - 1680.0) < 112.0) and y > 360.0 and y < 1280.0
+			if in_main_passage or in_upper_chamber or in_lower_chamber or in_side_cut:
+				continue
+			var seed := column * 31 + row * 17
+			var jitter_x := float((seed * 13) % 19) - 9.0
+			var jitter_y := float((seed * 7) % 17) - 8.0
+			var object_type := "rock"
+			if seed % 5 == 0 or seed % 7 == 0:
+				object_type = "crystal"
+			elif seed % 11 == 0:
+				object_type = "plant"
+			var radius := 43.0 + float(seed % 13)
+			result.append({"type": object_type, "x": x + jitter_x, "y": y + jitter_y, "r": radius})
+	for item in [
+		{"type":"crystal","x":170.0,"y":790.0,"r":58.0},
+		{"type":"crystal","x":2030.0,"y":820.0,"r":62.0},
+		{"type":"generator","x":350.0,"y":800.0,"r":46.0},
+		{"type":"generator","x":1880.0,"y":800.0,"r":46.0},
+		{"type":"container","x":880.0,"y":300.0,"r":34.0},
+		{"type":"container","x":1370.0,"y":1320.0,"r":34.0}
+	]:
+		result.append(item)
+	return result
 
 func _orbit_objects() -> Array:
  var result: Array = []
@@ -138,7 +148,7 @@ func select_map(id: String) -> bool:
  return false
 
 func new_custom_map(name: String = "Моя карта") -> Dictionary:
- return {"id":"custom_" + str(Time.get_unix_time_from_system()) + "_" + str(randi()),"name":name.substr(0,32),"size":Vector2(2400,1500),"theme":"cyan","zone_delay":35.0,"zone_duration":180.0,"objects":[]}
+ return {"id":"custom_" + str(Time.get_unix_time_from_system()) + "_" + str(randi()),"name":name.substr(0,32),"size":Vector2(2400,1500),"theme":"cyan","zone_delay":120.0,"zone_duration":60.0,"objects":[]}
 
 func save_custom_map(data: Dictionary) -> bool:
  var clean := _sanitize_map(data)

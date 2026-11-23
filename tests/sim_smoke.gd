@@ -610,6 +610,37 @@ func _run() -> void:
 	if profile["color"] != 7 or profile["kind"] != 0 or profile["outfit"] != 0 or profile["hat"] != 2:
 		_fail("client profile was not clamped: %s" % str(profile))
 
+	# Danger zone is inactive for two minutes, then contracts from map edges to centre in one minute.
+	sim.reset([{"id":1,"name":"Zone QA","human":true,"color":0,"kind":0,"outfit":0,"hat":0}])
+	var zone_player: Dictionary = sim.players[1]
+	zone_player.pos = Vector2(20.0, 20.0)
+	zone_player.light = 100.0
+	sim.elapsed_time = 119.0
+	sim.call("_tick_danger_zone", 1.0)
+	if float(zone_player.light) < 99.9:
+		_fail("danger zone activated before the two-minute delay")
+		simtest
+		return
+	sim.elapsed_time = 121.0
+	sim.call("_tick_danger_zone", 1.0)
+	if float(zone_player.light) >= 99.9:
+		_fail("danger zone did not begin closing inward after two minutes")
+		return
+	sim.elapsed_time = 150.0
+	sim.call("_tick_danger_zone", 0.0)
+	var zone_snapshot: Dictionary = sim.snapshot()
+	var zone_data: Array = zone_snapshot.get("zone", [])
+	if zone_data.size() < 2 or not Vector2(zone_data[1]).is_equal_approx(sim.world_size * 0.31):
+		_fail("danger zone did not contract linearly during its one-minute closing period")
+		return
+	sim.elapsed_time = 180.0
+	sim.call("_tick_danger_zone", 0.0)
+	zone_snapshot = sim.snapshot()
+	zone_data = zone_snapshot.get("zone", [])
+	if not Vector2(zone_data[1]).is_equal_approx(sim.world_size * 0.12):
+		_fail("danger zone did not reach its final central area after one minute")
+		return
+
 	arena.queue_free()
 	await process_frame
 	if failures.is_empty():

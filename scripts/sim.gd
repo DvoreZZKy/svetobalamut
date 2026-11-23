@@ -6,7 +6,7 @@ extends RefCounted
 const A := Vector2(1600, 900)
 var world_size: Vector2 = A
 var map_data: Dictionary = {}
-var danger_radius := 0.0
+var danger_half_extents := Vector2.ZERO
 var map_object_timer := 2.0
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
@@ -123,7 +123,7 @@ func reset(cfg: Array) -> void:
 		runtime_object["max_hp"] = object_hp
 		runtime_objects.append(runtime_object)
 	map_data["objects"] = runtime_objects
-	danger_radius = minf(world_size.x, world_size.y) * 0.48
+	danger_half_extents = world_size * 0.5
 	map_object_timer = 2.0
 	players.clear()
 	pending_decoys.clear()
@@ -956,15 +956,16 @@ func _tick_danger_zone(dt: float) -> void:
 				if healed > 0.01:
 					player.healing_total = float(player.get("healing_total", 0.0)) + healed
 					events.append({"t":"heal","id":player.id,"amount":healed})
-	var delay := float(map_data.get("zone_delay", 35.0))
-	var duration := float(map_data.get("zone_duration", 180.0))
-	var maximum := minf(world_size.x, world_size.y) * 0.48
-	var minimum := minf(world_size.x, world_size.y) * 0.12
-	if elapsed_time > delay:
-		danger_radius = lerpf(maximum, minimum, clampf((elapsed_time - delay) / duration, 0.0, 1.0))
+	var delay := float(map_data.get("zone_delay", 120.0))
+	var duration := float(map_data.get("zone_duration", 60.0))
+	if elapsed_time >= delay:
+		# The safe rectangle starts at the map edges and contracts evenly toward its centre.
+		var progress := clampf((elapsed_time - delay) / duration, 0.0, 1.0)
+		danger_half_extents = world_size * lerpf(0.5, 0.12, progress)
 		var center := world_size * 0.5
 		for player in players.values():
-			if not player.shadow and not player.decoy and (player.pos as Vector2).distance_to(center) > danger_radius:
+			var offset: Vector2 = (player.pos as Vector2) - center
+			if not player.shadow and not player.decoy and (absf(offset.x) > danger_half_extents.x or absf(offset.y) > danger_half_extents.y):
 				player.light = maxf(0.0, float(player.light) - 7.5 * dt)
 				if player.light <= 0.0:
 					_make_shadow(player, 0, false)
@@ -1798,4 +1799,4 @@ func snapshot() -> Dictionary:
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
 	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "az": az, "at": at, "abm": abm, "fx": effects.duplicate(), "tl": time_left,
-		"map_id": str(map_data.get("id", "arena_original")), "ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time, "world": world_size, "zone": [world_size * 0.5, danger_radius], "map_objects": map_data.get("objects", [])}
+		"map_id": str(map_data.get("id", "arena_original")), "ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time, "world": world_size, "zone": [world_size * 0.5, danger_half_extents], "map_objects": map_data.get("objects", [])}

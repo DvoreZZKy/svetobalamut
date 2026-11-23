@@ -753,8 +753,10 @@ func _draw() -> void:
 			var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
 			var r := float(item.get("r",48.0))
 			draw_arc(p,r,0.0,TAU,24,Color("#65edff"),2.5,true)
-		var simple_zone: Array = view.get("zone", [world * 0.5, minf(world.x,world.y)*0.48])
-		draw_arc(simple_zone[0], float(simple_zone[1]), 0.0, TAU, 64, Color("#ff4f9b",0.9), 4.0, true)
+		if float(view.get("elapsed", 0.0)) >= 120.0:
+			var simple_zone: Array = view.get("zone", [world * 0.5, world * 0.5])
+			var simple_half: Vector2 = Vector2(simple_zone[1])
+			draw_rect(Rect2(Vector2(simple_zone[0]) - simple_half, simple_half * 2.0), Color("#ff4f9b",0.9), false, 4.0)
 		return
 	var map_id := str(view.get("map_id", MapData.selected_id))
 	var gc := Color(0.12, 0.28, 0.48, 0.14)
@@ -799,8 +801,17 @@ func _draw() -> void:
 		for tick in 4:
 			var axis := Vector2.from_angle(TAU * float(tick) / 4.0)
 			draw_line(c + axis * z.z * 0.82, c + axis * z.z * 0.94, Color(0.52, 0.34, 0.92, 0.38), 2.0, true)
-	var zone_info: Array = view.get("zone", [world * 0.5, minf(world.x,world.y)*0.48])
-	draw_arc(zone_info[0], float(zone_info[1]), 0.0, TAU, 100, Color("#ff4f9b",0.92), 5.0, true)
+	if float(view.get("elapsed", 0.0)) >= 120.0:
+		var zone_info: Array = view.get("zone", [world * 0.5, world * 0.5])
+		var zone_half: Vector2 = Vector2(zone_info[1])
+		var safe_rect := Rect2(Vector2(zone_info[0]) - zone_half, zone_half * 2.0)
+		draw_rect(safe_rect, Color("#ff4f9b",0.92), false, 5.0)
+		var bracket := minf(42.0, minf(zone_half.x, zone_half.y) * 0.18)
+		for corner in [safe_rect.position, safe_rect.position + Vector2(safe_rect.size.x, 0), safe_rect.position + safe_rect.size, safe_rect.position + Vector2(0, safe_rect.size.y)]:
+			var sx := 1.0 if corner.x < world.x * 0.5 else -1.0
+			var sy := 1.0 if corner.y < world.y * 0.5 else -1.0
+			draw_line(corner, corner + Vector2(sx * bracket, 0), Color("#ffd0e5",0.9), 3.0, true)
+			draw_line(corner, corner + Vector2(0, sy * bracket), Color("#ffd0e5",0.9), 3.0, true)
 	for item in view.get("map_objects", map_objects):
 		var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
 		var r := float(item.get("r",48.0))
