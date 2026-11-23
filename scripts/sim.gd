@@ -101,9 +101,6 @@ func reset(cfg: Array) -> void:
 	world_size = Vector2(map_data.get("size", A))
 	danger_radius = minf(world_size.x, world_size.y) * 0.48
 	map_object_timer = 2.0
-	map_data = MapData.get_selected_map()
-	world_size = Vector2(map_data.get("size", A))
-	danger_radius = minf(world_size.x, world_size.y) * 0.48
 	players.clear()
 	bullets.clear()
 	eaters.clear()
@@ -874,37 +871,6 @@ func _wall_bounce(p: Dictionary) -> void:
 	pos = _resolve_map_objects(pos, 28.0)
 	p.pos = pos
 	p.vel = vel
-
-
-
-func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
-	for item in map_data.get("objects", []):
-		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
-		var object_type := str(item.get("type", "rock"))
-		if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
-			continue
-		var object_radius := float(item.get("r", 48.0))
-		var delta := pos - center
-		var minimum := radius + object_radius
-		if delta.length_squared() < minimum * minimum:
-			var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
-			pos = center + direction * minimum
-	return pos
-
-
-func _tick_danger_zone(dt: float) -> void:
-	var delay := float(map_data.get("zone_delay", 35.0))
-	var duration := float(map_data.get("zone_duration", 180.0))
-	var maximum := minf(world_size.x, world_size.y) * 0.48
-	var minimum := minf(world_size.x, world_size.y) * 0.12
-	if elapsed_time > delay:
-		danger_radius = lerpf(maximum, minimum, clampf((elapsed_time - delay) / duration, 0.0, 1.0))
-		var center := world_size * 0.5
-		for p in players.values():
-			if not p.shadow and not p.decoy and (p.pos as Vector2).distance_to(center) > danger_radius:
-				p.light = maxf(0.0, float(p.light) - 7.5 * dt)
-				if p.light <= 0.0:
-					_make_shadow(p, 0, false)
 
 
 
