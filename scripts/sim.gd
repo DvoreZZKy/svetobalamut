@@ -58,6 +58,7 @@ var eaters: Array = []
 var lures: Array = []
 var attack_zones: Array = []
 var attack_turrets: Array = []
+var attack_beams: Array = []
 var pickups: Array = []
 var pickup_timer := 9.0
 var meteors: Array = []
@@ -93,6 +94,7 @@ func reset(cfg: Array) -> void:
 	lures.clear()
 	attack_zones.clear()
 	attack_turrets.clear()
+	attack_beams.clear()
 	pickups.clear()
 	pickup_timer = rng.randf_range(8.0, 13.0)
 	meteors.clear()
@@ -176,6 +178,7 @@ func step(dt: float) -> void:
 	_update_bullets(dt)
 	_update_attack_zones(dt)
 	_update_attack_turrets(dt)
+	_update_attack_beams(dt)
 	_update_lures(dt)
 	_update_eaters(dt)
 	_update_pickups(dt)
@@ -435,12 +438,26 @@ func _parasite_basic_attack(p: Dictionary) -> void:
 			best_dot = alignment
 			best = target
 	if not best.is_empty():
+		_add_attack_beam(p.pos, best.pos, 13, 0.12)
 		_damage(best, 10.0 * float(p.attack), p.id, false)
 		var old_light: float = float(p.light)
 		p.light = minf(float(p.max_light), float(p.light) + 2.0)
 		if float(p.light) > old_light:
 			p.healing_total = float(p.get("healing_total", 0.0)) + float(p.light) - old_light
 			events.append({"t": "heal", "id": p.id, "amount": float(p.light) - old_light})
+
+
+func _add_attack_beam(start_pos: Vector2, end_pos: Vector2, beam_kind: int, duration: float) -> void:
+	attack_beams.append({"a": start_pos, "b": end_pos, "kind": beam_kind, "t": duration})
+
+
+func _update_attack_beams(dt: float) -> void:
+	var keep: Array = []
+	for beam in attack_beams:
+		beam.t = float(beam.t) - dt
+		if float(beam.t) > 0.0:
+			keep.append(beam)
+	attack_beams = keep
 
 
 func _spawn_attack_zone(pos: Vector2, owner_id: int, zone_kind: String, radius: float, duration: float) -> void:
@@ -705,6 +722,7 @@ func _chain_lightning(p: Dictionary) -> void:
 	if first.is_empty() or (first.pos as Vector2).distance_to(p.pos) > 300.0:
 		return
 	var origin: Vector2 = first.pos
+	_add_attack_beam(p.pos, origin, 4, 0.14)
 	_damage(first, 24.0 * float(p.attack), p.id, false)
 	var second: Dictionary = {}
 	var best_distance := 220.0 * 220.0
@@ -716,6 +734,7 @@ func _chain_lightning(p: Dictionary) -> void:
 			best_distance = distance
 			second = candidate
 	if not second.is_empty():
+		_add_attack_beam(origin, second.pos, 4, 0.14)
 		_damage(second, 15.0 * float(p.attack), p.id, false)
 
 
@@ -1577,8 +1596,11 @@ func snapshot() -> Dictionary:
 	var at: Array = []
 	for turret in attack_turrets:
 		at.append([turret.pos, int(turret.owner), float(turret.t)])
+	var abm: Array = []
+	for beam in attack_beams:
+		abm.append([beam.a, beam.b, int(beam.kind), float(beam.t)])
 	var ea: Array = []
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
-	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "az": az, "at": at, "fx": effects.duplicate(), "tl": time_left,
+	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "az": az, "at": at, "abm": abm, "fx": effects.duplicate(), "tl": time_left,
 		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time}
