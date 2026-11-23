@@ -1744,7 +1744,12 @@ func _update_hud(dt: float) -> void:
 		ability_bar.set_fill_ratio(1.0 - ability_cooldown / 9.0)
 		var extra_cooldown := clampf(float(me.get("excd", 0.0)), 0.0, 13.0)
 		extra_ability_bar.set_fill_ratio(1.0 - extra_cooldown / 13.0)
-		var ability_duration_max := 0.65 if int(me.get("k", 0)) == 2 else 2.8
+		var ability_kind := int(me.get("k", 0))
+		var ability_duration_max := 2.8
+		match ability_kind:
+			2: ability_duration_max = 0.65
+			4: ability_duration_max = 2.2
+			14: ability_duration_max = 3.2
 		var ability_duration := clampf(float(me.get("ab", 0.0)), 0.0, ability_duration_max)
 		var extra_duration := 0.0
 		match int(me.get("k", 0)):
@@ -1754,6 +1759,12 @@ func _update_hud(dt: float) -> void:
 				extra_duration = clampf(float(me.get("abs", 0.0)), 0.0, 2.4)
 			2:
 				extra_duration = clampf(float(me.get("phs", 0.0)), 0.0, 1.25)
+			5, 6, 10:
+				extra_duration = clampf(float(me.get("field_t", 0.0)), 0.0, 2.8)
+			16:
+				extra_duration = clampf(float(me.get("turret_t", 0.0)), 0.0, 6.0)
+			17:
+				extra_duration = clampf(float(me.get("field_t", 0.0)), 0.0, 2.8)
 		ability_duration_bar.visible = not is_shadow and not over and ability_duration > 0.0
 		extra_duration_bar.visible = not is_shadow and not over and extra_duration > 0.0
 		ability_duration_label.visible = ability_duration_bar.visible
@@ -1761,7 +1772,7 @@ func _update_hud(dt: float) -> void:
 		if ability_duration_bar.visible:
 			ability_duration_bar.set_fill_ratio(ability_duration / ability_duration_max)
 		if extra_duration_bar.visible:
-			var extra_duration_max := 3.8 if int(me.get("k", 0)) == 0 else (2.4 if int(me.get("k", 0)) == 1 else 1.25)
+			var extra_duration_max := 3.8 if ability_kind == 0 else (2.4 if ability_kind == 1 else (1.25 if ability_kind == 2 else (6.0 if ability_kind == 16 else 2.8)))
 			extra_duration_bar.set_fill_ratio(extra_duration / extra_duration_max)
 			extra_duration_label.text = "F • %.1fс" % extra_duration
 		ability_duration_label.text = "Q • %.1fс" % ability_duration
@@ -2232,13 +2243,30 @@ func _handle_events(evs: Array) -> void:
 					var tw := create_tween()
 					tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
 			"ability":
-				Sfx.play("dash", 1.0, -2.0)
+				var ability_kind := int(e.get("kind", 0))
+				if ability_kind == 7:
+					Sfx.play("boom", 1.12, -3.0)
+				elif ability_kind == 4:
+					Sfx.play("chaos", 1.25, -7.0)
+				else:
+					Sfx.play("dash", 1.0, -2.0)
 				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
 				flash(pos, 190.0, ability_color, 0.45)
 				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55, true)
+			"mirage_clone":
+				Sfx.play("possess", 1.25, -7.0)
+				flash(pos, 64.0, Color("#c49bff"), 0.18)
+				burst(pos, Color("#c49bff"), 12, 220.0, 0.28)
+			"supernova":
+				Sfx.play("boom", 1.28, -1.0)
+				_outline_shockwave(pos, float(e.get("r", 230.0)), Color("#ffb45f"), 0.14)
+				burst(pos, Color("#ffb45f"), 44, 620.0, 0.38, true)
+				flash(pos, float(e.get("r", 230.0)) * 0.82, Color("#fff0a0"), 0.18)
+				shake = maxf(shake, 16.0)
 			"extra_ability":
+				var extra_kind := int(e.get("kind", 0))
 				var extra_color: Color = [Color("#baff6a"), Color("#ffca63"), Color("#c18cff"), Color("#8cf7ff")][int(e.get("kind", 0)) % 4]
-				Sfx.play("dash", 1.15, -1.0)
+				Sfx.play("chaos" if extra_kind == 4 else "dash", 1.15, -1.0)
 				flash(pos, 145.0, extra_color, 0.38)
 				burst(pos, extra_color, 34, 470.0, 0.5, true)
 			"capsule_absorb":
@@ -2247,7 +2275,7 @@ func _handle_events(evs: Array) -> void:
 				Sfx.play("win")
 
 
-func _outline_shockwave(pos: Vector2, radius: float, col: Color) -> void:
+func _outline_shockwave(pos: Vector2, radius: float, col: Color, duration: float = 0.24) -> void:
 	if _is_potato():
 		return
 	# A translucent filled pulse makes the released charge readable without hiding the arena.
@@ -2262,8 +2290,8 @@ func _outline_shockwave(pos: Vector2, radius: float, col: Color) -> void:
 	wave.position = pos
 	wave.scale = Vector2.ONE * 0.72
 	var tw := create_tween().set_parallel(true)
-	tw.tween_property(wave, "scale", Vector2.ONE, 0.24).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(wave, "modulate:a", 0.0, 0.24)
+	tw.tween_property(wave, "scale", Vector2.ONE, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(wave, "modulate:a", 0.0, duration)
 	tw.chain().tween_callback(wave.queue_free)
 
 func burst(pos: Vector2, col: Color, amount: int, speed: float, life: float, important := false) -> void:
