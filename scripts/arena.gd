@@ -190,7 +190,7 @@ func _ready() -> void:
 	var arena_env := G.make_env()
 	add_child(arena_env)
 	cam = Camera2D.new()
-	cam.position = ARENA / 2.0
+	cam.position = Vector2(MapData.get_selected_map().get("size", ARENA)) / 2.0
 	cam.zoom = Vector2(camera_zoom, camera_zoom)
 	map_objects = MapData.get_selected_map().get("objects", [])
 	add_child(cam)
@@ -728,7 +728,7 @@ func _draw() -> void:
 	if _is_potato():
 		# Keep the arena's gameplay zones visible, but draw them as cheap outlines:
 		# no filled polygons, inner decoration, ticks, or background grid.
-		for z in Sim.ZONES:
+		for z in Sim.regen_zones_for(world):
 			var center := Vector2(z.x, z.y)
 			draw_arc(center, z.z, 0.0, TAU, 48, Color(0.30, 0.34, 0.46, 0.78), 2.0, true)
 		var simple_border := PackedVector2Array([
@@ -745,12 +745,33 @@ func _draw() -> void:
 		var simple_zone: Array = view.get("zone", [world * 0.5, minf(world.x,world.y)*0.48])
 		draw_arc(simple_zone[0], float(simple_zone[1]), 0.0, TAU, 64, Color("#ff4f9b",0.9), 4.0, true)
 		return
+	var map_id := str(view.get("map_id", MapData.selected_id))
 	var gc := Color(0.12, 0.28, 0.48, 0.14)
 	for x in range(0, int(world.x) + 1, 100):
 		draw_line(Vector2(x, 0), Vector2(x, world.y), gc, 1.5)
 	for y in range(0, int(world.y) + 1, 100):
 		draw_line(Vector2(0, y), Vector2(world.x, y), gc, 1.5)
-	for z in Sim.ZONES:
+	match map_id:
+		"neon_canyon":
+			for i in 5:
+				var x := 260.0 + float(i) * 500.0
+				draw_line(Vector2(x, 0), Vector2(x + 210.0, world.y), Color("#8b55d8", 0.10), 18.0, true)
+		"pulse_grid":
+			for x in range(100, int(world.x), 300):
+				for y in range(100, int(world.y), 300):
+					draw_rect(Rect2(Vector2(x, y), Vector2(220, 220)), Color("#3ad9ee", 0.035), false, 2.0)
+		"shard_labyrinth":
+			draw_circle(world * 0.5, minf(world.x, world.y) * 0.34, Color("#301d48", 0.12))
+			for i in 4:
+				draw_arc(world * 0.5, 180.0 + float(i) * 125.0, 0.0, TAU, 80, Color("#b36bff", 0.09), 9.0, true)
+		"dark_orbit":
+			for i in 5:
+				draw_arc(world * 0.5, 220.0 + float(i) * 150.0, 0.0, TAU, 96, Color("#8d7cff", 0.12), 3.0, true)
+		"light_garden":
+			for x in range(180, int(world.x), 360):
+				for y in range(160, int(world.y), 300):
+					draw_circle(Vector2(x, y), 115.0, Color("#57e99b", 0.045))
+	for z in Sim.regen_zones_for(world):
 		var c := Vector2(z.x, z.y)
 		var zone_poly := PackedVector2Array()
 		var inner_ring := PackedVector2Array()
@@ -777,6 +798,22 @@ func _draw() -> void:
 		draw_circle(p,r+8.0,Color(tint,0.08))
 		draw_arc(p,r,0.0,TAU,32,tint,4.0,true)
 		draw_arc(p,r*0.72,0.0,TAU,24,Color(tint,0.45),2.0,true)
+		if kind == "rock":
+			var rock_points := PackedVector2Array()
+			for point_index in 9:
+				var angle := TAU * float(point_index) / 9.0
+				var roughness := 0.82 + 0.12 * sin(float(point_index) * 2.7 + p.x * 0.01)
+				rock_points.append(p + Vector2.from_angle(angle) * r * roughness)
+			draw_colored_polygon(rock_points, Color("#26384e", 0.72))
+			draw_polyline(rock_points, tint, 3.0, true)
+		elif kind == "crystal":
+			var crystal_points := PackedVector2Array([p + Vector2(0, -r), p + Vector2(r * 0.72, 0), p + Vector2(0, r), p + Vector2(-r * 0.72, 0)])
+			draw_colored_polygon(crystal_points, Color(tint, 0.22))
+			draw_polyline(crystal_points, tint, 3.0, true)
+		elif kind == "plant":
+			draw_line(p + Vector2(0, r * 0.45), p + Vector2(0, -r * 0.55), tint, 4.0, true)
+			draw_arc(p + Vector2(-r * 0.25, -r * 0.2), r * 0.52, -2.8, 0.2, 20, tint, 4.0, true)
+			draw_arc(p + Vector2(r * 0.25, -r * 0.42), r * 0.48, 2.9, 6.0, 20, tint, 4.0, true)
 		var hp_ratio := clampf(float(item.get("hp",item.get("max_hp",1.0))) / maxf(1.0,float(item.get("max_hp",1.0))),0.0,1.0)
 		if hp_ratio < 0.999:
 			draw_arc(p,r+6.0,-PI*0.5,-PI*0.5+TAU*hp_ratio,32,Color("#ffcf78"),3.0,true)
@@ -906,8 +943,9 @@ func _draw_bullets() -> void:
 		if b[4] > 0:
 			col = Color(1, 1, 1)
 		if _is_potato():
-			bullet_layer.draw_line(pos - vel * 0.035, pos, col, 3.0, false)
-			bullet_layer.draw_circle(pos, radius * 0.65, col)
+			var simple_dir := vel.normalized()
+			bullet_layer.draw_line(pos - simple_dir * (radius + 8.0), pos + simple_dir * (radius + 4.0), col, 5.0, false)
+			bullet_layer.draw_circle(pos, radius * 0.95, col)
 			continue
 		var tail := pos - vel * 0.075
 		var glow := G.hdr(col, 1.6)
@@ -973,6 +1011,14 @@ func _draw_bullets() -> void:
 				bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
 				bullet_layer.draw_line(tail, pos, G.hdr(col, 2.0), width * 0.4, true)
 				bullet_layer.draw_circle(pos, radius, Color(4, 4, 4))
+		# Directional nose and rotating energy arc make every shot read as moving.
+		var bullet_dir := vel.normalized()
+		if bullet_dir.length_squared() > 0.01:
+			var nose := pos + bullet_dir * (radius + 5.0)
+			var wing := bullet_dir.orthogonal() * maxf(4.0, radius * 0.58)
+			bullet_layer.draw_line(pos - bullet_dir * radius, nose, Color.WHITE, 2.2, true)
+			bullet_layer.draw_polyline(PackedVector2Array([nose - bullet_dir * 8.0 + wing, nose, nose - bullet_dir * 8.0 - wing]), Color.WHITE, 2.0, true)
+			bullet_layer.draw_arc(pos, radius + 4.0, t * 5.0, t * 5.0 + PI * 1.15, 18, Color(col, 0.82), 2.0, true)
 	for lure in view.get("lu", []):
 		var lure_pos: Vector2 = lure[0]
 		var lure_pulse := 1.0 if _is_potato() else 0.78 + 0.22 * sin(t * 13.0)
@@ -1365,6 +1411,8 @@ func _update_views(dt: float) -> void:
 				actor.scale = Vector2.ONE * 0.62 * (1.0 + 0.025 * sin(t * 4.0 + float(id)))
 		else:
 			var c := col if _is_potato() else G.hdr(col, 1.0 + 0.55 * lf)
+			if bool(pd.get("d", false)):
+				c.a = 0.48
 			if pd.h > 0.0:
 				c = Color.WHITE if _is_potato() else Color(3.2, 3.2, 3.2)
 			if pd.iv > 0.0 and not _is_potato():
@@ -1516,11 +1564,12 @@ func _update_fx(dt: float) -> void:
 	fx_mat.set_shader_parameter("blind", blind_cur)
 	var ws := Vector2(get_window().size)
 	var sc := minf(ws.x / 1280.0, ws.y / 720.0)
-	var wp: Vector2 = pviews[local_id].pos if pviews.has(local_id) else ARENA / 2.0
-	var px: Vector2 = ws / 2.0 + (wp - ARENA / 2.0) * cam.zoom.x * sc
-	fx_mat.set_shader_parameter("center", px / ws)
-	fx_mat.set_shader_parameter("aspect", ws.x / ws.y)
-	fx_mat.set_shader_parameter("radius", 200.0 * cam.zoom.x * sc / ws.y)
+	var wp: Vector2 = pviews[local_id].pos if pviews.has(local_id) else Vector2(view.get("world", ARENA)) * 0.5
+	var viewport_size := get_viewport_rect().size
+	var screen_pos: Vector2 = get_viewport().get_canvas_transform() * wp
+	fx_mat.set_shader_parameter("center", screen_pos / viewport_size)
+	fx_mat.set_shader_parameter("aspect", viewport_size.x / maxf(viewport_size.y, 1.0))
+	fx_mat.set_shader_parameter("radius", 235.0 * cam.zoom.x / maxf(viewport_size.y, 1.0))
 
 
 func _update_hud(dt: float) -> void:
