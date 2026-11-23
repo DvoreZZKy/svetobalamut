@@ -16,7 +16,7 @@ func _run() -> void:
 		quit(1)
 		return
 	var custom: Dictionary = map_service.call("new_custom_map", "Map smoke test")
-	custom["objects"] = [{"type":"rock","x":400.0,"y":400.0,"r":50.0}]
+	custom["objects"] = [{"type":"container","x":1200.0,"y":750.0,"r":35.0}]
 	if not bool(map_service.call("save_custom_map", custom)):
 		push_error("Could not save a custom map")
 		quit(1)
@@ -25,6 +25,19 @@ func _run() -> void:
 	map_service.call("receive_map", custom)
 	if (map_service.call("all_maps") as Array).size() != count_after_save:
 		push_error("Receiving the same map created a duplicate")
+		quit(1)
+		return
+	var sim_script: Script = load("res://scripts/sim.gd")
+	var sim: Variant = sim_script.new()
+	sim.reset([{"id":1,"name":"Map QA","human":true,"color":0,"kind":0,"outfit":0,"hat":0}])
+	if sim.world_size != Vector2(2400,1500):
+		push_error("Custom map dimensions were not loaded into the simulation")
+		quit(1)
+		return
+	sim.bullets = [{"id":1,"pos":Vector2(1200,750),"vel":Vector2.ZERO,"owner":1,"life":1.0,"bn":0,"ricochet":false,"dmg":100.0,"radius":6.0,"hit_ids":[]}]
+	sim.call("_update_bullets",1.0/60.0)
+	if not sim.map_data.get("objects",[]).is_empty() or sim.pickups.size() != 1:
+		push_error("A destroyed container did not disappear and drop its battery")
 		quit(1)
 		return
 	var editor_scene: PackedScene = load("res://scenes/map_editor.tscn")

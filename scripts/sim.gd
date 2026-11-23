@@ -1644,6 +1644,16 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 				break
 		if not inp.dash and rng.randf() < 0.0015:
 			inp.dash = true
+	for item in map_data.get("objects", []):
+		var obstacle_type := str(item.get("type", "rock"))
+		if not ["rock", "crystal", "cover", "container", "plant"].has(obstacle_type):
+			continue
+		var obstacle_pos := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+		var away := p.pos - obstacle_pos
+		var distance := away.length()
+		var avoid_distance := float(item.get("r", 48.0)) + 145.0
+		if distance > 1.0 and distance < avoid_distance:
+			mv += away.normalized() * (1.0 - distance / avoid_distance) * 1.25
 	inp.mv = mv.limit_length(1.0)
 	if effects.has("reverse"):
 		inp.mv = -inp.mv

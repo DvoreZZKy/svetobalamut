@@ -777,6 +777,9 @@ func _draw() -> void:
 		draw_circle(p,r+8.0,Color(tint,0.08))
 		draw_arc(p,r,0.0,TAU,32,tint,4.0,true)
 		draw_arc(p,r*0.72,0.0,TAU,24,Color(tint,0.45),2.0,true)
+		var hp_ratio := clampf(float(item.get("hp",item.get("max_hp",1.0))) / maxf(1.0,float(item.get("max_hp",1.0))),0.0,1.0)
+		if hp_ratio < 0.999:
+			draw_arc(p,r+6.0,-PI*0.5,-PI*0.5+TAU*hp_ratio,32,Color("#ffcf78"),3.0,true)
 	var border := PackedVector2Array([
 		Vector2(24,0), Vector2(world.x-24,0), Vector2(world.x,24),
 		Vector2(world.x,world.y-24), Vector2(world.x-24,world.y),
