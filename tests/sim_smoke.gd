@@ -299,8 +299,8 @@ func _run() -> void:
 				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("split_on_wall", false)):
 					_fail("crystal basic attack does not split at arena walls")
 			4:
-				if float(attack_target.light) >= target_light_before:
-					_fail("impulse chain attack did not hit an aligned nearby target")
+				if float(attack_target.light) >= target_light_before or sim.attack_beams.is_empty():
+					_fail("impulse chain attack did not hit and visibly arc to an aligned target")
 			5:
 				if sim.bullets.is_empty() or not sim.bullets[0].has("homing"):
 					_fail("magnet basic attack is not homing")
@@ -326,8 +326,8 @@ func _run() -> void:
 				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("lob", false)):
 					_fail("volcano projectile does not follow an arc")
 			13:
-				if float(attack_target.light) >= target_light_before:
-					_fail("parasite tether did not damage a target in its aim cone")
+				if float(attack_target.light) >= target_light_before or sim.attack_beams.is_empty():
+					_fail("parasite tether did not damage and visibly connect to a target in its aim cone")
 			14:
 				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("wave", false)):
 					_fail("pendulum projectile does not oscillate")
