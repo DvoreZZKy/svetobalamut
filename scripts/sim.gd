@@ -8,9 +8,6 @@ var world_size: Vector2 = A
 var map_data: Dictionary = {}
 var danger_radius := 0.0
 var map_object_timer := 2.0
-var world_size: Vector2 = A
-var map_data: Dictionary = {}
-var danger_radius := 0.0
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
 	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.90,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
