@@ -83,7 +83,7 @@ func _cave_objects() -> Array:
         var floor_y := passage_center + passage_half
         upper_poly.append(Vector2(x, 0.0))
         lower_poly.append(Vector2(x, 1600.0))
-        if column % 3 == 0:
+        if column % 2 == 0:
             upper_parts.append({"x":x,"y":maxf(50.0,ceiling_y - 55.0),"r":72.0})
             lower_parts.append({"x":x,"y":minf(1550.0,floor_y + 55.0),"r":72.0})
     for column in range(44, -1, -1):
