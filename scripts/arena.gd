@@ -3,6 +3,7 @@ extends Node2D
 ## Рисуем всегда из словаря `view` (snapshot) — одна и та же картинка на хосте и у клиентов.
 
 const ARENA := Vector2(1600, 900)
+var arena_world_size := ARENA
 const CHAOS_RU := {
 	"invert": "ИНВЕРСИЯ СВЕТА И ТЬМЫ", "reverse": "РЕВЕРС УПРАВЛЕНИЯ", "blind": "СЛЕПОТА",
 	"bounce": "ОТСКОК ВЫСТРЕЛОВ", "zerog": "НУЛЕВАЯ ГРАВИТАЦИЯ", "rain": "ДОЖДЬ ПОЖИРАТЕЛЕЙ",
@@ -190,7 +191,8 @@ func _ready() -> void:
 	var arena_env := G.make_env()
 	add_child(arena_env)
 	cam = Camera2D.new()
-	cam.position = Vector2(MapData.get_selected_map().get("size", ARENA)) / 2.0
+	arena_world_size = Vector2(MapData.get_selected_map().get("size", ARENA))
+	cam.position = arena_world_size / 2.0
 	cam.zoom = Vector2(camera_zoom, camera_zoom)
 	map_objects = MapData.get_selected_map().get("objects", [])
 	add_child(cam)
@@ -832,7 +834,7 @@ func _seed_ambient() -> void:
 	var mote_count: int = [22, 12, 5, 0][G.graphics_quality]
 	for i in mote_count:
 		ambient_motes.append({
-			"p": Vector2(rng.randf_range(35.0, ARENA.x - 35.0), rng.randf_range(35.0, ARENA.y - 35.0)),
+			"p": Vector2(rng.randf_range(35.0, arena_world_size.x - 35.0), rng.randf_range(35.0, arena_world_size.y - 35.0)),
 			"v": Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(7.0, 20.0),
 			"r": rng.randf_range(2.0, 4.5),
 			"phase": rng.randf_range(0.0, TAU),
@@ -847,9 +849,9 @@ func _update_ambient(dt: float) -> void:
 	for i in mote_count:
 		var mote: Dictionary = ambient_motes[i]
 		mote.p += mote.v * dt
-		if mote.p.x < 20.0 or mote.p.x > ARENA.x - 20.0:
+		if mote.p.x < 20.0 or mote.p.x > arena_world_size.x - 20.0:
 			mote.v.x *= -1.0
-		if mote.p.y < 20.0 or mote.p.y > ARENA.y - 20.0:
+		if mote.p.y < 20.0 or mote.p.y > arena_world_size.y - 20.0:
 			mote.v.y *= -1.0
 	ambient_layer.queue_redraw()
 
