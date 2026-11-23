@@ -26,5 +26,7 @@ jobs:
         run: godot --headless --path . --quit-after 3
       - name: Verify interactive tutorial startup
         run: godot --headless --path . --script res://tests/tutorial_smoke.gd
+      - name: Map library and editor startup
+        run: godot --headless --path . --script res://tests/map_smoke.gd
       - name: Simulation, chaos and network-sanitising checks
         run: godot --headless --path . --script res://tests/sim_smoke.gd
