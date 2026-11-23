@@ -32,6 +32,8 @@ var lobby_frame_data: Array[Dictionary] = []
 var lobby_root: VBoxContainer
 var waiting_control := ""
 var control_buttons := {}
+var bot_map_picker: OptionButton
+var room_map_picker: OptionButton
 
 
 func _ready() -> void:
@@ -50,7 +52,7 @@ func _ready() -> void:
 	add_child(title)
 
 	var main := _box("main")
-	_btn("Играть одному (с ботами)", main, func(): Sfx.play("click"); G.start_single())
+	_btn("Играть одному (с ботами)", main, func(): Sfx.play("click"); _show("bot_maps"))
 	_btn("Карты и редактор", main, func(): Sfx.play("click"); get_tree().change_scene_to_file("res://scenes/map_editor.tscn"))
 	_btn("Обучение", main, _start_tutorial_from_menu)
 	_btn("Создать комнату", main, _on_host)
@@ -364,6 +366,39 @@ func _ready() -> void:
 	_btn("ПРОЙТИ ТУТОРИАЛ", lobby_actions, _open_lobby_tutorial)
 	start_btn = _btn("СТАРТ", lobby_actions, func(): Net.start_match())
 	_btn("ВЫЙТИ", lobby_actions, func(): G.save_settings(); Net.leave(); _show("main"))
+	room_map_picker = OptionButton.new()
+	room_map_picker.custom_minimum_size = Vector2(230, 48)
+	for map_item in MapData.all_maps():
+		room_map_picker.add_item(str(map_item.get("name", "Карта")))
+		if str(map_item.get("id", "")) == str(MapData.selected_id):
+			room_map_picker.select(room_map_picker.item_count - 1)
+	room_map_picker.item_selected.connect(func(index: int):
+		var available_maps := MapData.all_maps()
+		if index >= 0 and index < available_maps.size():
+			MapData.select_map(str(available_maps[index].get("id", "arena_original"))))
+			lobby_info.text = "КАРТА КОМНАТЫ: " + str(available_maps[index].get("name", "Карта")))
+	lobby_actions.add_child(room_map_picker)
+
+	var bot_maps := _box("bot_maps")
+	bot_maps.position = Vector2(390, 170)
+	bot_maps.size = Vector2(500, 390)
+	_title(bot_maps, "ВЫБОР КАРТЫ")
+	var bot_map_hint := Label.new()
+	bot_map_hint.text = "Выбери арену для матча с ботами"
+	bot_map_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	bot_map_hint.add_theme_font_size_override("font_size", 17)
+	bot_maps.add_child(bot_map_hint)
+	bot_map_picker = OptionButton.new()
+	bot_map_picker.custom_minimum_size = Vector2(450, 52)
+	bot_map_picker.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	for map_item in MapData.all_maps():
+		bot_map_picker.add_item(str(map_item.get("name", "Карта")))
+		if str(map_item.get("id", "")) == str(MapData.selected_id):
+			bot_map_picker.select(bot_map_picker.item_count - 1)
+	bot_maps.add_child(bot_map_picker)
+	var bot_start := _btn("НАЧАТЬ МАТЧ", bot_maps, _start_selected_bot_game)
+	bot_start.custom_minimum_size = Vector2(450, 58)
+	_btn("НАЗАД", bot_maps, func(): _show("main"))
 
 	Net.lobby_changed.connect(_on_lobby_changed)
 	Net.join_failed.connect(_on_join_failed)
@@ -708,6 +743,14 @@ func _slider(parent: Node, text: String, val: float, cb: Callable) -> void:
 	parent.add_child(h)
 
 
+func _start_selected_bot_game() -> void:
+	var maps := MapData.all_maps()
+	var index := bot_map_picker.selected
+	if index >= 0 and index < maps.size():
+		MapData.select_map(str(maps[index].get("id", "arena_original")))
+	G.start_single_game()
+
+
 func _on_host() -> void:
 	Sfx.play("click")
 	var err := Net.host()
@@ -783,6 +826,7 @@ func _on_lobby_changed() -> void:
 			kick_btn.pressed.connect(func(): Net.kick_peer(kicked_id))
 			row.add_child(kick_btn)
 	if Net.is_host:
+		room_map_picker.visible = true
 		var ips := G.local_ips()
 		var room_addresses: Array[String] = []
 		for ip in ips:
@@ -794,6 +838,7 @@ func _on_lobby_changed() -> void:
 			Net.names.size(), Net.MAX_PLAYERS]
 		start_btn.visible = true
 	else:
+		room_map_picker.visible = false
 		lobby_info.text = "ОЖИДАНИЕ ХОСТА • ПОДКЛЮЧЕНИЕ ПО IP:ПОРТ"
 		start_btn.visible = false
 
