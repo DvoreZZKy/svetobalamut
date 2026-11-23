@@ -7,24 +7,24 @@ const A := Vector2(1600, 900)
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
 	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.90,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
-	{"name":"Капсула","hp":136.0,"def":0.88,"atk":1.30,"speed":0.78,"rate":0.56,"ability":"Энергощит"},
-	{"name":"Призрак","hp":126.0,"def":0.88,"atk":1.0,"speed":1.16,"rate":0.26,"ability":"Фазовый скачок"},
-	{"name":"Кристалл","hp":140.0,"def":0.96,"atk":1.55,"speed":1.0,"rate":0.46,"ability":"Звёздный залп"},
-	{"name":"Импульс","hp":123.0,"def":1.02,"atk":1.0,"speed":1.17,"rate":0.24,"ability":"Разгон"},
+	{"name":"Капсула","hp":136.0,"def":0.88,"atk":1.30,"speed":0.83,"rate":0.56,"ability":"Энергощит"},
+	{"name":"Призрак","hp":126.0,"def":0.88,"atk":1.0,"speed":1.14,"rate":0.26,"ability":"Фазовый скачок"},
+	{"name":"Кристалл","hp":140.0,"def":0.96,"atk":1.38,"speed":1.0,"rate":0.46,"ability":"Звёздный залп"},
+	{"name":"Импульс","hp":123.0,"def":1.02,"atk":1.0,"speed":1.14,"rate":0.24,"ability":"Разгон"},
 	{"name":"Магнит","hp":132.0,"def":0.96,"atk":1.02,"speed":0.96,"rate":0.30,"ability":"Притяжение"},
-	{"name":"Слизень","hp":155.0,"def":0.86,"atk":0.95,"speed":0.86,"rate":0.34,"ability":"Липкая броня"},
-	{"name":"Сверхнова","hp":118.0,"def":1.08,"atk":1.18,"speed":0.94,"rate":0.38,"ability":"Вспышка"},
-	{"name":"Мираж","hp":124.0,"def":1.0,"atk":1.0,"speed":1.16,"rate":0.28,"ability":"Смещение"},
-	{"name":"Осколок","hp":126.0,"def":0.98,"atk":1.08,"speed":1.04,"rate":0.30,"ability":"Гранёный залп"},
+	{"name":"Слизень","hp":155.0,"def":0.86,"atk":1.03,"speed":0.86,"rate":0.34,"ability":"Липкая броня"},
+	{"name":"Сверхнова","hp":126.0,"def":1.08,"atk":1.18,"speed":0.94,"rate":0.38,"ability":"Вспышка"},
+	{"name":"Мираж","hp":124.0,"def":1.0,"atk":1.0,"speed":1.14,"rate":0.28,"ability":"Смещение"},
+	{"name":"Осколок","hp":126.0,"def":0.98,"atk":1.12,"speed":1.04,"rate":0.30,"ability":"Гранёный залп"},
 	{"name":"Сингулярность","hp":138.0,"def":0.94,"atk":1.0,"speed":0.93,"rate":0.36,"ability":"Гравитационная яма"},
-	{"name":"Рикошет","hp":122.0,"def":1.0,"atk":1.04,"speed":1.08,"rate":0.29,"ability":"Отскок"},
+	{"name":"Рикошет","hp":122.0,"def":1.0,"atk":1.04,"speed":1.11,"rate":0.29,"ability":"Отскок"},
 	{"name":"Вулкан","hp":145.0,"def":0.92,"atk":1.12,"speed":0.94,"rate":0.37,"ability":"Перегрев"},
 	{"name":"Паразит","hp":128.0,"def":0.98,"atk":1.05,"speed":1.02,"rate":0.31,"ability":"Высасывание"},
 	{"name":"Маятник","hp":130.0,"def":0.97,"atk":1.0,"speed":1.06,"rate":0.30,"ability":"Размах"},
 	{"name":"Губка","hp":150.0,"def":0.86,"atk":0.98,"speed":0.92,"rate":0.33,"ability":"Поглощение"},
 	{"name":"Генератор","hp":124.0,"def":0.98,"atk":1.0,"speed":1.02,"rate":0.30,"ability":"Автотурель"},
 	{"name":"Полярность","hp":134.0,"def":0.94,"atk":1.04,"speed":1.0,"rate":0.32,"ability":"Отталкивание"},
-	{"name":"Фантом","hp":116.0,"def":0.90,"atk":1.04,"speed":1.17,"rate":0.28,"ability":"Фазирование"}
+	{"name":"Фантом","hp":116.0,"def":0.90,"atk":1.04,"speed":1.12,"rate":0.28,"ability":"Фазирование"}
 ]
 
 
@@ -145,7 +145,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
 		"wave_ammo": 4, "wave_reload_t": 0.0, "buff": "", "buff_t": 0.0,
-		"field_t": 0.0, "field_mode": 0, "special_shots": 0, "turret_t": 0.0, "turret_cd": 0.0,
+		"field_t": 0.0, "field_mode": 0, "field_hit_cd": {}, "special_shots": 0, "turret_t": 0.0, "turret_cd": 0.0,
 		"pts": 0, "kills": 0, "damage_total": 0.0, "healing_total": 0.0, "kill_streak": 0, "kill_streak_t": 0.0, "last_hit": 0, "damage_by": {}, "hit_age": 99.0, "hit_t": 0.0, "push_cd": 0.0,
 		"derp_t": 0.0, "derp_by": 0, "derp": {"t": 0.0, "mv": Vector2.ZERO, "aim": pos, "fire": false, "dash": false},
 		"poss_target": 0, "poss_cd": 0.0, "poss_protect_cd": 0.0,
@@ -443,7 +443,7 @@ func _parasite_basic_attack(p: Dictionary) -> void:
 		_add_attack_beam(p.pos, best.pos, 13, 0.12)
 		_damage(best, 10.0 * float(p.attack), p.id, false)
 		var old_light: float = float(p.light)
-		p.light = minf(float(p.max_light), float(p.light) + 2.0)
+		p.light = minf(float(p.max_light), float(p.light) + 1.5)
 		if float(p.light) > old_light:
 			p.healing_total = float(p.get("healing_total", 0.0)) + float(p.light) - old_light
 			events.append({"t": "heal", "id": p.id, "amount": float(p.light) - old_light})
@@ -478,7 +478,7 @@ func _update_attack_zones(dt: float) -> void:
 				continue
 			match str(zone.kind):
 				"slime":
-					player.slow_t = maxf(float(player.get("slow_t", 0.0)), 0.24)
+					player.slow_t = maxf(float(player.get("slow_t", 0.0)), 0.32)
 				"gravity":
 					player.vel += (zone.pos - player.pos).normalized() * 340.0 * dt
 					player.slow_t = maxf(float(player.get("slow_t", 0.0)), 0.12)
@@ -563,8 +563,23 @@ func _capsule_shockwave(p: Dictionary) -> void:
 	shake_req = maxf(shake_req, 5.0)
 
 
+func _ability_cooldown(kind: int) -> float:
+	match kind:
+		2, 7:
+			return 11.0
+		18:
+			return 12.0
+	return 9.0
+
+
+func _extra_ability_cooldown(kind: int) -> float:
+	if kind == 16:
+		return 16.0
+	return 13.0
+
+
 func _use_ability(p: Dictionary) -> void:
-	p.ability_cd = 9.0
+	p.ability_cd = _ability_cooldown(int(p.kind))
 	match p.kind:
 		0:
 			p.ability_t = 2.8
@@ -616,7 +631,7 @@ func _use_ability(p: Dictionary) -> void:
 			p.absorb_t = 2.8
 			p.absorb_count = 0
 		16:
-			p.turret_t = 5.0
+			p.turret_t = 4.0
 			p.turret_cd = 0.1
 		17:
 			p.field_t = 2.5
@@ -627,7 +642,7 @@ func _use_ability(p: Dictionary) -> void:
 
 
 func _use_extra_ability(p: Dictionary) -> void:
-	p.extra_cd = 13.0
+	p.extra_cd = _extra_ability_cooldown(int(p.kind))
 	match int(p.kind):
 		0:
 			# Fireflies use bioluminescent signals: lure eaters to a bright decoy.
@@ -659,7 +674,7 @@ func _use_extra_ability(p: Dictionary) -> void:
 		8:
 			p.pos = (p.pos + p.aim * 390.0).clamp(Vector2(40,40), A - Vector2(40,40))
 			p.inv = 0.35
-		9, 15:
+		9:
 			p.max_shield = 30.0
 			p.shield_hp = 30.0
 		10:
@@ -681,9 +696,10 @@ func _use_extra_ability(p: Dictionary) -> void:
 			p.shield_hp = maxf(0.0, float(p.get("shield_hp",0.0)) - recovered)
 			p.light = minf(float(p.max_light), float(p.light) + recovered)
 		16:
-			p.turret_t = 8.0
+			p.turret_t = 6.0
 			p.turret_cd = 0.1
 		17:
+			_character_pulse(p, 155.0, 10.0, 360.0)
 			p.field_t = 2.8
 			p.field_mode = 1 if int(p.get("field_mode",0)) == 2 else 2
 		18:
@@ -749,7 +765,18 @@ func _tick_character_fields(p: Dictionary, dt: float) -> void:
 			var distance := offset.length()
 			if distance < 310.0 and distance > 1.0:
 				var strength := (1.0 - distance / 310.0) * 520.0
+				if int(p.kind) == 5 and int(p.field_mode) == 2:
+					strength *= 1.35
 				target.vel += offset.normalized() * strength * dt * (1.0 if int(p.field_mode) == 1 else -1.0)
+				if int(p.kind) == 10 and int(p.field_mode) == 1 and distance < 185.0:
+					var field_hit_cd: Dictionary = p.get("field_hit_cd", {})
+					var hit_cd := float(field_hit_cd.get(int(target.id), 0.0)) - dt
+					if hit_cd <= 0.0:
+						_damage(target, 2.5, int(p.id), false)
+						field_hit_cd[int(target.id)] = 0.7
+					else:
+						field_hit_cd[int(target.id)] = hit_cd
+					p.field_hit_cd = field_hit_cd
 	if p.turret_t > 0.0 and p.turret_cd <= 0.0:
 		var target := _nearest(p, false)
 		if not target.is_empty():
@@ -1170,7 +1197,7 @@ func _update_bullets(dt: float) -> void:
 								_damage(splash_target, hit_damage * 0.34, b.owner, false)
 					var zone_kind := str(b.get("zone_on_hit", ""))
 					if not zone_kind.is_empty():
-						_spawn_attack_zone(b.pos, int(b.owner), zone_kind, 118.0 if zone_kind == "gravity" else 86.0, 2.8 if zone_kind == "slime" else 2.2)
+						_spawn_attack_zone(b.pos, int(b.owner), zone_kind, 118.0 if zone_kind == "gravity" else (100.0 if zone_kind == "slime" else 86.0), 3.2 if zone_kind == "slime" else 2.2)
 					if int(b.get("polarity", 0)) != 0:
 						p.vel += (p.pos - b.pos).normalized() * 430.0 * float(b.polarity)
 					var pierce_left := int(b.get("pierce", 0))

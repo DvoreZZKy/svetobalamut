@@ -248,6 +248,32 @@ func _run() -> void:
 	if int(crystal_charge_player.get("prism_shots", 0)) != 2:
 		_fail("crystal did not consume exactly one prism charge per shot")
 
+	# Sponge F must convert stored shield into light; it must not be swallowed by the Shard shield branch.
+	sim.reset([{"id": 1, "name": "Sponge F QA", "human": true, "color": 0, "kind": 15, "outfit": 0, "hat": 0}])
+	sim.chaos_enabled = false
+	var sponge_f: Dictionary = sim.players[1]
+	sponge_f.light = 70.0
+	sponge_f.shield_hp = 20.0
+	sim._use_extra_ability(sponge_f)
+	if not is_equal_approx(float(sponge_f.light), 90.0) or not is_equal_approx(float(sponge_f.shield_hp), 0.0):
+		_fail("sponge F did not convert shield into light")
+	if not is_equal_approx(float(sponge_f.extra_cd), 13.0):
+		_fail("sponge F cooldown changed unexpectedly")
+
+	# Individual cooldowns and stat adjustments stay explicit and regression-tested.
+	if not is_equal_approx(sim._ability_cooldown(2), 11.0) or not is_equal_approx(sim._ability_cooldown(7), 11.0) or not is_equal_approx(sim._ability_cooldown(18), 12.0):
+		_fail("strong character Q cooldowns were not increased individually")
+	if not is_equal_approx(sim._extra_ability_cooldown(16), 16.0):
+		_fail("Generator F cooldown was not increased")
+	if not is_equal_approx(float(Sim.CLASS_STATS[3].atk), 1.38):
+		_fail("Crystal damage multiplier was not reduced")
+	if not is_equal_approx(float(Sim.CLASS_STATS[6].atk), 1.03):
+		_fail("Slime damage multiplier was not increased")
+	if not is_equal_approx(float(Sim.CLASS_STATS[7].hp), 126.0):
+		_fail("Supernova health was not increased")
+	if not is_equal_approx(float(Sim.CLASS_STATS[1].speed), 0.83) or not is_equal_approx(float(Sim.CLASS_STATS[18].speed), 1.12):
+		_fail("Capsule or Phantom speed adjustment is missing")
+
 	# Expanded character roster: every new class has a distinct profile and both abilities activate.
 	if Sim.CLASS_STATS.size() != 19:
 		_fail("expected 19 playable classes, found %d" % Sim.CLASS_STATS.size())
