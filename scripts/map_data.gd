@@ -18,8 +18,110 @@ func _ready() -> void:
 
 func all_maps() -> Array:
  var out: Array = MAPS.duplicate(true)
+ for map_index in out.size():
+  var map_item: Dictionary = out[map_index]
+  match str(map_item.get("id", "")):
+   "neon_canyon":
+    map_item["size"] = Vector2(2600, 1300)
+    map_item["objects"] = _canyon_objects()
+   "pulse_grid":
+    map_item["size"] = Vector2(1900, 1500)
+    map_item["objects"] = _pulse_grid_objects()
+   "shard_labyrinth":
+    map_item["name"] = "Пещера разломов"
+    map_item["size"] = Vector2(2200, 1600)
+    map_item["objects"] = _cave_objects()
+   "dark_orbit":
+    map_item["size"] = Vector2(3200, 1200)
+    map_item["objects"] = _orbit_objects()
+   "light_garden":
+    map_item["size"] = Vector2(1900, 1100)
+    map_item["objects"] = _garden_objects()
+  out[map_index] = map_item
  out.append_array(custom_maps.duplicate(true))
  return out
+
+
+func _canyon_objects() -> Array:
+ var result: Array = []
+ for i in 5:
+  var x := 340.0 + float(i) * 480.0
+  var y := 280.0 if i % 2 == 0 else 1020.0
+  result.append({"type": "rock", "x": x, "y": y, "r": 82.0})
+  result.append({"type": "rock", "x": x + 150.0, "y": 1300.0 - y, "r": 62.0})
+  result.append({"type": "cover", "x": x + 230.0, "y": 650.0, "r": 48.0})
+ result.append({"type": "generator", "x": 1300.0, "y": 650.0, "r": 58.0})
+ return result
+
+
+func _pulse_grid_objects() -> Array:
+ var result: Array = []
+ for row in 3:
+  for column in 5:
+   if (row + column) % 2 == 0:
+    result.append({"type": "cover", "x": 260.0 + float(column) * 345.0, "y": 310.0 + float(row) * 440.0, "r": 52.0})
+ result.append({"type": "generator", "x": 950.0, "y": 750.0, "r": 62.0})
+ result.append({"type": "generator", "x": 430.0, "y": 1160.0, "r": 46.0})
+ result.append({"type": "generator", "x": 1470.0, "y": 340.0, "r": 46.0})
+ for x in [620.0, 1280.0]:
+  result.append({"type": "container", "x": x, "y": 750.0, "r": 38.0})
+ return result
+
+
+func _cave_objects() -> Array:
+ var result: Array = []
+ var wall_xs: Array[float] = [560.0, 1100.0, 1640.0]
+ var gap_centers: Array[float] = [650.0, 1085.0, 430.0]
+ for wall_index in wall_xs.size():
+  for row in 10:
+   var y := 150.0 + float(row) * 145.0
+   if absf(y - gap_centers[wall_index]) < 215.0:
+    continue
+   result.append({"type": "rock", "x": wall_xs[wall_index], "y": y, "r": 43.0})
+  result.append({"type": "crystal", "x": wall_xs[wall_index] + 125.0, "y": gap_centers[wall_index], "r": 32.0})
+ for x in range(760, 1000, 110):
+  result.append({"type": "rock", "x": float(x), "y": 820.0, "r": 38.0})
+ for x in range(1280, 1510, 110):
+  result.append({"type": "rock", "x": float(x), "y": 790.0, "r": 38.0})
+ for item in [
+  {"type": "generator", "x": 350.0, "y": 800.0, "r": 46.0},
+  {"type": "generator", "x": 1880.0, "y": 800.0, "r": 46.0},
+  {"type": "container", "x": 880.0, "y": 300.0, "r": 34.0},
+  {"type": "container", "x": 1370.0, "y": 1320.0, "r": 34.0},
+  {"type": "plant", "x": 2050.0, "y": 250.0, "r": 42.0},
+  {"type": "plant", "x": 190.0, "y": 1350.0, "r": 42.0}
+ ]:
+  result.append(item)
+ return result
+
+
+func _orbit_objects() -> Array:
+ var result: Array = []
+ for i in 4:
+  var angle := TAU * float(i) / 4.0
+  var center := Vector2(1600.0, 600.0) + Vector2.from_angle(angle) * 430.0
+  result.append({"type": "teleporter", "x": center.x, "y": center.y, "r": 48.0})
+  result.append({"type": "crystal", "x": center.x + 120.0, "y": center.y, "r": 36.0})
+ result.append({"type": "rock", "x": 1600.0, "y": 600.0, "r": 110.0})
+ result.append({"type": "generator", "x": 1600.0, "y": 250.0, "r": 52.0})
+ result.append({"type": "generator", "x": 1600.0, "y": 950.0, "r": 52.0})
+ return result
+
+
+func _garden_objects() -> Array:
+ var result: Array = []
+ for row in 3:
+  for column in 5:
+   var x := 230.0 + float(column) * 360.0
+   var y := 180.0 + float(row) * 360.0
+   if (row + column) % 3 == 0:
+    result.append({"type": "plant", "x": x, "y": y, "r": 58.0})
+   else:
+    result.append({"type": "cover", "x": x, "y": y, "r": 40.0})
+ result.append({"type": "generator", "x": 950.0, "y": 550.0, "r": 60.0})
+ result.append({"type": "teleporter", "x": 280.0, "y": 550.0, "r": 42.0})
+ result.append({"type": "teleporter", "x": 1620.0, "y": 550.0, "r": 42.0})
+ return result
 
 func get_selected_map() -> Dictionary:
  for item in all_maps():
