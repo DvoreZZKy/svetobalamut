@@ -69,41 +69,41 @@ func _pulse_grid_objects() -> Array:
 
 
 func _cave_objects() -> Array:
-	var result: Array = []
-	# Dense, overlapping mineral formations form cave walls around winding passages.
-	for column in range(1, 27):
-		var x := float(column) * 82.0
-		var main_y := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
-		var upper_branch := 470.0 + sin(x * 0.0045 + 1.2) * 95.0
-		var lower_branch := 1190.0 + sin(x * 0.0038 + 2.0) * 100.0
-		for row in range(1, 20):
-			var y := float(row) * 78.0
-			var in_main_passage := absf(y - main_y) < 142.0
-			var in_upper_chamber := absf(y - upper_branch) < 86.0 and x > 420.0 and x < 1780.0
-			var in_lower_chamber := absf(y - lower_branch) < 92.0 and x > 520.0 and x < 1880.0
-			var in_side_cut := (absf(x - 520.0) < 105.0 or absf(x - 1680.0) < 112.0) and y > 360.0 and y < 1280.0
-			if in_main_passage or in_upper_chamber or in_lower_chamber or in_side_cut:
-				continue
-			var seed := column * 31 + row * 17
-			var jitter_x := float((seed * 13) % 19) - 9.0
-			var jitter_y := float((seed * 7) % 17) - 8.0
-			var object_type := "rock"
-			if seed % 5 == 0 or seed % 7 == 0:
-				object_type = "crystal"
-			elif seed % 11 == 0:
-				object_type = "plant"
-			var radius := 43.0 + float(seed % 13)
-			result.append({"type": object_type, "x": x + jitter_x, "y": y + jitter_y, "r": radius})
-	for item in [
-		{"type":"crystal","x":170.0,"y":790.0,"r":58.0},
-		{"type":"crystal","x":2030.0,"y":820.0,"r":62.0},
-		{"type":"generator","x":350.0,"y":800.0,"r":46.0},
-		{"type":"generator","x":1880.0,"y":800.0,"r":46.0},
-		{"type":"container","x":880.0,"y":300.0,"r":34.0},
-		{"type":"container","x":1370.0,"y":1320.0,"r":34.0}
-	]:
-		result.append(item)
-	return result
+ var result: Array = []
+ # Dense, overlapping mineral formations form cave walls around winding passages.
+ for column in range(1, 27):
+  var x := float(column) * 82.0
+  var main_y := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
+  var upper_branch := 470.0 + sin(x * 0.0045 + 1.2) * 95.0
+  var lower_branch := 1190.0 + sin(x * 0.0038 + 2.0) * 100.0
+  for row in range(1, 20):
+   var y := float(row) * 78.0
+   var in_main_passage := absf(y - main_y) < 142.0
+   var in_upper_chamber := absf(y - upper_branch) < 86.0 and x > 420.0 and x < 1780.0
+   var in_lower_chamber := absf(y - lower_branch) < 92.0 and x > 520.0 and x < 1880.0
+   var in_side_cut := (absf(x - 520.0) < 105.0 or absf(x - 1680.0) < 112.0) and y > 360.0 and y < 1280.0
+   if in_main_passage or in_upper_chamber or in_lower_chamber or in_side_cut:
+    continue
+   var seed := column * 31 + row * 17
+   var jitter_x := float((seed * 13) % 19) - 9.0
+   var jitter_y := float((seed * 7) % 17) - 8.0
+   var object_type := "rock"
+   if seed % 5 == 0 or seed % 7 == 0:
+    object_type = "crystal"
+   elif seed % 11 == 0:
+    object_type = "plant"
+   var radius := 43.0 + float(seed % 13)
+   result.append({"type": object_type, "x": x + jitter_x, "y": y + jitter_y, "r": radius})
+ for item in [
+  {"type":"crystal","x":170.0,"y":790.0,"r":58.0},
+  {"type":"crystal","x":2030.0,"y":820.0,"r":62.0},
+  {"type":"generator","x":350.0,"y":800.0,"r":46.0},
+  {"type":"generator","x":1880.0,"y":800.0,"r":46.0},
+  {"type":"container","x":880.0,"y":300.0,"r":34.0},
+  {"type":"container","x":1370.0,"y":1320.0,"r":34.0}
+ ]:
+  result.append(item)
+ return result
 
 func _orbit_objects() -> Array:
  var result: Array = []
