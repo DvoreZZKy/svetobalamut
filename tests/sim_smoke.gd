@@ -571,29 +571,29 @@ func _run() -> void:
 		_fail("effects did not expire: %s" % str(sim.effects.keys()))
 	sim.chaos_enabled = true
 
-	# Danger zone is inactive for two minutes, then contracts from map edges to centre in one minute.
+	# Danger zone starts after one minute and contracts from map edges to centre in 30 seconds.
 	sim.reset([{"id":1,"name":"Zone QA","human":true,"color":0,"kind":0,"outfit":0,"hat":0}])
 	var zone_player: Dictionary = sim.players[1]
 	zone_player.pos = Vector2(-100.0, -100.0)
 	zone_player.light = 100.0
-	sim.elapsed_time = 119.0
+	sim.elapsed_time = 59.0
 	sim.call("_tick_danger_zone", 1.0)
 	if float(zone_player.light) < 99.9:
-		_fail("danger zone activated before the two-minute delay")
+		_fail("danger zone activated before the one-minute delay")
 		return
-	sim.elapsed_time = 121.0
+	sim.elapsed_time = 61.0
 	sim.call("_tick_danger_zone", 1.0)
 	if float(zone_player.light) >= 99.9:
-		_fail("danger zone did not begin closing inward after two minutes")
+		_fail("danger zone did not begin closing inward after 30 seconds")
 		return
-	sim.elapsed_time = 150.0
+	sim.elapsed_time = 75.0
 	sim.call("_tick_danger_zone", 0.0)
 	var zone_snapshot: Dictionary = sim.snapshot()
 	var zone_data: Array = zone_snapshot.get("zone", [])
 	if zone_data.size() < 2 or not Vector2(zone_data[1]).is_equal_approx(sim.world_size * 0.31):
-		_fail("danger zone did not contract linearly during its one-minute closing period")
+		_fail("danger zone did not contract linearly during its 30-second closing period")
 		return
-	sim.elapsed_time = 180.0
+	sim.elapsed_time = 90.0
 	sim.call("_tick_danger_zone", 0.0)
 	zone_snapshot = sim.snapshot()
 	zone_data = zone_snapshot.get("zone", [])

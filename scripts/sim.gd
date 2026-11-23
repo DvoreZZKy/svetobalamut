@@ -131,6 +131,7 @@ var events: Array = []
 var inputs := {}
 var time_left := 0.0
 var elapsed_time := 0.0
+var zone_warning_sent := false
 var phase := "play"
 var winner := 0
 var chaos_timer := 4.0
@@ -188,6 +189,7 @@ func reset(cfg: Array) -> void:
 	inputs.clear()
 	time_left = 0.0
 	elapsed_time = 0.0
+	zone_warning_sent = false
 	phase = "play"
 	winner = 0
 	chaos_timer = 15.0
@@ -1009,13 +1011,21 @@ func _wall_bounce(p: Dictionary) -> void:
 
 func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
 	for item in map_data.get("objects", []):
-		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
 		var object_type := str(item.get("type", "rock"))
+		if object_type == "cave_wall":
+			for part in item.get("parts", []):
+				var center := Vector2(float(part.get("x", 0.0)), float(part.get("y", 0.0)))
+				var minimum := radius + float(part.get("r", 48.0))
+				var delta := pos - center
+				if delta.length_squared() < minimum * minimum:
+					var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
+					pos = center + direction * minimum
+			continue
 		if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
 			continue
-		var object_radius := float(item.get("r", 48.0))
+		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+		var minimum := radius + float(item.get("r", 48.0))
 		var delta := pos - center
-		var minimum := radius + object_radius
 		if delta.length_squared() < minimum * minimum:
 			var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
 			pos = center + direction * minimum
@@ -1039,9 +1049,12 @@ func _tick_danger_zone(dt: float) -> void:
 				if healed > 0.01:
 					player.healing_total = float(player.get("healing_total", 0.0)) + healed
 					events.append({"t":"heal","id":player.id,"amount":healed})
-	var delay := float(map_data.get("zone_delay", 120.0))
-	var duration := float(map_data.get("zone_duration", 60.0))
+	var delay := float(map_data.get("zone_delay", 60.0))
+	var duration := float(map_data.get("zone_duration", 30.0))
 	if elapsed_time >= delay:
+		if not zone_warning_sent:
+			zone_warning_sent = true
+			events.append({"t":"zone_warning"})
 		# The safe rectangle starts at the map edges and contracts evenly toward its centre.
 		var progress := clampf((elapsed_time - delay) / duration, 0.0, 1.0)
 		danger_half_extents = world_size * lerpf(0.5, 0.12, progress)
@@ -1866,7 +1879,7 @@ func snapshot() -> Dictionary:
 		pl.append({"i": p.id, "n": p.name, "p": p.pos, "v": p.vel, "a": p.aim, "l": p.light,
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
-			"hpmax": p.max_light, "sh": float(p.get("shield_hp", 0.0)), "shmax": float(p.get("max_shield", 0.0)), "acd": p.ability_cd, "ab": p.ability_t, "excd": float(p.get("extra_cd", 0.0)), "phs": float(p.get("phase_t", 0.0)), "abs": float(p.get("absorb_t", 0.0)), "lu_t": lure_remaining, "pr": int(p.get("prism_shots", 0)), "bot": not p.human,
+			"hpmax": p.max_light, "sh": float(p.get("shield_hp", 0.0)), "shmax": float(p.get("max_shield", 0.0)), "acd": p.ability_cd, "ab": p.ability_t, "excd": float(p.get("extra_cd", 0.0)), "phs": float(p.get("phase_t", 0.0)), "abs": float(p.get("absorb_t", 0.0)), "lu_t": lure_remaining, "pr": int(p.get("prism_shots", 0)), "sp": int(p.get("special_shots", 0)), "bot": not p.human,
 			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "field_t": float(p.get("field_t", 0.0)), "turret_t": float(p.get("turret_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var pu: Array = []
 	for pickup in pickups:

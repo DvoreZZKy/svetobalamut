@@ -32,14 +32,18 @@ func _run() -> void:
 				quit(1)
 				return
 			var cave_objects: Array = map_item.get("objects", [])
-			if cave_objects.size() < 180:
-				push_error("Cave formations are not dense enough to create continuous cave walls")
+			if cave_objects.size() > 10:
+				push_error("Cave walls were not merged into compound objects")
 				quit(1)
-			var cave_types := {}
+			var wall_count := 0
 			for cave_object in cave_objects:
-				cave_types[str(cave_object.get("type", ""))] = true
-			if not cave_types.has("rock") or not cave_types.has("crystal") or not cave_types.has("plant"):
-				push_error("Cave walls must combine rocks, crystals and vegetation")
+				if str(cave_object.get("type", "")) == "cave_wall":
+					wall_count += 1
+					if (cave_object.get("poly", []) as PackedVector2Array).size() < 40:
+						push_error("Compound cave wall polygon is incomplete")
+						quit(1)
+			if wall_count != 2:
+				push_error("Cave must consist of two merged wall objects")
 				quit(1)
 	if not cave_found or builtin_sizes.size() != 6 or unique_sizes.size() != 6:
 		push_error("Built-in maps do not have six distinct layouts and dimensions")

@@ -752,6 +752,13 @@ func _draw() -> void:
 		draw_polyline(simple_border, Color(0.22, 0.25, 0.34, 0.8), 2.0, true)
 		var simple_objects: Array = view.get("map_objects", map_objects)
 		for item in simple_objects:
+			if str(item.get("type", "")) == "cave_wall":
+				var wall_poly := PackedVector2Array()
+				for point in item.get("poly", []):
+					wall_poly.append(Vector2(point))
+				if wall_poly.size() >= 3:
+					draw_colored_polygon(wall_poly, Color("#26384e", 0.98))
+				continue
 			var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
 			var r := float(item.get("r",48.0))
 			draw_arc(p,r,0.0,TAU,24,Color("#65edff"),2.5,true)
@@ -818,6 +825,14 @@ func _draw() -> void:
 		var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
 		var r := float(item.get("r",48.0))
 		var kind := str(item.get("type","rock"))
+		if kind == "cave_wall":
+			var wall_poly := PackedVector2Array()
+			for point in item.get("poly", []):
+				wall_poly.append(Vector2(point))
+			if wall_poly.size() >= 3:
+				draw_colored_polygon(wall_poly, Color("#26384e", 0.98))
+				draw_polyline(wall_poly, Color("#5c8ba8", 0.85), 5.0, true)
+			continue
 		var tint: Color = {"rock":Color("#5c8ba8"),"crystal":Color("#65edff"),"cover":Color("#b17aff"),"container":Color("#ff9d65"),"plant":Color("#6affb5"),"generator":Color("#ffe47a"),"teleporter":Color("#da7aff")}.get(kind,Color("#65edff"))
 		var cave_formation := map_id == "shard_labyrinth" and kind in ["rock", "crystal", "plant"]
 		if not cave_formation:
