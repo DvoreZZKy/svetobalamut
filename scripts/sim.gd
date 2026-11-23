@@ -6,32 +6,27 @@ extends RefCounted
 const A := Vector2(1600, 900)
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
-	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.82,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
-	{"name":"Капсула","hp":140.0,"def":0.88,"atk":1.35,"speed":0.78,"rate":0.56,"ability":"Энергощит"},
-	{"name":"Призрак","hp":130.0,"def":0.88,"atk":1.0,"speed":1.20,"rate":0.26,"ability":"Фазовый скачок"},
-	{"name":"Кристалл","hp":140.0,"def":0.96,"atk":1.65,"speed":1.0,"rate":0.46,"ability":"Звёздный залп"},
-	{"name":"Импульс","hp":118.0,"def":1.02,"atk":0.95,"speed":1.22,"rate":0.24,"ability":"Разгон"},
-	{"name":"Магнит","hp":132.0,"def":0.96,"atk":0.95,"speed":0.96,"rate":0.32,"ability":"Притяжение"},
-	{"name":"Слизень","hp":155.0,"def":0.84,"atk":0.86,"speed":0.82,"rate":0.34,"ability":"Липкая броня"},
-	{"name":"Сверхнова","hp":112.0,"def":1.08,"atk":1.18,"speed":0.94,"rate":0.38,"ability":"Вспышка"},
-	{"name":"Мираж","hp":120.0,"def":1.0,"atk":0.96,"speed":1.16,"rate":0.28,"ability":"Смещение"},
+	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.90,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
+	{"name":"Капсула","hp":136.0,"def":0.88,"atk":1.30,"speed":0.78,"rate":0.56,"ability":"Энергощит"},
+	{"name":"Призрак","hp":126.0,"def":0.88,"atk":1.0,"speed":1.16,"rate":0.26,"ability":"Фазовый скачок"},
+	{"name":"Кристалл","hp":140.0,"def":0.96,"atk":1.55,"speed":1.0,"rate":0.46,"ability":"Звёздный залп"},
+	{"name":"Импульс","hp":123.0,"def":1.02,"atk":1.0,"speed":1.17,"rate":0.24,"ability":"Разгон"},
+	{"name":"Магнит","hp":132.0,"def":0.96,"atk":1.02,"speed":0.96,"rate":0.30,"ability":"Притяжение"},
+	{"name":"Слизень","hp":155.0,"def":0.86,"atk":0.95,"speed":0.86,"rate":0.34,"ability":"Липкая броня"},
+	{"name":"Сверхнова","hp":118.0,"def":1.08,"atk":1.18,"speed":0.94,"rate":0.38,"ability":"Вспышка"},
+	{"name":"Мираж","hp":124.0,"def":1.0,"atk":1.0,"speed":1.16,"rate":0.28,"ability":"Смещение"},
 	{"name":"Осколок","hp":126.0,"def":0.98,"atk":1.08,"speed":1.04,"rate":0.30,"ability":"Гранёный залп"},
-	{"name":"Сингулярность","hp":138.0,"def":0.94,"atk":0.98,"speed":0.88,"rate":0.36,"ability":"Гравитационная яма"},
-	{"name":"Рикошет","hp":122.0,"def":1.0,"atk":1.0,"speed":1.08,"rate":0.29,"ability":"Отскок"},
-	{"name":"Вулкан","hp":145.0,"def":0.92,"atk":1.12,"speed":0.90,"rate":0.40,"ability":"Перегрев"},
-	{"name":"Паразит","hp":128.0,"def":0.98,"atk":1.02,"speed":1.02,"rate":0.31,"ability":"Высасывание"},
+	{"name":"Сингулярность","hp":138.0,"def":0.94,"atk":1.0,"speed":0.93,"rate":0.36,"ability":"Гравитационная яма"},
+	{"name":"Рикошет","hp":122.0,"def":1.0,"atk":1.04,"speed":1.08,"rate":0.29,"ability":"Отскок"},
+	{"name":"Вулкан","hp":145.0,"def":0.92,"atk":1.12,"speed":0.94,"rate":0.37,"ability":"Перегрев"},
+	{"name":"Паразит","hp":128.0,"def":0.98,"atk":1.05,"speed":1.02,"rate":0.31,"ability":"Высасывание"},
 	{"name":"Маятник","hp":130.0,"def":0.97,"atk":1.0,"speed":1.06,"rate":0.30,"ability":"Размах"},
-	{"name":"Губка","hp":150.0,"def":0.86,"atk":0.90,"speed":0.88,"rate":0.35,"ability":"Поглощение"},
-	{"name":"Генератор","hp":124.0,"def":0.98,"atk":0.92,"speed":0.98,"rate":0.33,"ability":"Автотурель"},
-	{"name":"Полярность","hp":134.0,"def":0.94,"atk":1.0,"speed":1.0,"rate":0.32,"ability":"Отталкивание"},
-	{"name":"Фантом","hp":116.0,"def":0.90,"atk":1.08,"speed":1.24,"rate":0.28,"ability":"Фазирование"}
+	{"name":"Губка","hp":150.0,"def":0.86,"atk":0.98,"speed":0.92,"rate":0.33,"ability":"Поглощение"},
+	{"name":"Генератор","hp":124.0,"def":0.98,"atk":1.0,"speed":1.02,"rate":0.30,"ability":"Автотурель"},
+	{"name":"Полярность","hp":134.0,"def":0.94,"atk":1.04,"speed":1.0,"rate":0.32,"ability":"Отталкивание"},
+	{"name":"Фантом","hp":116.0,"def":0.90,"atk":1.04,"speed":1.17,"rate":0.28,"ability":"Фазирование"}
 ]
 
-## Every class has one counter and one class that counters it.
-## A counter deals 18% more damage; its counter deals 14% less.
-const COUNTER_TARGETS := [15, 3, 18, 10, 14, 6, 7, 4, 0, 12, 17, 9, 13, 16, 8, 2, 5, 11, 1]
-const COUNTER_DAMAGE_BONUS := 1.18
-const COUNTER_DAMAGE_RESIST := 0.86
 
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
@@ -900,15 +895,7 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 		return
 	if float(p.get("phase_t", 0.0)) > 0.0:
 		return
-	var matchup_damage: float = dmg
-	if src != 0 and players.has(src):
-		var attacker_kind: int = posmod(int(players[src].get("kind", 0)), COUNTER_TARGETS.size())
-		var defender_kind: int = posmod(int(p.get("kind", 0)), COUNTER_TARGETS.size())
-		if int(COUNTER_TARGETS[attacker_kind]) == defender_kind:
-			matchup_damage *= COUNTER_DAMAGE_BONUS
-		elif int(COUNTER_TARGETS[defender_kind]) == attacker_kind:
-			matchup_damage *= COUNTER_DAMAGE_RESIST
-	var reduced: float = matchup_damage * float(p.get("defense", 1.0)) * 0.90
+	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.90
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.72
 	var shield_before: float = float(p.get("shield_hp", 0.0))
