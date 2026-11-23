@@ -103,6 +103,15 @@ func reset(cfg: Array) -> void:
 			if selected_map is Dictionary:
 				map_data = selected_map
 	world_size = Vector2(map_data.get("size", A))
+	var runtime_objects: Array = []
+	for raw_object in map_data.get("objects", []):
+		var runtime_object: Dictionary = raw_object.duplicate(true)
+		var object_type := str(runtime_object.get("type", "rock"))
+		var object_hp := 90.0 if object_type == "container" else (65.0 if object_type == "crystal" else 99999.0)
+		runtime_object["hp"] = object_hp
+		runtime_object["max_hp"] = object_hp
+		runtime_objects.append(runtime_object)
+	map_data["objects"] = runtime_objects
 	danger_radius = minf(world_size.x, world_size.y) * 0.48
 	map_object_timer = 2.0
 	players.clear()
@@ -1201,13 +1210,24 @@ func _update_bullets(dt: float) -> void:
 		else:
 			b.pos += b.vel * dt
 		var object_hit := false
-		for item in map_data.get("objects", []):
+		var object_list: Array = map_data.get("objects", [])
+		for object_index in object_list.size():
+			var item: Dictionary = object_list[object_index]
 			var object_type := str(item.get("type", "rock"))
 			if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
 				continue
 			var object_center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
 			var object_radius := float(item.get("r", 48.0))
 			if b.pos.distance_squared_to(object_center) <= pow(object_radius + float(b.get("radius", 6.0)), 2.0):
+				if object_type == "container" or object_type == "crystal":
+					var remaining_hp := maxf(0.0, float(item.get("hp", 65.0)) - float(b.get("dmg", BULLET_DMG)))
+					item["hp"] = remaining_hp
+					object_list[object_index] = item
+					if remaining_hp <= 0.0:
+						object_list.remove_at(object_index)
+						var drop_kind := "battery" if object_type == "container" else "shield"
+						pickups.append({"pos": object_center, "kind": drop_kind, "t": 12.0})
+				map_data["objects"] = object_list
 				object_hit = true
 				break
 		var dead: bool = b.life <= 0.0 or object_hit
