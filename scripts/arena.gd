@@ -843,24 +843,98 @@ func _draw_bullets() -> void:
 			bullet_layer.draw_line(meteor_pos - Vector2(0, 105), meteor_pos, Color(1.0, 0.24, 0.08, 0.5), 30.0, true)
 			bullet_layer.draw_circle(meteor_pos, 20.0, Color(3.2, 0.72, 0.18))
 			bullet_layer.draw_circle(meteor_pos, 9.0, Color(4.0, 2.4, 0.8))
+	for zone in view.get("az", []):
+		var zone_pos: Vector2 = zone[0]
+		var zone_kind := str(zone[1])
+		var zone_radius: float = float(zone[2])
+		var zone_alpha := clampf(float(zone[3]) / 2.8, 0.0, 1.0)
+		var zone_col := Color("#8dff72") if zone_kind == "slime" else (Color("#ff713c") if zone_kind == "lava" else Color("#a77aff"))
+		bullet_layer.draw_arc(zone_pos, zone_radius, 0.0, TAU, 48, Color(zone_col, 0.48 * zone_alpha), 3.0, true)
+		if not _is_potato():
+			bullet_layer.draw_circle(zone_pos, zone_radius * 0.72, Color(zone_col, 0.055 * zone_alpha))
+	for turret in view.get("at", []):
+		var turret_pos: Vector2 = turret[0]
+		var turret_owner: int = int(turret[1])
+		var turret_col: Color = G.col(cis.get(turret_owner, 0))
+		bullet_layer.draw_circle(turret_pos, 16.0, Color("#10273c"))
+		bullet_layer.draw_arc(turret_pos, 20.0, 0.0, TAU, 24, turret_col, 3.0, true)
+		bullet_layer.draw_line(turret_pos, turret_pos + Vector2(0, -23), Color.WHITE, 4.0, true)
 	for b in view.get("bl", []):
 		var vel: Vector2 = b[2]
 		var pos: Vector2 = b[1] + vel * snap_age
 		var col: Color = G.col(cis.get(b[3], 0))
+		var kind: int = int(b[5]) if b.size() > 5 else 0
+		var radius: float = float(b[6]) if b.size() > 6 else 6.0
 		if b[4] > 0:
 			col = Color(1, 1, 1)
 		if _is_potato():
 			bullet_layer.draw_line(pos - vel * 0.035, pos, col, 3.0, false)
-			bullet_layer.draw_circle(pos, 4.0, col)
+			bullet_layer.draw_circle(pos, radius * 0.65, col)
 			continue
 		var tail := pos - vel * 0.075
 		var glow := G.hdr(col, 1.6)
 		glow.a = 0.35
-		var radius: float = float(b[6]) if b.size() > 6 else 6.0
 		var width := 8.0 + radius * 0.8
-		bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
-		bullet_layer.draw_line(tail, pos, G.hdr(col, 2.0), width * 0.4, true)
-		bullet_layer.draw_circle(pos, 6.0, Color(4, 4, 4))
+		match kind:
+			0:
+				bullet_layer.draw_line(tail, pos, Color("#fff39a"), width * 1.8, true)
+				bullet_layer.draw_circle(pos, radius, Color("#fff6ad"))
+				bullet_layer.draw_circle(pos, radius * 0.38, Color.WHITE)
+			2:
+				bullet_layer.draw_line(tail, pos, Color("#b98aff"), width, true)
+				bullet_layer.draw_arc(pos, radius + 2.0, 0.0, TAU, 20, Color("#e2c7ff"), 2.5, true)
+			3:
+				var diamond := PackedVector2Array([pos + Vector2(0, -radius * 1.5), pos + Vector2(radius, 0), pos + Vector2(0, radius * 1.5), pos + Vector2(-radius, 0)])
+				bullet_layer.draw_colored_polygon(diamond, Color("#a9faff"))
+				bullet_layer.draw_polyline(diamond, Color.WHITE, 1.5, true)
+			4:
+				var bolt := PackedVector2Array([tail, tail.lerp(pos, 0.28) + Vector2(5, -7), tail.lerp(pos, 0.58) + Vector2(-5, 7), pos])
+				bullet_layer.draw_polyline(bolt, Color("#fff27a"), 5.0, true)
+			5, 17:
+				bullet_layer.draw_arc(pos, radius + 3.0, 0.0, TAU, 24, Color("#ff6b76") if kind == 5 else Color("#ff5c69"), 2.5, true)
+				bullet_layer.draw_circle(pos, radius * 0.58, Color("#77eaff") if kind == 5 else Color("#ff5968"))
+			6:
+				bullet_layer.draw_circle(pos, radius, Color("#8cff79"))
+				bullet_layer.draw_circle(pos + Vector2(-radius * 0.35, -radius * 0.2), radius * 0.28, Color("#d7ffb0"))
+			7:
+				bullet_layer.draw_circle(pos, radius + 4.0, Color(1.0, 0.34, 0.12, 0.32))
+				bullet_layer.draw_circle(pos, radius, Color("#ff9b43"))
+				bullet_layer.draw_circle(pos, radius * 0.38, Color("#fff2a1"))
+			8:
+				bullet_layer.draw_circle(pos - vel.normalized() * 10.0, radius * 0.8, Color(0.5, 0.35, 1.0, 0.35))
+				bullet_layer.draw_circle(pos, radius, Color("#d5b5ff"))
+			9:
+				var shard := PackedVector2Array([pos + vel.normalized() * radius * 1.8, pos + vel.normalized().orthogonal() * radius, pos - vel.normalized().orthogonal() * radius])
+				bullet_layer.draw_colored_polygon(shard, Color("#b6faff"))
+			10:
+				bullet_layer.draw_circle(pos, radius + 3.0, Color("#4a236f"))
+				bullet_layer.draw_circle(pos, radius, Color("#100c24"))
+				bullet_layer.draw_arc(pos, radius + 5.0, 0.0, TAU, 32, Color("#a77aff"), 2.0, true)
+			11:
+				bullet_layer.draw_arc(pos, radius + 2.0, 0.0, TAU, 28, Color.WHITE, 3.0, true)
+				bullet_layer.draw_line(pos + Vector2(-radius, 0), pos + Vector2(radius, 0), col, 2.0, true)
+			12:
+				bullet_layer.draw_circle(pos, radius + 3.0, Color("#ff4b24", 0.45))
+				bullet_layer.draw_circle(pos, radius, Color("#ff792e"))
+				bullet_layer.draw_circle(pos + Vector2(-2, -2), radius * 0.35, Color("#ffe18a"))
+			14:
+				bullet_layer.draw_line(tail, pos, Color("#9af5ff"), width, true)
+				bullet_layer.draw_circle(pos, radius, Color("#d9ffff"))
+			15:
+				bullet_layer.draw_circle(pos, radius, Color(0.38, 0.88, 1.0, 0.20))
+				bullet_layer.draw_arc(pos, radius, 0.0, TAU, 32, Color("#aafaff"), 3.0, true)
+				bullet_layer.draw_circle(pos, radius * 0.3, Color("#e9ffff"))
+			16:
+				bullet_layer.draw_circle(pos, radius, Color("#d4c7ff"))
+				bullet_layer.draw_arc(pos, radius + 3.0, 0.0, TAU, 24, Color("#a58aff"), 2.0, true)
+			18:
+				var slash_dir: Vector2 = vel.normalized()
+				bullet_layer.draw_line(pos - slash_dir * 16.0, pos + slash_dir * 16.0, Color("#c79bff"), 8.0, true)
+				bullet_layer.draw_line(pos - slash_dir.orthogonal() * 10.0, pos + slash_dir.orthogonal() * 10.0, Color.WHITE, 2.0, true)
+			_:
+				bullet_layer.draw_line(tail, pos, glow, width * 2.0, true)
+				bullet_layer.draw_line(tail, pos, G.hdr(col, 2.0), width * 0.4, true)
+				bullet_layer.draw_circle(pos, radius, Color(4, 4, 4))
 	for lure in view.get("lu", []):
 		var lure_pos: Vector2 = lure[0]
 		var lure_pulse := 1.0 if _is_potato() else 0.78 + 0.22 * sin(t * 13.0)
