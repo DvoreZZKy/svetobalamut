@@ -75,20 +75,24 @@ func _ready() -> void:
 	_btn("Назад", join, func(): _show("main"))
 
 	var profile := _box("profile")
-	profile.anchor_left = 0.5
-	profile.anchor_right = 0.5
-	profile.anchor_top = 0.5
-	profile.anchor_bottom = 0.5
-	profile.offset_left = -250
-	profile.offset_right = 250
-	profile.offset_top = -280
-	profile.offset_bottom = 280
+	profile.anchor_left = 0.0
+	profile.anchor_right = 1.0
+	profile.anchor_top = 0.0
+	profile.anchor_bottom = 1.0
+	profile.offset_left = 0
+	profile.offset_right = 0
+	profile.offset_top = 92
+	profile.offset_bottom = -18
 	profile.alignment = BoxContainer.ALIGNMENT_CENTER
 	profile.add_theme_constant_override("separation", 5)
-	_title(profile, "ТВОЙ ПЕРСОНАЖ")
+	profile.add_theme_constant_override("alignment", BoxContainer.ALIGNMENT_CENTER)
+	var profile_heading := _title(profile, "ТВОЙ ПЕРСОНАЖ")
+	profile_heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	profile_heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	profile_preview = _make_vector_preview(profile)
 	profile_info = Label.new()
 	profile_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	profile_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	profile_info.add_theme_font_size_override("font_size", 15)
 	profile.add_child(profile_info)
 	profile_color_btn = _btn("Цвет", profile, func():
