@@ -5,12 +5,18 @@ var kind := 0
 var tint := Color("#54eaff")
 var outfit := 0
 var hat := 0
+var anim_time := 0.0
 
 func setup(p_kind: int, p_tint: Color, p_outfit: int, p_hat: int) -> void:
 	kind = maxi(0, p_kind)
 	tint = p_tint
 	outfit = posmod(p_outfit, 5)
 	hat = posmod(p_hat, 5)
+	queue_redraw()
+
+
+func _process(dt: float) -> void:
+	anim_time += dt
 	queue_redraw()
 
 
@@ -25,28 +31,39 @@ func _shape(points: Array, fill: Color, edge: Color = Color.WHITE, width: float 
 func _draw() -> void:
 	var dark := tint.darkened(0.62)
 	var bright := tint.lightened(0.42)
-	match posmod(kind, 4):
-		0: # Светляк: крылья и короткое светящееся тело.
-			_shape([Vector2(-8,-4),Vector2(-23,-18),Vector2(-27,-14),Vector2(-17,5),Vector2(-7,8)], bright, bright, 2.5)
-			_shape([Vector2(8,-4),Vector2(23,-18),Vector2(27,-14),Vector2(17,5),Vector2(7,8)], bright, bright, 2.5)
-			_shape([Vector2(-10,-14),Vector2(10,-14),Vector2(13,8),Vector2(0,23),Vector2(-13,8)], dark, bright, 3.5)
-			_shape([Vector2(-7,-9),Vector2(7,-9),Vector2(8,8),Vector2(0,17),Vector2(-8,8)], tint, tint.lightened(0.7), 2.0)
-			draw_line(Vector2(-5,-14),Vector2(-12,-27),bright,3.0,true)
-			draw_line(Vector2(5,-14),Vector2(12,-27),bright,3.0,true)
-		1: # Капсула: широкий корпус и одно большое окно.
-			_shape([Vector2(-17,-22),Vector2(12,-22),Vector2(20,-12),Vector2(20,13),Vector2(10,24),Vector2(-10,24),Vector2(-20,13),Vector2(-20,-12)], dark, bright, 4.0)
-			_shape([Vector2(-12,-15),Vector2(12,-15),Vector2(14,3),Vector2(9,15),Vector2(-9,15),Vector2(-14,3)], tint, bright, 2.5)
-			_shape([Vector2(-8,-9),Vector2(8,-9),Vector2(8,1),Vector2(-8,1)], Color("#d9fbff"), Color("#d9fbff"), 1.0)
-		2: # Призрак: плавающий силуэт с гранёным низом.
-			_shape([Vector2(-19,17),Vector2(-20,-5),Vector2(-14,-20),Vector2(-7,-25),Vector2(7,-25),Vector2(14,-20),Vector2(20,-5),Vector2(19,17),Vector2(8,10),Vector2(0,20),Vector2(-8,10)], dark, bright, 3.5)
-			_shape([Vector2(-12,-10),Vector2(-5,-17),Vector2(5,-17),Vector2(12,-10),Vector2(10,1),Vector2(-10,1)], Color("#f5f1ff"), Color("#f5f1ff"), 1.0)
-			draw_line(Vector2(-7,7),Vector2(7,7),Color("#7557b9"),3.0,true)
-		3: # Кристалл: ромб с тремя крупными плоскостями.
-			_shape([Vector2(0,-28),Vector2(20,-9),Vector2(16,12),Vector2(0,28),Vector2(-16,12),Vector2(-20,-9)], dark, bright, 4.0)
-			_shape([Vector2(0,-21),Vector2(12,-8),Vector2(0,2),Vector2(-12,-8)], bright, bright, 1.0)
-			_shape([Vector2(-12,-5),Vector2(0,4),Vector2(0,21),Vector2(-13,10)], tint, bright, 1.5)
-			_shape([Vector2(12,-5),Vector2(13,10),Vector2(0,21),Vector2(0,4)], tint.darkened(0.2), bright, 1.5)
+	if kind < 4:
+		match posmod(kind, 4):
+			0: # Светляк: крылья и короткое светящееся тело.
+				_shape([Vector2(-8,-4),Vector2(-23,-18),Vector2(-27,-14),Vector2(-17,5),Vector2(-7,8)], bright, bright, 2.5)
+				_shape([Vector2(8,-4),Vector2(23,-18),Vector2(27,-14),Vector2(17,5),Vector2(7,8)], bright, bright, 2.5)
+				_shape([Vector2(-10,-14),Vector2(10,-14),Vector2(13,8),Vector2(0,23),Vector2(-13,8)], dark, bright, 3.5)
+				_shape([Vector2(-7,-9),Vector2(7,-9),Vector2(8,8),Vector2(0,17),Vector2(-8,8)], tint, tint.lightened(0.7), 2.0)
+				draw_line(Vector2(-5,-14),Vector2(-12,-27),bright,3.0,true)
+				draw_line(Vector2(5,-14),Vector2(12,-27),bright,3.0,true)
+			1: # Капсула: широкий корпус и одно большое окно.
+				_shape([Vector2(-17,-22),Vector2(12,-22),Vector2(20,-12),Vector2(20,13),Vector2(10,24),Vector2(-10,24),Vector2(-20,13),Vector2(-20,-12)], dark, bright, 4.0)
+				_shape([Vector2(-12,-15),Vector2(12,-15),Vector2(14,3),Vector2(9,15),Vector2(-9,15),Vector2(-14,3)], tint, bright, 2.5)
+				_shape([Vector2(-8,-9),Vector2(8,-9),Vector2(8,1),Vector2(-8,1)], Color("#d9fbff"), Color("#d9fbff"), 1.0)
+			2: # Призрак: плавающий силуэт с гранёным низом.
+				_shape([Vector2(-19,17),Vector2(-20,-5),Vector2(-14,-20),Vector2(-7,-25),Vector2(7,-25),Vector2(14,-20),Vector2(20,-5),Vector2(19,17),Vector2(8,10),Vector2(0,20),Vector2(-8,10)], dark, bright, 3.5)
+				_shape([Vector2(-12,-10),Vector2(-5,-17),Vector2(5,-17),Vector2(12,-10),Vector2(10,1),Vector2(-10,1)], Color("#f5f1ff"), Color("#f5f1ff"), 1.0)
+				draw_line(Vector2(-7,7),Vector2(7,7),Color("#7557b9"),3.0,true)
+			3: # Кристалл: ромб с тремя крупными плоскостями.
+				_shape([Vector2(0,-28),Vector2(20,-9),Vector2(16,12),Vector2(0,28),Vector2(-16,12),Vector2(-20,-9)], dark, bright, 4.0)
+				_shape([Vector2(0,-21),Vector2(12,-8),Vector2(0,2),Vector2(-12,-8)], bright, bright, 1.0)
+				_shape([Vector2(-12,-5),Vector2(0,4),Vector2(0,21),Vector2(-13,10)], tint, bright, 1.5)
+				_shape([Vector2(12,-5),Vector2(13,10),Vector2(0,21),Vector2(0,4)], tint.darkened(0.2), bright, 1.5)
 	if kind >= 4:
+		# Newer classes use their own animated core instead of reusing one of the four
+		# original silhouettes underneath their class-specific ornaments.
+		var core_pulse := 1.0 + 0.07 * sin(anim_time * 5.2 + float(kind))
+		_shape([Vector2(0, -20), Vector2(16, -12), Vector2(20, 5), Vector2(10, 20), Vector2(-10, 20), Vector2(-20, 5), Vector2(-16, -12)], dark, bright, 3.0)
+		draw_circle(Vector2.ZERO, 11.0 * core_pulse, tint.lightened(0.22))
+		draw_circle(Vector2.ZERO, 4.0 * core_pulse, Color.WHITE)
+		var orbit_angle := anim_time * (1.1 if kind % 2 == 0 else -1.1) + float(kind)
+		draw_arc(Vector2.ZERO, 32.0 + 2.0 * sin(anim_time * 3.0), orbit_angle, orbit_angle + PI * 1.35, 28, Color(bright, 0.82), 2.4, true)
+		var spark_pos := Vector2.from_angle(orbit_angle) * 32.0
+		draw_circle(spark_pos, 3.2, Color.WHITE)
 		var emblem_id := posmod(kind - 4, 15)
 		# Каждый новый класс получает собственный силуэтный декор и фактуру.
 		match emblem_id:
@@ -133,7 +150,7 @@ func _draw() -> void:
 			var yy := -10.0 + float(i) * 10.0
 			draw_line(Vector2(-5, yy), Vector2(5, yy), Color(bright, 0.72), 1.4, true)
 
-	if outfit > 0:
+	if outfit > 0 and kind < 4:
 		var cloth: Color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][outfit]
 		match posmod(kind, 4):
 			0: _shape([Vector2(-7,-3),Vector2(7,-3),Vector2(5,10),Vector2(0,15),Vector2(-5,10)], cloth, cloth.lightened(0.35), 2.0)
