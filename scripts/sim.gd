@@ -69,6 +69,7 @@ const CHAOS := ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal"
 const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog": 6.0, "magnet": 5.0}
 
 var players := {}
+var pending_decoys: Array[Dictionary] = []
 var bullets: Array = []
 var eaters: Array = []
 var lures: Array = []
@@ -125,6 +126,7 @@ func reset(cfg: Array) -> void:
 	danger_radius = minf(world_size.x, world_size.y) * 0.48
 	map_object_timer = 2.0
 	players.clear()
+	pending_decoys.clear()
 	bullets.clear()
 	eaters.clear()
 	lures.clear()
@@ -211,6 +213,9 @@ func step(dt: float) -> void:
 			_bot_think(p, dt)
 	for p in players.values():
 		_update_player(p, dt)
+	for clone in pending_decoys:
+		players[int(clone.id)] = clone
+	pending_decoys.clear()
 	_collisions(dt)
 	_update_bullets(dt)
 	_update_attack_zones(dt)
@@ -758,7 +763,8 @@ func _spawn_mirage_doubles(p: Dictionary) -> void:
 		clone.max_light = 38.0
 		clone.aim = p.aim
 		clone.vel = p.vel + offset.normalized() * 115.0
-		players[clone_id] = clone
+		clone["decoy_owner"] = int(p.id)
+		pending_decoys.append(clone)
 		events.append({"t": "mirage_clone", "x": clone_pos.x, "y": clone_pos.y, "c": p.ci})
 
 
@@ -1595,6 +1601,14 @@ func _bomb_tick(dt: float) -> void:
 func _bot_think(p: Dictionary, dt: float) -> void:
 	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false, "ability": false, "extra_ability": false}
 	var b: Dictionary = p.bot
+	if p.decoy:
+		var source: Dictionary = players.get(int(p.get("decoy_owner", 0)), {})
+		if not source.is_empty():
+			var drift := (p.pos - source.pos).normalized()
+			inp.mv = (drift * 0.35 + source.vel.normalized() * 0.25).limit_length(0.6)
+			inp.aim = source.pos
+		inputs[p.id] = inp
+		return
 	# Bots stay deliberately imperfect: they improve a little, but never become expert marksmen.
 	b.skill = minf(0.24, float(b.get("skill", 0.04)) + dt * 0.00045)
 	var skill: float = float(b.skill)
