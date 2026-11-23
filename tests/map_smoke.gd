@@ -15,6 +15,31 @@ func _run() -> void:
 		push_error("Expected the original arena and five additional maps")
 		quit(1)
 		return
+	var cave_found := false
+	var builtin_sizes: Array[String] = []
+	for map_item in maps:
+		var map_id := str(map_item.get("id", ""))
+		if map_id.begins_with("custom_"):
+			continue
+		var map_size: Vector2 = Vector2(map_item.get("size", Vector2.ZERO))
+		builtin_sizes.append(str(map_size))
+		if map_id == "shard_labyrinth":
+			cave_found = true
+			if str(map_item.get("name", "")) != "Пещера разломов" or map_size != Vector2(2200, 1600):
+				push_error("Cave map name or dimensions are incorrect")
+				quit(1)
+				return
+			if (map_item.get("objects", []) as Array).size() < 30:
+				push_error("Cave map is still too empty to form winding passages")
+				quit(1)
+	if not cave_found or builtin_sizes.size() != 6 or builtin_sizes.size() != builtin_sizes.duplicate().size():
+		push_error("Built-in maps do not have six distinct layouts and dimensions")
+		quit(1)
+		return
+	if Sim.regen_zones_for(Vector2(2200, 1600)).size() != 4:
+		push_error("Map-scaled regeneration zones were not created")
+		quit(1)
+		return
 	var custom: Dictionary = map_service.call("new_custom_map", "Map smoke test")
 	custom["objects"] = [{"type":"container","x":1200.0,"y":750.0,"r":35.0}]
 	if not bool(map_service.call("save_custom_map", custom)):
