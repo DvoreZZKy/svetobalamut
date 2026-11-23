@@ -586,8 +586,9 @@ func _build_hud() -> void:
 	ability_caption.anchor_right = 0.5
 	ability_caption.anchor_top = 1.0
 	ability_caption.anchor_bottom = 1.0
-	ability_caption.offset_left = -190
-	ability_caption.offset_right = 160
+	ability_caption.offset_left = -310
+	ability_caption.offset_right = -140
+	ability_caption.add_theme_font_size_override("font_size", 8)
 	ability_caption.offset_top = -31
 	ability_caption.offset_bottom = -17
 	ability_caption.add_theme_color_override("font_color", Color("#c3a0ff"))
@@ -596,8 +597,9 @@ func _build_hud() -> void:
 	extra_ability_caption.anchor_right = 0.5
 	extra_ability_caption.anchor_top = 1.0
 	extra_ability_caption.anchor_bottom = 1.0
-	extra_ability_caption.offset_left = -190
-	extra_ability_caption.offset_right = 160
+	extra_ability_caption.offset_left = -310
+	extra_ability_caption.offset_right = -140
+	extra_ability_caption.add_theme_font_size_override("font_size", 8)
 	extra_ability_caption.offset_top = -16
 	extra_ability_caption.offset_bottom = -2
 	extra_ability_caption.add_theme_color_override("font_color", Color("#72f5b4"))
@@ -2274,7 +2276,10 @@ func _handle_events(evs: Array) -> void:
 				if is_instance_valid(fx_mat):
 					var tw := create_tween()
 					tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
- 			"ability_failed":
+			"generator_attack":
+				if int(e.get("id", 0)) == local_id:
+					_show_banner("ТУРЕЛЬ УСТАНОВЛЕНА В ТОЧКЕ ПРИЦЕЛА")
+			"ability_failed":
 				if int(e.get("id", 0)) == local_id:
 					_show_banner("НИКОГО В РАДИУСЕ — АТАКА НЕ УДАЛАСЬ")
 					Sfx.play("hit", 0.65, -8.0)

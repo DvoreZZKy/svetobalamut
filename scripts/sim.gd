@@ -502,6 +502,7 @@ func _fire_class_attack(p: Dictionary) -> void:
 				break
 		if not found:
 			attack_turrets.append({"pos": turret_pos, "owner": p.id, "t": 4.0, "cd": 0.12})
+		events.append({"t":"generator_attack","id":p.id,"x":turret_pos.x,"y":turret_pos.y,"c":p.ci})
 	elif kind == 17:
 		var polarity := int(p.get("polarity_mode", 1))
 		_spawn_class_bullet(p, aim, 1160.0, 8.0, 0.9, 1.35, {"polarity": polarity})
@@ -671,7 +672,7 @@ func _extra_ability_cooldown(kind: int) -> float:
 func _ability_requires_target(kind: int, is_extra: bool) -> bool:
 	if is_extra:
 		return kind in [4, 7, 12, 13, 14, 17]
-	return kind in [4, 7, 13, 14]
+	return kind in [4, 7, 13]
 
 
 func _ability_target_available(p: Dictionary, is_extra: bool) -> bool:

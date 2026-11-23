@@ -602,6 +602,39 @@ func _run() -> void:
 		return
 
 
+	# Targeted abilities must fail cleanly without consuming their cooldown when no opponent is in range.
+	sim.reset([{"id":1,"name":"No Target","human":true,"color":0,"kind":7,"outfit":0,"hat":0}])
+	sim.chaos_enabled = false
+	var no_target: Dictionary = sim.players[1]
+	sim.inputs[1] = {"ability": true}
+	sim._update_player(no_target, 1.0 / 60.0)
+	if float(no_target.ability_cd) > 0.0:
+		_fail("Supernova consumed its Q cooldown without a target in range")
+	if not sim.events.any(func(event): return str(event.get("t", "")) == "ability_failed" and int(event.get("id", 0)) == 1):
+		_fail("failed targeted ability did not publish player feedback")
+	# Generator's basic attack places a turret; Q also publishes an explanatory HUD notice.
+	sim.reset([{"id":1,"name":"Generator","human":true,"color":0,"kind":16,"outfit":0,"hat":0}])
+	sim.chaos_enabled = false
+	var generator: Dictionary = sim.players[1]
+	generator.aim = Vector2.RIGHT
+	sim._fire_class_attack(generator)
+	if sim.attack_turrets.is_empty() or not sim.events.any(func(event): return str(event.get("t", "")) == "generator_attack"):
+		_fail("Generator basic attack did not place and announce its turret")
+	sim._use_ability(generator)
+	if not sim.events.any(func(event): return str(event.get("t", "")) == "ability_notice" and int(event.get("id", 0)) == 1):
+		_fail("Generator Q did not publish its ability explanation")
+	# Bots steer back inside the shrinking rectangle rather than wandering into the hazard.
+	sim.reset([{"id":1,"name":"Zone Bot","human":false,"color":0,"kind":0,"outfit":0,"hat":0}])
+	sim.chaos_enabled = false
+	sim.elapsed_time = 145.0
+	sim.danger_half_extents = sim.world_size * 0.25
+	var zone_bot: Dictionary = sim.players[1]
+	zone_bot.pos = Vector2(20.0, sim.world_size.y * 0.5)
+	sim._bot_think(zone_bot, 1.0 / 60.0)
+	var zone_bot_move: Vector2 = sim.inputs[1].get("mv", Vector2.ZERO)
+	if zone_bot_move.x <= 0.0:
+		_fail("bot did not retreat from the closing danger zone toward safety")
+
 	# 4) A full bot match always finishes with a winner; no NaN positions.
 	var finished := 0
 	for match_i in 3:
