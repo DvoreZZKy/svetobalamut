@@ -56,6 +56,8 @@ var players := {}
 var bullets: Array = []
 var eaters: Array = []
 var lures: Array = []
+var attack_zones: Array = []
+var attack_turrets: Array = []
 var pickups: Array = []
 var pickup_timer := 9.0
 var meteors: Array = []
@@ -89,6 +91,8 @@ func reset(cfg: Array) -> void:
 	bullets.clear()
 	eaters.clear()
 	lures.clear()
+	attack_zones.clear()
+	attack_turrets.clear()
 	pickups.clear()
 	pickup_timer = rng.randf_range(8.0, 13.0)
 	meteors.clear()
@@ -132,6 +136,7 @@ func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: V
 		"defense": CLASS_STATS[posmod(kind, CLASS_STATS.size())].def, "attack": CLASS_STATS[posmod(kind, CLASS_STATS.size())].atk,
 		"speed_mult": CLASS_STATS[posmod(kind, CLASS_STATS.size())].speed, "fire_rate": CLASS_STATS[posmod(kind, CLASS_STATS.size())].rate,
 		"ability_cd": 0.0, "ability_t": 0.0, "extra_cd": 0.0, "phase_t": 0.0, "absorb_t": 0.0, "prism_shots": 0,
+		"slow_t": 0.0, "polarity_mode": 1,
 		"shadow": false, "decoy": false, "life": 0.0,
 		"dash_t": 0.0, "dash_dir": Vector2.RIGHT, "dash_cd": 0.0, "inv": 0.0, "fire_cd": 0.0,
 		"wave_charge": 0.0, "fire_was_down": false, "wave_released": false,
@@ -169,6 +174,8 @@ func step(dt: float) -> void:
 		_update_player(p, dt)
 	_collisions(dt)
 	_update_bullets(dt)
+	_update_attack_zones(dt)
+	_update_attack_turrets(dt)
 	_update_lures(dt)
 	_update_eaters(dt)
 	_update_pickups(dt)
@@ -249,7 +256,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	p.ability_cd = maxf(0.0, p.ability_cd - dt)
 	p.ability_t = maxf(0.0, p.ability_t - dt)
 	p.extra_cd = maxf(0.0, float(p.get("extra_cd", 0.0)) - dt)
-	p.phase_t = maxf(0.0, float(p.get("phase_t", 0.0)) - dt)
+	p.phase_t = maxf(0.0, float(p.phase_t) - dt)
+	p.slow_t = maxf(0.0, float(p.get("slow_t", 0.0)) - dt)
 	p.absorb_t = maxf(0.0, float(p.get("absorb_t", 0.0)) - dt)
 	p.field_t = maxf(0.0, float(p.get("field_t", 0.0)) - dt)
 	p.turret_t = maxf(0.0, float(p.get("turret_t", 0.0)) - dt)
@@ -269,6 +277,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	else:
 		var k := 0.9 if effects.has("zerog") else 15.0
 		var speed_boost := 1.55 if p.kind == 0 and p.ability_t > 0.0 else (1.42 if (p.kind == 4 or p.kind == 14) and p.ability_t > 0.0 else 1.0)
+		if float(p.get("slow_t", 0.0)) > 0.0:
+			speed_boost *= 0.68
 		if str(p.get("buff", "")) == "swift":
 			speed_boost *= 1.28
 		p.vel = p.vel.lerp(mv.limit_length(1.0) * SPEED * p.speed_mult * speed_boost, clampf(k * dt, 0.0, 1.0))
@@ -308,27 +318,8 @@ func _update_player(p: Dictionary, dt: float) -> void:
 		p.wave_released = false
 		p.fire_was_down = want_fire
 	elif want_fire and p.fire_cd <= 0.0 and p.light > shot_cost + 0.5:
-		var prism_active: bool = p.kind == 3 and int(p.get("prism_shots", 0)) > 0
-		var special_active: bool = int(p.get("special_shots", 0)) > 0
-		var spread_count := 3 if p.kind == 0 or prism_active else 1
-		for shot_i in spread_count:
-			var spread := (float(shot_i) - 1.0) * (0.12 if p.kind == 0 else 0.24) if spread_count == 3 else 0.0
-			var ang: float = p.aim.angle() + spread + rng.randf_range(-0.018, 0.018)
-			var dir := Vector2.from_angle(ang)
-			var bolt_speed := 1180.0 if p.kind == 3 else (1480.0 if p.kind == 2 else BULLET_SPEED)
-			var bolt_radius := 11.0 if p.kind == 3 else 6.0
-			var damage_mult := 0.42 if p.kind == 0 else (0.72 if prism_active else 1.0)
-			bullets.append({"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * bolt_speed + p.vel * 0.25,
-				"owner": p.id, "life": 1.4, "bn": 0, "ricochet": p.kind == 3 or special_active or p.kind == 11, "dmg": BULLET_DMG * p.attack * damage_mult * (1.25 if special_active and p.kind == 11 else 1.0) * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
-				"radius": bolt_radius})
-			next_id += 1
-		if prism_active:
-			p.prism_shots = int(p.prism_shots) - 1
-		p.light -= shot_cost
-		var haste := 0.52 if p.kind == 0 and p.ability_t > 0.0 else 1.0
-		p.fire_cd = p.fire_rate * haste
-		p.vel -= p.aim * 55.0
-		events.append({"t": "shot", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
+		_fire_class_attack(p)
+
 
 	var spd_ratio: float = p.vel.length() / SPEED
 	p.light -= MOVE_COST * minf(spd_ratio, 1.2) * dt
@@ -349,6 +340,163 @@ func _update_player(p: Dictionary, dt: float) -> void:
 	if p.light <= 0.0 and not p.decoy:
 		# Credit a kill only for a recent hit; otherwise this is starvation (no stale kill credit).
 		_make_shadow(p, p.last_hit if p.hit_age < 4.0 else 0, false)
+
+
+
+func _spawn_class_bullet(p: Dictionary, direction: Vector2, speed: float, radius: float, damage_mult: float, life: float, extra: Dictionary = {}) -> void:
+	var dir := direction.normalized()
+	var bullet: Dictionary = {"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * speed + p.vel * 0.18,
+		"owner": p.id, "life": life, "bn": 0, "ricochet": false,
+		"dmg": BULLET_DMG * float(p.attack) * damage_mult * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
+		"radius": radius, "vk": int(p.kind), "hit_ids": []}
+	for key in extra:
+		bullet[key] = extra[key]
+	bullets.append(bullet)
+	next_id += 1
+
+
+func _fire_class_attack(p: Dictionary) -> void:
+	var kind := int(p.kind)
+	var aim: Vector2 = p.aim.normalized()
+	var prism_active: bool = kind == 3 and int(p.get("prism_shots", 0)) > 0
+	if prism_active:
+		for i in 3:
+			_spawn_class_bullet(p, aim.rotated((float(i) - 1.0) * 0.24), 1180.0, 7.0, 0.72, 1.4, {"ricochet": true})
+		p.prism_shots = int(p.prism_shots) - 1
+	elif kind == 0:
+		for i in 3:
+			_spawn_class_bullet(p, aim.rotated((float(i) - 1.0) * 0.12), 1120.0, 5.0, 0.42, 1.4, {"homing": 1.8})
+	elif kind == 2:
+		_spawn_class_bullet(p, aim, 1480.0, 7.0, 0.82, 1.55, {"pierce": 2})
+	elif kind == 3:
+		_spawn_class_bullet(p, aim, 1180.0, 11.0, 1.0, 1.5, {"split_on_wall": true})
+	elif kind == 4:
+		_chain_lightning(p)
+	elif kind == 5:
+		_spawn_class_bullet(p, aim, 980.0, 8.0, 0.92, 1.5, {"homing": 3.4})
+	elif kind == 6:
+		_spawn_class_bullet(p, aim, 900.0, 10.0, 0.9, 1.5, {"zone_on_hit": "slime"})
+	elif kind == 7:
+		_spawn_class_bullet(p, aim, 1050.0, 9.0, 0.9, 1.35, {"explosive": true})
+	elif kind == 8:
+		for i in 2:
+			_spawn_class_bullet(p, aim.rotated(-0.13 if i == 0 else 0.13), 1320.0, 5.5, 0.58, 1.25)
+	elif kind == 9:
+		for i in 3:
+			_spawn_class_bullet(p, aim.rotated((float(i) - 1.0) * 0.24), 1370.0, 5.0, 0.48, 1.15)
+	elif kind == 10:
+		_spawn_class_bullet(p, aim, 760.0, 13.0, 0.9, 1.7, {"zone_on_hit": "gravity"})
+	elif kind == 11:
+		_spawn_class_bullet(p, aim, 1240.0, 8.0, 0.95, 1.55, {"ricochet": true})
+	elif kind == 12:
+		_spawn_class_bullet(p, aim, 830.0, 10.0, 0.92, 1.45, {"zone_on_hit": "lava", "lob": true})
+	elif kind == 13:
+		_parasite_basic_attack(p)
+	elif kind == 14:
+		_spawn_class_bullet(p, aim, 1180.0, 7.0, 0.9, 1.35, {"wave": true})
+	elif kind == 15:
+		_spawn_class_bullet(p, aim, 650.0, 11.0, 0.72, 1.8, {"absorb_bubble": true})
+	elif kind == 16:
+		var turret_pos: Vector2 = (p.pos + aim * 105.0).clamp(Vector2(50, 50), A - Vector2(50, 50))
+		var found := false
+		for turret in attack_turrets:
+			if int(turret.owner) == int(p.id):
+				turret.pos = turret_pos
+				turret.t = 4.0
+				found = true
+				break
+		if not found:
+			attack_turrets.append({"pos": turret_pos, "owner": p.id, "t": 4.0, "cd": 0.12})
+	elif kind == 17:
+		var polarity := int(p.get("polarity_mode", 1))
+		_spawn_class_bullet(p, aim, 1160.0, 8.0, 0.9, 1.35, {"polarity": polarity})
+		p.polarity_mode = -1 if polarity > 0 else 1
+	elif kind == 18:
+		_spawn_class_bullet(p, aim, 1580.0, 13.0, 0.78, 0.62, {"pierce": 4, "slash": true})
+	p.light -= SHOT_COST
+	var haste := 0.52 if kind == 0 and p.ability_t > 0.0 else 1.0
+	p.fire_cd = float(p.fire_rate) * haste
+	p.vel -= aim * 42.0
+	events.append({"t": "shot", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
+
+
+func _parasite_basic_attack(p: Dictionary) -> void:
+	var best: Dictionary = {}
+	var best_dot := 0.72
+	for target in players.values():
+		if target.id == p.id or target.shadow or target.decoy or target.inv > 0.0:
+			continue
+		var offset: Vector2 = target.pos - p.pos
+		var distance := offset.length()
+		if distance > 350.0 or distance < 1.0:
+			continue
+		var alignment := p.aim.normalized().dot(offset / distance)
+		if alignment > best_dot:
+			best_dot = alignment
+			best = target
+	if not best.is_empty():
+		_damage(best, 10.0 * float(p.attack), p.id, false)
+		var old_light: float = float(p.light)
+		p.light = minf(float(p.max_light), float(p.light) + 2.0)
+		if float(p.light) > old_light:
+			p.healing_total = float(p.get("healing_total", 0.0)) + float(p.light) - old_light
+			events.append({"t": "heal", "id": p.id, "amount": float(p.light) - old_light})
+
+
+func _spawn_attack_zone(pos: Vector2, owner_id: int, zone_kind: String, radius: float, duration: float) -> void:
+	attack_zones.append({"pos": pos, "owner": owner_id, "kind": zone_kind, "r": radius, "t": duration, "hit_cd": {}})
+
+
+func _update_attack_zones(dt: float) -> void:
+	var keep: Array = []
+	for zone in attack_zones:
+		zone.t = float(zone.t) - dt
+		var hit_cd: Dictionary = zone.hit_cd
+		for player in players.values():
+			if player.shadow or player.decoy or int(player.id) == int(zone.owner):
+				continue
+			if (player.pos as Vector2).distance_to(zone.pos) > float(zone.r):
+				continue
+			match str(zone.kind):
+				"slime":
+					player.slow_t = maxf(float(player.get("slow_t", 0.0)), 0.24)
+				"gravity":
+					player.vel += (zone.pos - player.pos).normalized() * 340.0 * dt
+					player.slow_t = maxf(float(player.get("slow_t", 0.0)), 0.12)
+				"lava":
+					var cd := float(hit_cd.get(int(player.id), 0.0)) - dt
+					if cd <= 0.0:
+						_damage(player, 3.0, int(zone.owner), false)
+						hit_cd[int(player.id)] = 0.55
+					else:
+						hit_cd[int(player.id)] = cd
+		zone.hit_cd = hit_cd
+		if float(zone.t) > 0.0:
+			keep.append(zone)
+	attack_zones = keep
+
+
+func _update_attack_turrets(dt: float) -> void:
+	var keep: Array = []
+	for turret in attack_turrets:
+		turret.t = float(turret.t) - dt
+		turret.cd = float(turret.cd) - dt
+		if float(turret.t) <= 0.0:
+			continue
+		if float(turret.cd) <= 0.0:
+			var owner_id := int(turret.owner)
+			if players.has(owner_id) and not players[owner_id].shadow:
+				var owner: Dictionary = players[owner_id]
+				var target := _nearest(owner, false)
+				if not target.is_empty() and (target.pos as Vector2).distance_to(turret.pos) < 620.0:
+					var direction: Vector2 = (target.pos - turret.pos).normalized()
+					bullets.append({"id": next_id, "pos": turret.pos + direction * 20.0, "vel": direction * 1080.0,
+						"owner": owner_id, "life": 0.9, "bn": 0, "ricochet": false,
+						"dmg": BULLET_DMG * float(owner.attack) * 0.38, "radius": 4.5, "vk": 16, "hit_ids": []})
+					next_id += 1
+			turret.cd = 0.68
+		keep.append(turret)
+	attack_turrets = keep
 
 
 func _capsule_shockwave(p: Dictionary) -> void:
@@ -895,18 +1043,51 @@ func _match_event_tick(dt: float) -> void:
 func _update_bullets(dt: float) -> void:
 	var keep: Array = []
 	var bright := _brightest(0)
+	var consumed_ids: Array = []
 	for b in bullets:
+		if consumed_ids.has(int(b.id)):
+			continue
 		b.life -= dt
+		if float(b.get("homing", 0.0)) > 0.0:
+			var target: Dictionary = {}
+			var nearest_d := 1e18
+			for candidate in players.values():
+				if candidate.shadow or candidate.decoy or int(candidate.id) == int(b.owner):
+					continue
+				var candidate_d: float = b.pos.distance_squared_to(candidate.pos)
+				if candidate_d < nearest_d:
+					nearest_d = candidate_d
+					target = candidate
+			if not target.is_empty():
+				var current_speed: float = b.vel.length()
+				var desired: Vector2 = (target.pos - b.pos).normalized()
+				b.vel = b.vel.normalized().lerp(desired, clampf(float(b.homing) * dt, 0.0, 1.0)).normalized() * current_speed
+		if bool(b.get("lob", false)):
+			b.vel.y += 390.0 * dt
 		if effects.has("magnet") and not bright.is_empty() and bright.id != b.owner:
 			var sp: float = b.vel.length()
 			b.vel = (b.vel + (bright.pos - b.pos).normalized() * 2600.0 * dt).normalized() * sp
-		b.pos += b.vel * dt
+		if bool(b.get("wave", false)):
+			b.wave_t = float(b.get("wave_t", 0.0)) + dt
+			b.pos += b.vel * dt + b.vel.normalized().orthogonal() * sin(float(b.wave_t) * 8.0) * 78.0 * dt
+		else:
+			b.pos += b.vel * dt
 		var dead: bool = b.life <= 0.0
 		var bounce_on: bool = effects.has("bounce") or bool(b.get("ricochet", false))
 		var bounce_limit: int = 2 if bool(b.get("ricochet", false)) else 4
 		var bp: Vector2 = b.pos
 		var bv: Vector2 = b.vel
-		if bp.x < 0.0 or bp.x > A.x:
+		var hit_wall := bp.x < 0.0 or bp.x > A.x or bp.y < 0.0 or bp.y > A.y
+		if hit_wall and bool(b.get("split_on_wall", false)):
+			var split_dir: Vector2 = bv.normalized()
+			for split_i in 3:
+				var child_dir := split_dir.rotated((float(split_i) - 1.0) * 0.42)
+				keep.append({"id": next_id, "pos": bp.clamp(Vector2(8, 8), A - Vector2(8, 8)), "vel": child_dir * 980.0,
+					"owner": b.owner, "life": 0.8, "bn": 0, "ricochet": false, "dmg": float(b.dmg) * 0.42,
+					"radius": 5.0, "vk": 3, "hit_ids": []})
+				next_id += 1
+			dead = true
+		elif bp.x < 0.0 or bp.x > A.x:
 			if bounce_on and b.bn < bounce_limit:
 				bv.x = -bv.x
 				bp.x = clampf(bp.x, 0.0, A.x)
@@ -937,24 +1118,57 @@ func _update_bullets(dt: float) -> void:
 					dead = true
 					events.append({"t": "capsule_absorb", "x": b.pos.x, "y": b.pos.y, "c": p.ci, "id": p.id})
 					break
+		if not dead and bool(b.get("absorb_bubble", false)):
+			for other in bullets:
+				if int(other.id) == int(b.id) or int(other.owner) == int(b.owner) or consumed_ids.has(int(other.id)):
+					continue
+				var absorb_distance := float(b.get("radius", 11.0)) + float(other.get("radius", 6.0)) + 4.0
+				if (other.pos as Vector2).distance_squared_to(b.pos) <= absorb_distance * absorb_distance:
+					consumed_ids.append(int(other.id))
+					b.radius = minf(21.0, float(b.radius) + 2.0)
+					b.dmg = float(b.dmg) + 1.0
+					break
 		if not dead:
 			for p in players.values():
 				if p.shadow or p.inv > 0.0 or float(p.get("phase_t", 0.0)) > 0.0:
 					continue
 				if p.id == b.owner and b.bn == 0:
 					continue
+				if int(p.id) in b.get("hit_ids", []):
+					continue
 				if (p.pos - b.pos).length_squared() < pow(P_RADIUS + float(b.get("radius", 6.0)), 2):
 					var hit_damage := float(b.get("dmg", BULLET_DMG))
 					if players.has(b.owner) and int(players[b.owner].get("kind", -1)) == 1 and int(p.get("kind", -1)) == 1:
 						hit_damage *= 2.0
 					_damage(p, hit_damage, b.owner, b.bn > 0)
-					dead = true
+					if bool(b.get("explosive", false)):
+						for splash_target in players.values():
+							if splash_target.id == p.id or splash_target.id == b.owner or splash_target.shadow or splash_target.decoy:
+								continue
+							if (splash_target.pos as Vector2).distance_to(b.pos) <= 92.0:
+								_damage(splash_target, hit_damage * 0.34, b.owner, false)
+					var zone_kind := str(b.get("zone_on_hit", ""))
+					if not zone_kind.is_empty():
+						_spawn_attack_zone(b.pos, int(b.owner), zone_kind, 118.0 if zone_kind == "gravity" else 86.0, 2.8 if zone_kind == "slime" else 2.2)
+					if int(b.get("polarity", 0)) != 0:
+						p.vel += (p.pos - b.pos).normalized() * 430.0 * float(b.polarity)
+					var pierce_left := int(b.get("pierce", 0))
+					if pierce_left > 0:
+						var hit_ids: Array = b.get("hit_ids", [])
+						hit_ids.append(int(p.id))
+						b.hit_ids = hit_ids
+						b.pierce = pierce_left - 1
+					else:
+						dead = true
 					break
 		if not dead:
 			for e in eaters:
-				if (e.pos - b.pos).length_squared() < pow(e.r + 8.0, 2):
+				if (e.pos - b.pos).length_squared() < pow(e.r + float(b.get("radius", 8.0)), 2):
 					e.hp -= 1
 					e.flash = 0.1
+					var zone_kind := str(b.get("zone_on_hit", ""))
+					if not zone_kind.is_empty():
+						_spawn_attack_zone(b.pos, int(b.owner), zone_kind, 84.0, 2.0)
 					dead = true
 					if e.hp <= 0:
 						e.dead = true
@@ -973,6 +1187,12 @@ func _update_bullets(dt: float) -> void:
 		if not dead:
 			keep.append(b)
 	bullets = keep
+	if not consumed_ids.is_empty():
+		var filtered: Array = []
+		for kept_bullet in bullets:
+			if not consumed_ids.has(int(kept_bullet.id)):
+				filtered.append(kept_bullet)
+		bullets = filtered
 
 
 # ------------------------------------------------------- пожиратели ------
@@ -1349,9 +1569,16 @@ func snapshot() -> Dictionary:
 		ob.append([obstacle.pos, float(obstacle.r), float(obstacle.hp), float(obstacle.max_hp)])
 	var bl: Array = []
 	for b in bullets:
-		bl.append([b.id, b.pos, b.vel, b.owner, b.bn, int(players.get(b.owner, {}).get("kind", 0)), float(b.get("radius", 6.0))])
+		var visual_kind := int(b.get("vk", players.get(b.owner, {}).get("kind", 0)))
+		bl.append([b.id, b.pos, b.vel, b.owner, b.bn, visual_kind, float(b.get("radius", 6.0)), bool(b.get("absorb_bubble", false)), int(b.get("polarity", 0))])
+	var az: Array = []
+	for zone in attack_zones:
+		az.append([zone.pos, str(zone.kind), float(zone.r), float(zone.t)])
+	var at: Array = []
+	for turret in attack_turrets:
+		at.append([turret.pos, int(turret.owner), float(turret.t)])
 	var ea: Array = []
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
-	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "fx": effects.duplicate(), "tl": time_left,
+	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "az": az, "at": at, "fx": effects.duplicate(), "tl": time_left,
 		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time}
