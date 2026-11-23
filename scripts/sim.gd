@@ -753,8 +753,8 @@ func _spawn_mirage_doubles(p: Dictionary) -> void:
 	p.ability_t = 4.2
 	for clone_index in 2:
 		var side := -1.0 if clone_index == 0 else 1.0
-		var offset := p.aim.orthogonal() * side * 92.0
-		var clone_pos := (p.pos + offset).clamp(Vector2(60.0, 60.0), world_size - Vector2(60.0, 60.0))
+		var offset: Vector2 = p.aim.orthogonal() * side * 92.0
+		var clone_pos: Vector2 = (p.pos + offset).clamp(Vector2(60.0, 60.0), world_size - Vector2(60.0, 60.0))
 		var clone_id := -(2000 + next_id)
 		next_id += 1
 		var clone := _new_player(clone_id, "двойник", false, int(p.kind), int(p.ci), clone_pos, int(p.hat), int(p.outfit))
@@ -1605,7 +1605,7 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 	if p.decoy:
 		var source: Dictionary = players.get(int(p.get("decoy_owner", 0)), {})
 		if not source.is_empty():
-			var drift := (p.pos - source.pos).normalized()
+			var drift: Vector2 = (p.pos - source.pos).normalized()
 			inp.mv = (drift * 0.35 + source.vel.normalized() * 0.25).limit_length(0.6)
 			inp.aim = source.pos
 		inputs[p.id] = inp
