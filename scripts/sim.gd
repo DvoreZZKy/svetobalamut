@@ -205,6 +205,7 @@ func reset(cfg: Array) -> void:
 		var c: Dictionary = cfg[i]
 		var ang := TAU * i / n
 		var pos := world_size / 2.0 + Vector2(cos(ang) * world_size.x * 0.37, sin(ang) * world_size.y * 0.34)
+		pos = _find_free_spawn_position(pos, i)
 		var ci: int = int(c.get("color", shuffled[i])) if c.human else shuffled[i] % G.PROFILE_COLORS.size()
 		var kind: int = int(c.get("kind", ci % CLASS_STATS.size())) if c.human else rng.randi_range(0, CLASS_STATS.size() - 1)
 		var bot_hat := rng.randi_range(1, 4) if not c.human else int(c.get("hat", 0))
@@ -1020,13 +1021,31 @@ func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
 	for item in map_data.get("objects", []):
 		var object_type := str(item.get("type", "rock"))
 		if object_type == "cave_wall":
-			for part in item.get("parts", []):
-				var center := Vector2(float(part.get("x", 0.0)), float(part.get("y", 0.0)))
-				var minimum := radius + float(part.get("r", 48.0))
-				var delta := pos - center
-				if delta.length_squared() < minimum * minimum:
-					var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
-					pos = center + direction * minimum
+			var wall_poly := PackedVector2Array()
+			for point in item.get("poly", []):
+				wall_poly.append(Vector2(point))
+			if wall_poly.size() >= 3:
+				var inside_wall := Geometry2D.is_point_in_polygon(pos, wall_poly)
+				var nearest := pos
+				var nearest_distance := INF
+				for edge_index in wall_poly.size():
+					var a: Vector2 = wall_poly[edge_index]
+					var b: Vector2 = wall_poly[(edge_index + 1) % wall_poly.size()]
+					var edge := b - a
+					var edge_length_sq := edge.length_squared()
+					var t := clampf((pos - a).dot(edge) / edge_length_sq, 0.0, 1.0) if edge_length_sq > 0.001 else 0.0
+					var candidate := a + edge * t
+					var distance := pos.distance_squared_to(candidate)
+					if distance < nearest_distance:
+						nearest_distance = distance
+						nearest = candidate
+				if inside_wall or nearest_distance < radius * radius:
+					var away := pos - nearest
+					if inside_wall:
+						away = -away
+					if away.length_squared() < 0.001:
+						away = Vector2.UP
+					pos = nearest + away.normalized() * (radius + 3.0)
 			continue
 		if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
 			continue
@@ -1037,6 +1056,32 @@ func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
 			var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
 			pos = center + direction * minimum
 	return pos
+
+
+func _find_free_spawn_position(origin: Vector2, player_index: int) -> Vector2:
+	var offsets: Array[Vector2] = [Vector2.ZERO]
+	for ring in range(1, 9):
+		var ring_radius := float(ring) * 62.0
+		for sample in range(16):
+			offsets.append(Vector2.from_angle(TAU * float(sample) / 16.0 + float(player_index) * 0.37) * ring_radius)
+	for offset in offsets:
+		var candidate := (origin + offset).clamp(Vector2(42.0, 42.0), world_size - Vector2(42.0, 42.0))
+		var resolved := _resolve_map_objects(candidate, 30.0)
+		if resolved.distance_to(candidate) < 2.0:
+			var occupied := false
+			for existing in players.values():
+				if (existing.pos as Vector2).distance_to(resolved) < 88.0:
+					occupied = true
+					break
+			if not occupied:
+				return resolved
+	for y_step in range(1, 20):
+		for x_step in range(1, 28):
+			var candidate := Vector2(float(x_step) * world_size.x / 28.0, float(y_step) * world_size.y / 20.0)
+			var resolved_scan := _resolve_map_objects(candidate, 30.0)
+			if resolved_scan.distance_to(candidate) < 2.0:
+				return resolved_scan
+	return _resolve_map_objects(world_size * 0.5, 30.0)
 
 
 func _tick_danger_zone(dt: float) -> void:

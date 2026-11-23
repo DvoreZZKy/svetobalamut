@@ -75,8 +75,11 @@ func _cave_objects() -> Array:
     # Two continuous compound walls replace hundreds of separate rock/crystal nodes.
     for column in range(0, 45):
         var x := float(column) * 50.0
-        var passage_center := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
-        var passage_half := 158.0 + sin(x * 0.0051 + 0.8) * 22.0
+        var passage_center := 800.0 + sin(x * 0.0032) * 185.0 + sin(x * 0.0071) * 72.0
+        var chamber_a := exp(-pow((x - 520.0) / 190.0, 2.0)) * 105.0
+        var chamber_b := exp(-pow((x - 1120.0) / 220.0, 2.0)) * 125.0
+        var chamber_c := exp(-pow((x - 1740.0) / 200.0, 2.0)) * 110.0
+        var passage_half := 218.0 + sin(x * 0.0051 + 0.8) * 28.0 + chamber_a + chamber_b + chamber_c
         var ceiling_y := passage_center - passage_half
         var floor_y := passage_center + passage_half
         upper_poly.append(Vector2(x, 0.0))
