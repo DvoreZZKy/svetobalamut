@@ -72,8 +72,6 @@ func _cave_objects() -> Array:
     var result: Array = []
     var upper_poly := PackedVector2Array()
     var lower_poly := PackedVector2Array()
-    var upper_parts: Array = []
-    var lower_parts: Array = []
     # Two continuous compound walls replace hundreds of separate rock/crystal nodes.
     for column in range(0, 45):
         var x := float(column) * 50.0
@@ -83,17 +81,14 @@ func _cave_objects() -> Array:
         var floor_y := passage_center + passage_half
         upper_poly.append(Vector2(x, 0.0))
         lower_poly.append(Vector2(x, 1600.0))
-        if column % 2 == 0:
-            upper_parts.append({"x":x,"y":maxf(50.0,ceiling_y - 55.0),"r":72.0})
-            lower_parts.append({"x":x,"y":minf(1550.0,floor_y + 55.0),"r":72.0})
     for column in range(44, -1, -1):
         var x := float(column) * 50.0
         var passage_center := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
         var passage_half := 158.0 + sin(x * 0.0051 + 0.8) * 22.0
         upper_poly.append(Vector2(x, passage_center - passage_half))
         lower_poly.append(Vector2(x, passage_center + passage_half))
-    result.append({"type":"cave_wall","x":1100.0,"y":0.0,"r":0.0,"poly":upper_poly,"parts":upper_parts})
-    result.append({"type":"cave_wall","x":1100.0,"y":1600.0,"r":0.0,"poly":lower_poly,"parts":lower_parts})
+    result.append({"type":"cave_wall","x":1100.0,"y":0.0,"r":0.0,"poly":upper_poly})
+    result.append({"type":"cave_wall","x":1100.0,"y":1600.0,"r":0.0,"poly":lower_poly})
     for item in [
         {"type":"crystal","x":170.0,"y":790.0,"r":58.0},
         {"type":"crystal","x":2030.0,"y":820.0,"r":62.0},
@@ -202,7 +197,7 @@ func _sanitize_map(data: Dictionary) -> Dictionary:
   if not ["rock","crystal","cover","container","plant","generator","teleporter"].has(kind):
    continue
   objects.append({"type":kind,"x":clampf(float(raw.get("x",size.x*0.5)),40.0,size.x-40.0),"y":clampf(float(raw.get("y",size.y*0.5)),40.0,size.y-40.0),"r":clampf(float(raw.get("r",48.0)),18.0,130.0)})
- return {"id":str(data.get("id","custom")),"name":str(data.get("name","Моя карта")).substr(0,32),"size":size,"theme":str(data.get("theme","cyan")),"zone_delay":clampf(float(data.get("zone_delay",35.0)),5.0,180.0),"zone_duration":clampf(float(data.get("zone_duration",180.0)),30.0,360.0),"objects":objects}
+ return {"id":str(data.get("id","custom")),"name":str(data.get("name","Моя карта")).substr(0,32),"size":size,"theme":str(data.get("theme","cyan")),"zone_delay":clampf(float(data.get("zone_delay",60.0)),5.0,180.0),"zone_duration":clampf(float(data.get("zone_duration",180.0)),30.0,360.0),"objects":objects}
 
 func _write_maps() -> void:
  var serializable: Array = []

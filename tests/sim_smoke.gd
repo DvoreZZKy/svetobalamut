@@ -403,8 +403,8 @@ func _run() -> void:
 				if sim.bullets.is_empty() or str(sim.bullets[0].get("zone_on_hit", "")) != "gravity":
 					_fail("singularity projectile does not create a gravity field")
 			11:
-				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("ricochet", false)):
-					_fail("ricochet basic projectile does not bounce")
+				if sim.bullets.is_empty() or bool(sim.bullets[0].get("ricochet", false)):
+					_fail("ricochet basic projectile should be a straight shot before Q is activated")
 			12:
 				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("lob", false)):
 					_fail("volcano projectile does not follow an arc")
@@ -426,6 +426,20 @@ func _run() -> void:
 			18:
 				if sim.bullets.is_empty() or int(sim.bullets[0].get("pierce", 0)) != 4:
 					_fail("phantom slash does not pierce multiple targets")
+
+	# Ricochet Q upgrades the next five basic attacks into three-shot bouncing volleys.
+	sim.reset([{"id":1,"name":"Ricochet Q","human":true,"color":0,"kind":11,"outfit":0,"hat":0}])
+	sim.chaos_enabled = false
+	var ricochet_player: Dictionary = sim.players[1]
+	sim._use_ability(ricochet_player)
+	if int(ricochet_player.get("special_shots", 0)) != 5:
+		_fail("Ricochet Q did not grant five empowered shots")
+	sim._fire_class_attack(ricochet_player)
+	if sim.bullets.size() != 3:
+		_fail("Ricochet Q did not convert the next basic attack into a three-shot volley")
+	for ricochet_bullet in sim.bullets:
+		if not bool(ricochet_bullet.get("ricochet", false)):
+			_fail("Ricochet Q empowered volley contains a non-bouncing projectile")
 
 	# Slime, gravity and lava patches have active gameplay effects.
 	sim.reset([

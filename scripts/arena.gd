@@ -782,7 +782,7 @@ func _draw() -> void:
 			var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
 			var r := float(item.get("r",48.0))
 			draw_arc(p,r,0.0,TAU,24,Color("#65edff"),2.5,true)
-		if float(view.get("elapsed", 0.0)) >= 120.0:
+		if float(view.get("elapsed", 0.0)) >= 60.0:
 			var simple_zone: Array = view.get("zone", [world * 0.5, world * 0.5])
 			var simple_half: Vector2 = Vector2(simple_zone[1])
 			draw_rect(Rect2(Vector2(simple_zone[0]) - simple_half, simple_half * 2.0), Color("#ff4f9b",0.9), false, 4.0)
@@ -830,7 +830,7 @@ func _draw() -> void:
 		for tick in 4:
 			var axis := Vector2.from_angle(TAU * float(tick) / 4.0)
 			draw_line(c + axis * z.z * 0.82, c + axis * z.z * 0.94, Color(0.52, 0.34, 0.92, 0.38), 2.0, true)
-	if float(view.get("elapsed", 0.0)) >= 120.0:
+	if float(view.get("elapsed", 0.0)) >= 60.0:
 		var zone_info: Array = view.get("zone", [world * 0.5, world * 0.5])
 		var zone_half: Vector2 = Vector2(zone_info[1])
 		var safe_rect := Rect2(Vector2(zone_info[0]) - zone_half, zone_half * 2.0)
@@ -2343,10 +2343,14 @@ func _handle_events(evs: Array) -> void:
 					var tw := create_tween()
 					tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
 			"zone_warning":
-				zone_warning_until = Time.get_ticks_msec() / 1000.0 + 3.5
+				zone_warning_until = Time.get_ticks_msec() / 1000.0 + 4.5
 				zone_warning_panel.visible = true
 				zone_warning_label.visible = true
-				Sfx.play("siren", 1.0, 2.0)
+				Sfx.play("siren", 1.0, 3.0)
+				var warning_tween := create_tween()
+				warning_tween.set_loops(4)
+				warning_tween.tween_property(zone_warning_panel, "color:a", 0.48, 0.22)
+				warning_tween.tween_property(zone_warning_panel, "color:a", 0.88, 0.22)
 			"generator_attack":
 				if int(e.get("id", 0)) == local_id:
 					_show_banner("ТУРЕЛЬ УСТАНОВЛЕНА В ТОЧКЕ ПРИЦЕЛА")
