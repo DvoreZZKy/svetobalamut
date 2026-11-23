@@ -488,7 +488,8 @@ func _fire_class_attack(p: Dictionary) -> void:
 				_spawn_class_bullet(p, aim.rotated((float(fan_i) - 1.0) * 0.18), 1320.0, 7.0, 0.72, 1.7, {"ricochet": true})
 			p.special_shots = int(p.special_shots) - 1
 		else:
-			_spawn_class_bullet(p, aim, 1240.0, 8.0, 0.95, 1.55, {"ricochet": true})
+			# The base shot is a normal straight projectile; Q is what grants ricochets.
+			_spawn_class_bullet(p, aim, 1240.0, 8.0, 0.95, 1.55)
 	elif kind == 12:
 		_spawn_class_bullet(p, aim, 830.0, 10.0, 0.92, 1.45, {"zone_on_hit": "lava", "lob": true})
 	elif kind == 13:
