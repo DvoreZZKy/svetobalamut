@@ -271,6 +271,135 @@ func _run() -> void:
 		if float(roster_player.max_light) < 100.0 or float(roster_player.max_light) > 160.0:
 			_fail("class %d has invalid max light" % kind)
 
+	# Every class now has a mechanically distinct ordinary attack.
+	for kind in Sim.CLASS_STATS.size():
+		if kind == 1:
+			continue
+		var attack_cfg: Array = [
+			{"id": 1, "name": "Attack QA", "human": true, "color": 0, "kind": kind, "outfit": 0, "hat": 0},
+			{"id": 2, "name": "Target", "human": true, "color": 1, "kind": 0, "outfit": 0, "hat": 0}
+		]
+		sim.reset(attack_cfg)
+		sim.chaos_enabled = false
+		var attack_player: Dictionary = sim.players[1]
+		var attack_target: Dictionary = sim.players[2]
+		attack_player.pos = Vector2(500, 450)
+		attack_player.aim = Vector2.RIGHT
+		attack_target.pos = Vector2(650, 450)
+		var target_light_before := float(attack_target.light)
+		sim._fire_class_attack(attack_player)
+		match kind:
+			0:
+				if sim.bullets.size() != 3 or not bool(sim.bullets[0].get("homing", false)):
+					_fail("firefly basic attack is not a guided three-shot fan")
+			2:
+				if sim.bullets.is_empty() or int(sim.bullets[0].get("pierce", 0)) != 2:
+					_fail("ghost basic attack does not pierce targets")
+			3:
+				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("split_on_wall", false)):
+					_fail("crystal basic attack does not split at arena walls")
+			4:
+				if float(attack_target.light) >= target_light_before:
+					_fail("impulse chain attack did not hit an aligned nearby target")
+			5:
+				if sim.bullets.is_empty() or not sim.bullets[0].has("homing"):
+					_fail("magnet basic attack is not homing")
+			6:
+				if sim.bullets.is_empty() or str(sim.bullets[0].get("zone_on_hit", "")) != "slime":
+					_fail("slime projectile does not create a slowing patch")
+			7:
+				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("explosive", false)):
+					_fail("supernova projectile is not explosive")
+			8:
+				if sim.bullets.size() != 2:
+					_fail("mirage does not fire its mirrored pair")
+			9:
+				if sim.bullets.size() != 3:
+					_fail("shard does not fire a three-piece fan")
+			10:
+				if sim.bullets.is_empty() or str(sim.bullets[0].get("zone_on_hit", "")) != "gravity":
+					_fail("singularity projectile does not create a gravity field")
+			11:
+				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("ricochet", false)):
+					_fail("ricochet basic projectile does not bounce")
+			12:
+				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("lob", false)):
+					_fail("volcano projectile does not follow an arc")
+			13:
+				if float(attack_target.light) >= target_light_before:
+					_fail("parasite tether did not damage a target in its aim cone")
+			14:
+				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("wave", false)):
+					_fail("pendulum projectile does not oscillate")
+			15:
+				if sim.bullets.is_empty() or not bool(sim.bullets[0].get("absorb_bubble", false)):
+					_fail("sponge does not fire an absorbing bubble")
+			16:
+				if sim.attack_turrets.size() != 1:
+					_fail("generator did not deploy its basic-attack turret")
+			17:
+				if sim.bullets.is_empty() or int(sim.bullets[0].get("polarity", 0)) == 0:
+					_fail("polarity shot did not select an attraction/repulsion mode")
+			18:
+				if sim.bullets.is_empty() or int(sim.bullets[0].get("pierce", 0)) != 4:
+					_fail("phantom slash does not pierce multiple targets")
+
+	# Slime, gravity and lava patches have active gameplay effects.
+	sim.reset([
+		{"id": 1, "name": "Zone Owner", "human": true, "color": 0, "kind": 6, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Zone Target", "human": true, "color": 1, "kind": 0, "outfit": 0, "hat": 0}
+	])
+	sim.chaos_enabled = false
+	var zone_target: Dictionary = sim.players[2]
+	zone_target.pos = Vector2(550, 450)
+	sim._spawn_attack_zone(Vector2(500, 450), 1, "slime", 100.0, 1.0)
+	sim._update_attack_zones(1.0 / 60.0)
+	if float(zone_target.get("slow_t", 0.0)) <= 0.0:
+		_fail("slime patch did not slow an enemy")
+	var zone_light_before := float(zone_target.light)
+	sim.attack_zones.clear()
+	sim._spawn_attack_zone(Vector2(500, 450), 1, "lava", 100.0, 1.0)
+	sim._update_attack_zones(1.0 / 60.0)
+	if float(zone_target.light) >= zone_light_before:
+		_fail("lava patch did not damage an enemy")
+	sim.attack_zones.clear()
+	zone_target.pos = Vector2(600, 450)
+	zone_target.vel = Vector2.ZERO
+	sim._spawn_attack_zone(Vector2(500, 450), 1, "gravity", 140.0, 1.0)
+	sim._update_attack_zones(1.0 / 60.0)
+	if zone_target.vel.x >= 0.0:
+		_fail("gravity field did not pull an enemy inward")
+
+	# Generator turret fires and Sponge bubbles consume incoming projectiles.
+	sim.attack_zones.clear()
+	sim.attack_turrets = [{"pos": Vector2(500, 450), "owner": 1, "t": 2.0, "cd": 0.0}]
+	sim._update_attack_turrets(1.0 / 60.0)
+	if sim.bullets.is_empty():
+		_fail("generator turret did not fire at a nearby target")
+	sim.reset([
+		{"id": 1, "name": "Sponge", "human": true, "color": 0, "kind": 15, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Shooter", "human": true, "color": 1, "kind": 0, "outfit": 0, "hat": 0}
+	])
+	sim.chaos_enabled = false
+	sim.bullets = [
+		{"id": 10, "pos": Vector2(500, 450), "vel": Vector2(650, 0), "owner": 1, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 7.0, "radius": 11.0, "vk": 15, "absorb_bubble": true, "hit_ids": []},
+		{"id": 11, "pos": Vector2(510, 450), "vel": Vector2.ZERO, "owner": 2, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 8.0, "radius": 6.0, "vk": 0, "hit_ids": []}
+	]
+	sim._update_bullets(1.0 / 60.0)
+	if sim.bullets.size() != 1 or float(sim.bullets[0].radius) <= 11.0:
+		_fail("sponge bubble did not absorb and grow after eating a projectile")
+
+	# Crystal's charged primary shot still splits into three fragments at a wall.
+	sim.reset([{"id": 1, "name": "Crystal", "human": true, "color": 0, "kind": 3, "outfit": 0, "hat": 0}])
+	sim.chaos_enabled = false
+	var wall_crystal: Dictionary = sim.players[1]
+	wall_crystal.pos = Vector2(1590, 450)
+	wall_crystal.aim = Vector2.RIGHT
+	sim._fire_class_attack(wall_crystal)
+	sim._update_bullets(1.0 / 60.0)
+	if sim.bullets.size() != 3:
+		_fail("crystal wall impact did not split the projectile into three fragments")
+
 	# Capsule shell absorbs an incoming shot and converts it into light.
 	sim.reset(melee_cfg)
 	sim.chaos_enabled = false
