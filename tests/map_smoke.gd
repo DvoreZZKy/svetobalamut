@@ -35,7 +35,7 @@ func _run() -> void:
 	var editor: Node = editor_scene.instantiate()
 	root.add_child(editor)
 	await process_frame
-	if editor.get_child_count() < 5:
+	if editor.get_child_count() < 2 or editor.get_child(0).get_child_count() < 7:
 		push_error("Map editor controls were not created")
 		quit(1)
 		return
