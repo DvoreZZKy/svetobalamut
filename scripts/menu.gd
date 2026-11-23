@@ -75,8 +75,15 @@ func _ready() -> void:
 	_btn("Назад", join, func(): _show("main"))
 
 	var profile := _box("profile")
-	profile.position = Vector2(390, 72)
-	profile.size = Vector2(500, 560)
+	profile.anchor_left = 0.5
+	profile.anchor_right = 0.5
+	profile.anchor_top = 0.5
+	profile.anchor_bottom = 0.5
+	profile.offset_left = -250
+	profile.offset_right = 250
+	profile.offset_top = -280
+	profile.offset_bottom = 280
+	profile.alignment = BoxContainer.ALIGNMENT_CENTER
 	profile.add_theme_constant_override("separation", 5)
 	_title(profile, "ТВОЙ ПЕРСОНАЖ")
 	profile_preview = _make_vector_preview(profile)
@@ -102,6 +109,7 @@ func _ready() -> void:
 		profile_btn.add_theme_font_size_override("font_size", 18)
 	var save_profile_btn := profile.get_child(profile.get_child_count() - 1) as Button
 	save_profile_btn.custom_minimum_size = Vector2(450, 38)
+	save_profile_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	save_profile_btn.add_theme_font_size_override("font_size", 18)
 	_refresh_profile()
 
@@ -290,8 +298,15 @@ func _ready() -> void:
 
 
 	var controls := _box("controls")
-	controls.position = Vector2(390, 95)
-	controls.size = Vector2(500, 610)
+	controls.anchor_left = 0.5
+	controls.anchor_right = 0.5
+	controls.anchor_top = 0.5
+	controls.anchor_bottom = 0.5
+	controls.offset_left = -250
+	controls.offset_right = 250
+	controls.offset_top = -305
+	controls.offset_bottom = 305
+	controls.alignment = BoxContainer.ALIGNMENT_CENTER
 	_title(controls, "НАСТРОЙКА УПРАВЛЕНИЯ")
 	for action in ["up", "down", "left", "right", "dash", "ability", "extra_ability", "possess"]:
 		var bind_btn := _btn("", controls, func(): _begin_rebind(action))
@@ -380,8 +395,15 @@ func _ready() -> void:
 	lobby_actions.add_child(room_map_picker)
 
 	var bot_maps := _box("bot_maps")
-	bot_maps.position = Vector2(390, 170)
-	bot_maps.size = Vector2(500, 390)
+	bot_maps.anchor_left = 0.5
+	bot_maps.anchor_right = 0.5
+	bot_maps.anchor_top = 0.5
+	bot_maps.anchor_bottom = 0.5
+	bot_maps.offset_left = -250
+	bot_maps.offset_right = 250
+	bot_maps.offset_top = -195
+	bot_maps.offset_bottom = 195
+	bot_maps.alignment = BoxContainer.ALIGNMENT_CENTER
 	_title(bot_maps, "ВЫБОР КАРТЫ")
 	var bot_map_hint := Label.new()
 	bot_map_hint.text = "Выбери арену для матча с ботами"
@@ -552,8 +574,19 @@ func _box(key: String) -> VBoxContainer:
 		b.offset_right = -36
 		b.offset_bottom = -24
 	else:
-		b.position = Vector2(440, 180 if key == "main" else 145)
-		b.size = Vector2(400, 560)
+		if key == "main":
+			b.position = Vector2(440, 128)
+			b.size = Vector2(400, 560)
+		else:
+			b.anchor_left = 0.5
+			b.anchor_right = 0.5
+			b.anchor_top = 0.5
+			b.anchor_bottom = 0.5
+			b.offset_left = -200
+			b.offset_right = 200
+			b.offset_top = -280
+			b.offset_bottom = 280
+			b.alignment = BoxContainer.ALIGNMENT_CENTER
 	b.add_theme_constant_override("separation", 14)
 	add_child(b)
 	boxes[key] = b
@@ -583,11 +616,11 @@ func _refresh_profile() -> void:
 		"Танк • много здоровья • Q: щит, снижающий урон",
 		"Ловкий • быстрые лёгкие выстрелы • Q: рывок сквозь пространство",
 		"Тяжёлый • медленные мощные снаряды • Q: круговой залп • F: призматические выстрелы",
-		"Сверхбыстрый • Q: разгон • F: цепная молния по двум целям",
+		"Очень быстрый, но хрупкий • Q: разгон • F: цепная молния по двум целям",
 		"Контроль поля • Q: притягивает врагов • F: отталкивает их",
 		"Медленный и крепкий • Q: временная броня • F: липкая зона",
 		"Хрупкий разрушитель • Q: вспышка • F: большая сверхнова",
-		"Мобильный • Q/F: короткое и длинное смещение",
+		"Создаёт двух световых двойников • F: скачок сквозь пространство",
 		"Точный стрелок • Q: рикошетные заряды • F: защитный щит",
 		"Контроль пространства • Q/F: гравитационное поле",
 		"Рикошетные снаряды • Q: усиленные выстрелы • F: веерный залп",
