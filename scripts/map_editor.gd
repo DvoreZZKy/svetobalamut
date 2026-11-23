@@ -133,7 +133,7 @@ func _draw() -> void:
  for item in draft.get("objects",[]):
   var p := _map_to_canvas(Vector2(float(item.x),float(item.y)))
   var r := float(item.r)*canvas_rect.size.x/float(draft.size.x)
-  var tint := {"rock":Color("#69a4c8"),"crystal":Color("#61efff"),"cover":Color("#b58aff"),"container":Color("#ff9d65"),"plant":Color("#69ffb3"),"generator":Color("#ffe47a"),"teleporter":Color("#e47aff")}.get(str(item.type),Color.CYAN)
+  var tint: Color = {"rock":Color("#69a4c8"),"crystal":Color("#61efff"),"cover":Color("#b58aff"),"container":Color("#ff9d65"),"plant":Color("#69ffb3"),"generator":Color("#ffe47a"),"teleporter":Color("#e47aff")}.get(str(item.type),Color.CYAN)
   draw_circle(p,r+5,Color(tint,0.12))
   draw_arc(p,r,0.0,TAU,28,tint,3.0,true)
   draw_arc(p,r*0.65,0.0,TAU,24,Color(tint,0.55),1.5,true)
