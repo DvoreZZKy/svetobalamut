@@ -48,48 +48,91 @@ func _draw() -> void:
 			_shape([Vector2(12,-5),Vector2(13,10),Vector2(0,21),Vector2(0,4)], tint.darkened(0.2), bright, 1.5)
 	if kind >= 4:
 		var emblem_id := posmod(kind - 4, 15)
+		# Каждый новый класс получает собственный силуэтный декор и фактуру.
 		match emblem_id:
-			0:
-				draw_arc(Vector2.ZERO, 25.0, -1.2, 1.2, 18, bright, 3.0, true)
-			1:
-				draw_circle(Vector2.ZERO, 5.0, bright)
-				draw_arc(Vector2.ZERO, 18.0, 0.0, TAU, 24, bright, 2.0, true)
-			2:
-				_shape([Vector2(-9,-8),Vector2(9,-8),Vector2(15,8),Vector2(0,18),Vector2(-15,8)], bright, bright, 2.0)
-			3:
-				for i in 8:
-					draw_line(Vector2.ZERO, Vector2.from_angle(TAU * float(i) / 8.0) * 25.0, bright, 2.5, true)
-			4:
-				draw_arc(Vector2.ZERO, 24.0, 0.0, TAU, 24, bright, 3.0, true)
-				draw_circle(Vector2.ZERO, 4.0, Color.WHITE)
-			5:
-				for i in 3:
-					draw_line(Vector2(-18, -12 + i * 12), Vector2(18, -12 + i * 12), bright, 2.0, true)
-			6:
-				_shape([Vector2(0,-20),Vector2(17,0),Vector2(0,20),Vector2(-17,0)], bright, bright, 2.0)
-			7:
-				draw_arc(Vector2.ZERO, 24.0, -0.8, 0.8, 16, bright, 4.0, true)
-			8:
-				draw_line(Vector2(-18,-18), Vector2(18,18), bright, 4.0, true)
-				draw_line(Vector2(-18,18), Vector2(18,-18), bright, 4.0, true)
-			9:
+			0: # Импульс — электрические плавники и молнии.
+				_shape([Vector2(-16,-8),Vector2(-34,-20),Vector2(-28,0),Vector2(-34,20),Vector2(-13,9)], bright, bright, 2.0)
+				_shape([Vector2(16,-8),Vector2(34,-20),Vector2(28,0),Vector2(34,20),Vector2(13,9)], bright, bright, 2.0)
+				draw_line(Vector2(-8,-17),Vector2(2,-5),Color.WHITE,2.5,true)
+				draw_line(Vector2(2,-5),Vector2(-5,5),Color.WHITE,2.5,true)
+				draw_line(Vector2(-5,5),Vector2(8,17),Color.WHITE,2.5,true)
+			1: # Магнит — полюса и металлические дуги.
+				draw_arc(Vector2.ZERO, 29.0, PI, TAU, 24, Color("#ff657d"), 5.0, true)
+				draw_arc(Vector2.ZERO, 29.0, 0.0, PI, 24, Color("#62caff"), 5.0, true)
+				draw_rect(Rect2(-20,-4,10,9), Color("#ff657d"))
+				draw_rect(Rect2(10,-4,10,9), Color("#62caff"))
+			2: # Слизень — мягкие капли и пузырьки.
+				_shape([Vector2(-22,8),Vector2(-19,-8),Vector2(-8,-16),Vector2(12,-13),Vector2(23,0),Vector2(18,15),Vector2(0,22),Vector2(-18,17)], tint.lightened(0.18), bright, 2.5)
 				for i in 4:
-					draw_circle(Vector2.from_angle(TAU * float(i) / 4.0) * 22.0, 4.0, bright)
-			10:
-				draw_arc(Vector2.ZERO, 22.0, 0.0, TAU, 24, bright, 3.0, true)
-				draw_circle(Vector2.ZERO, 8.0, dark)
-			11:
+					draw_circle(Vector2(-12.0 + float(i) * 8.0, 2.0 + float(i % 2) * 7.0), 2.2, Color("#eaffc2"))
+				draw_circle(Vector2(20,-22), 4.0, bright)
+			3: # Сверхнова — корона солнечных лучей.
+				for i in 12:
+					var angle := TAU * float(i) / 12.0
+					draw_line(Vector2.from_angle(angle) * 25.0, Vector2.from_angle(angle) * 36.0, bright, 3.0, true)
+				draw_circle(Vector2.ZERO, 8.0, Color("#fff0a1"))
+				draw_circle(Vector2.ZERO, 4.0, Color.WHITE)
+			4: # Мираж — двойной контур-призрак.
+				draw_arc(Vector2(-13,-3), 22.0, -1.3, 1.3, 20, Color(bright, 0.7), 3.0, true)
+				draw_arc(Vector2(13,3), 22.0, PI - 1.3, PI + 1.3, 20, Color(bright, 0.7), 3.0, true)
+				draw_circle(Vector2(-11,-4), 3.0, Color.WHITE)
+				draw_circle(Vector2(11,4), 3.0, Color.WHITE)
+			5: # Осколок — острые кристаллические грани.
+				_shape([Vector2(0,-34),Vector2(8,-10),Vector2(28,-19),Vector2(13,0),Vector2(30,15),Vector2(6,10),Vector2(0,34),Vector2(-7,10),Vector2(-29,17),Vector2(-13,0),Vector2(-27,-19),Vector2(-7,-10)], bright, Color.WHITE, 2.0)
+				draw_line(Vector2(-10,-3),Vector2(10,4),Color.WHITE,2.0,true)
+			6: # Сингулярность — чёрное ядро и линза.
+				draw_arc(Vector2.ZERO, 30.0, 0.2, 2.9, 28, bright, 3.0, true)
+				draw_arc(Vector2.ZERO, 30.0, 3.35, 6.05, 28, bright, 3.0, true)
+				draw_circle(Vector2.ZERO, 12.0, Color("#090719"))
+				draw_circle(Vector2.ZERO, 5.0, Color("#c9a5ff"))
+			7: # Рикошет — три отражающих шеврона.
 				for i in 3:
-					draw_line(Vector2(-18, -12 + i * 12), Vector2(18, -12 + i * 12), bright, 3.0, true)
-			12:
+					var yy := -13.0 + float(i) * 13.0
+					draw_line(Vector2(-20,yy),Vector2(0,yy + 8.0),bright,3.0,true)
+					draw_line(Vector2(0,yy + 8.0),Vector2(20,yy),bright,3.0,true)
+			8: # Вулкан — раскалённые трещины.
+				_shape([Vector2(-18,8),Vector2(-15,-8),Vector2(-5,-18),Vector2(6,-12),Vector2(18,-19),Vector2(16,5),Vector2(7,19),Vector2(-9,18)], Color("#54202b"), Color("#ff9a45"), 2.5)
+				draw_line(Vector2(-8,9),Vector2(0,-2),Color("#ffe58a"),3.0,true)
+				draw_line(Vector2(0,-2),Vector2(10,7),Color("#ffe58a"),3.0,true)
+				draw_circle(Vector2(0,-9),4.0,Color("#fff1a1"))
+			9: # Паразит — усики и сегменты.
+				for side in [-1.0, 1.0]:
+					draw_line(Vector2(side * 10,-13),Vector2(side * 23,-29),bright,3.0,true)
+					draw_line(Vector2(side * 17,5),Vector2(side * 29,16),bright,3.0,true)
+					draw_circle(Vector2(side * 24,-29),3.0,Color.WHITE)
+				for i in 3:
+					draw_arc(Vector2(0,0), 11.0 + float(i) * 5.0, 0.2, 2.9, 16, bright, 1.8, true)
+			10: # Маятник — подвес и качающийся груз.
+				draw_line(Vector2(0,-24),Vector2(0,2),bright,3.0,true)
+				draw_arc(Vector2(0,0), 28.0, 0.2, 2.95, 20, bright, 2.0, true)
+				_shape([Vector2(0,-2),Vector2(12,10),Vector2(0,25),Vector2(-12,10)], tint.lightened(0.3), bright, 2.5)
+			11: # Губка — пористая поверхность.
+				for i in 9:
+					var angle := TAU * float(i) / 9.0
+					draw_circle(Vector2.from_angle(angle) * 17.0, 3.0 + float(i % 2), bright)
+				draw_circle(Vector2.ZERO, 6.0, tint.lightened(0.65))
+			12: # Фантом — следы рывка.
+				for i in 4:
+					var yy := -18.0 + float(i) * 12.0
+					draw_line(Vector2(-34,yy),Vector2(-20,yy),Color(bright, 0.85 - float(i) * 0.14),3.0,true)
+				draw_line(Vector2(12,-13),Vector2(28,-24),bright,3.0,true)
+				draw_line(Vector2(12,13),Vector2(28,24),bright,3.0,true)
+			13: # Генератор — катушки и энергетическое ядро.
+				draw_arc(Vector2.ZERO, 27.0, 0.0, TAU, 24, bright, 3.0, true)
+				for i in 4:
+					draw_circle(Vector2.from_angle(TAU * float(i) / 4.0) * 27.0, 4.0, Color("#fff0a1"))
 				draw_circle(Vector2.ZERO, 8.0, bright)
-				draw_arc(Vector2.ZERO, 23.0, 0.0, TAU, 24, bright, 2.5, true)
-			13:
-				draw_line(Vector2(-20,0), Vector2(20,0), bright, 4.0, true)
-				draw_line(Vector2(0,-20), Vector2(0,20), bright, 4.0, true)
-			14:
-				draw_arc(Vector2.ZERO, 27.0, -1.0, 1.0, 20, bright, 3.5, true)
-				draw_arc(Vector2.ZERO, 19.0, 2.1, 4.2, 20, bright, 2.5, true)
+			14: # Полярность — разноимённые полюса.
+				draw_circle(Vector2(-13,0), 12.0, Color("#ff647d"))
+				draw_circle(Vector2(13,0), 12.0, Color("#62caff"))
+				draw_line(Vector2(-18,0),Vector2(-8,0),Color.WHITE,2.5,true)
+				draw_line(Vector2(-13,-5),Vector2(-13,5),Color.WHITE,2.5,true)
+				draw_line(Vector2(8,0),Vector2(18,0),Color.WHITE,2.5,true)
+		# Световые насечки подчёркивают материал каждого нового корпуса.
+		for i in 3:
+			var yy := -10.0 + float(i) * 10.0
+			draw_line(Vector2(-5, yy), Vector2(5, yy), Color(bright, 0.72), 1.4, true)
+
 	if outfit > 0:
 		var cloth: Color = [Color("#26334f"), Color("#f4d35e"), Color("#3ddc97"), Color("#f05d9b"), Color("#d6e4ff")][outfit]
 		match posmod(kind, 4):
