@@ -9,6 +9,48 @@ var map_data: Dictionary = {}
 var danger_half_extents := Vector2.ZERO
 var map_object_timer := 2.0
 const MAX_LIGHT := 125.0
+const ABILITY_Q_NOTICES := [
+	"Перегрузка: скорость и темп атак повышены",
+	"Энергощит: входящий урон уменьшен",
+	"Фазовый скачок: рывок вперёд с неуязвимостью",
+	"Звёздный залп: круг из десяти рикошетящих снарядов",
+	"Разгон: ускорение передвижения",
+	"Притяжение: поле притягивает ближайших противников",
+	"Липкая броня: получен временный щит",
+	"Вспышка: мощный взрыв вокруг персонажа",
+	"Смещение: созданы два отвлекающих двойника",
+	"Гранёный залп: следующие пять выстрелов усилены",
+	"Гравитационная яма: поле притягивает врагов",
+	"Отскок: следующие пять выстрелов рикошетят",
+	"Перегрев: временно повышен урон",
+	"Высасывание: ближайший противник теряет свет",
+	"Размах: ускорение и усиленный размах",
+	"Поглощение: щит поглощает снаряды",
+	"Автотурель: турель активна рядом с вами",
+	"Отталкивание: включено силовое поле",
+	"Фазирование: краткая неуязвимость"
+]
+const ABILITY_F_NOTICES := [
+	"Световая приманка: пожиратели отвлекаются на маяк",
+	"Поглощение снарядов: ловите выстрелы и превращайте их в свет",
+	"Фазовая защита: проходите сквозь угрозы",
+	"Призматические выстрелы: следующие три атаки раздваиваются",
+	"Цепная молния: удар по ближайшим врагам",
+	"Отталкивающий импульс: отбрасывает ближайших врагов",
+	"Отталкивающий импульс: отбрасывает ближайших врагов",
+	"Сверхновая: мощный круговой взрыв",
+	"Пространственный скачок: длинный телепорт вперёд",
+	"Защитный щит: получено 30 единиц щита",
+	"Гравитационное поле: притягивает ближайших врагов",
+	"Веерный рикошет: выпущено пять отражающихся снарядов",
+	"Вулканический выброс: оглушающий круговой взрыв",
+	"Высасывание энергии: наносит урон и восстанавливает свет",
+	"Ударная волна: отбрасывает врагов вокруг",
+	"Преобразование щита: запас щита превращён в свет",
+	"Усиленная турель: турель продлена до шести секунд",
+	"Смена полярности: поле меняет притяжение на отталкивание",
+	"Фазовый скачок: короткий телепорт с защитой"
+]
 const CLASS_STATS := [
 	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.90,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
 	{"name":"Капсула","hp":136.0,"def":0.88,"atk":1.30,"speed":0.83,"rate":0.56,"ability":"Энергощит"},
@@ -336,9 +378,15 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			p.light -= DASH_COST
 			events.append({"t": "dash", "x": p.pos.x, "y": p.pos.y, "c": p.ci})
 	if want_ability and p.ability_cd <= 0.0:
-		_use_ability(p)
+		if _ability_requires_target(int(p.kind), false) and not _ability_target_available(p, false):
+			events.append({"t":"ability_failed","id":p.id,"x":p.pos.x,"y":p.pos.y,"c":p.ci})
+		else:
+			_use_ability(p)
 	if want_extra and float(p.get("extra_cd", 0.0)) <= 0.0:
-		_use_extra_ability(p)
+		if _ability_requires_target(int(p.kind), true) and not _ability_target_available(p, true):
+			events.append({"t":"ability_failed","id":p.id,"x":p.pos.x,"y":p.pos.y,"c":p.ci})
+		else:
+			_use_extra_ability(p)
 	if effects.has("magnet"):
 		var b := _brightest(p.id)
 		if not b.is_empty():
@@ -443,6 +491,7 @@ func _fire_class_attack(p: Dictionary) -> void:
 	elif kind == 15:
 		_spawn_class_bullet(p, aim, 650.0, 11.0, 0.72, 1.8, {"absorb_bubble": true})
 	elif kind == 16:
+		# Generator's normal attack places a short-lived turret at the aimed location.
 		var turret_pos: Vector2 = (p.pos + aim * 105.0).clamp(Vector2(50, 50), world_size - Vector2(50, 50))
 		var found := false
 		for turret in attack_turrets:
@@ -619,6 +668,37 @@ func _extra_ability_cooldown(kind: int) -> float:
 	return 13.0
 
 
+func _ability_requires_target(kind: int, is_extra: bool) -> bool:
+	if is_extra:
+		return kind in [4, 7, 12, 13, 14, 17]
+	return kind in [4, 7, 13, 14]
+
+
+func _ability_target_available(p: Dictionary, is_extra: bool) -> bool:
+	var kind := int(p.kind)
+	var radius := 300.0
+	if is_extra:
+		match kind:
+			4: radius = 300.0
+			7: radius = 280.0
+			12: radius = 205.0
+			13: radius = 360.0
+			14: radius = 220.0
+			17: radius = 155.0
+	else:
+		match kind:
+			4: radius = 300.0
+			7: radius = 230.0
+			13: radius = 360.0
+			14: radius = 220.0
+	for target in players.values():
+		if int(target.id) == int(p.id) or target.shadow or target.decoy or float(target.get("inv", 0.0)) > 0.0:
+			continue
+		if (target.pos as Vector2).distance_to(p.pos) <= radius:
+			return true
+	return false
+
+
 func _use_ability(p: Dictionary) -> void:
 	p.ability_cd = _ability_cooldown(int(p.kind))
 	match p.kind:
@@ -679,6 +759,7 @@ func _use_ability(p: Dictionary) -> void:
 		18:
 			p.phase_t = 1.0
 			p.inv = maxf(float(p.inv), 1.0)
+	events.append({"t":"ability_notice","id":p.id,"text":str(ABILITY_Q_NOTICES[int(p.kind)])})
 
 
 func _use_extra_ability(p: Dictionary) -> void:
@@ -746,6 +827,7 @@ func _use_extra_ability(p: Dictionary) -> void:
 		18:
 			p.pos = (p.pos + p.aim * 260.0).clamp(Vector2(40,40), world_size - Vector2(40,40))
 			p.inv = maxf(float(p.inv), 0.55)
+	events.append({"t":"ability_notice","id":p.id,"text":str(ABILITY_F_NOTICES[int(p.kind)])})
 
 
 
@@ -1711,6 +1793,21 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 				break
 		if not inp.dash and rng.randf() < 0.0015:
 			inp.dash = true
+	# Bots recognise the shrinking danger rectangle and retreat before it reaches them.
+	if elapsed_time >= float(map_data.get("zone_delay", 120.0)):
+		var center := world_size * 0.5
+		var safe_min := center - danger_half_extents + Vector2(78.0, 78.0)
+		var safe_max := center + danger_half_extents - Vector2(78.0, 78.0)
+		var safe_target: Vector2 = p.pos.clamp(safe_min, safe_max)
+		var outside_safe := safe_target.distance_squared_to(p.pos) > 1.0
+		var near_edge := absf(p.pos.x - center.x) > danger_half_extents.x - 150.0 or absf(p.pos.y - center.y) > danger_half_extents.y - 150.0
+		if outside_safe or near_edge:
+			var retreat: Vector2 = (safe_target - p.pos).normalized() if outside_safe else (center - p.pos).normalized()
+			var urgency := 1.0 if outside_safe else 0.55
+			mv = (retreat * (2.2 * urgency) + mv * 0.18).limit_length(1.0)
+			if outside_safe and p.dash_cd <= 0.0 and rng.randf() < 0.035:
+				inp.dash = true
+			inp.fire = false if outside_safe else inp.fire
 	for item in map_data.get("objects", []):
 		var obstacle_type := str(item.get("type", "rock"))
 		if not ["rock", "crystal", "cover", "container", "plant"].has(obstacle_type):

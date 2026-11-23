@@ -538,27 +538,27 @@ func _build_hud() -> void:
 	ability_duration_bar = _bar(Vector2(18, 0), Vector2(176, 7), Color("#c3a0ff"), cl)
 	ability_duration_bar.anchor_top = 1.0
 	ability_duration_bar.anchor_bottom = 1.0
-	ability_duration_bar.offset_top = -94
-	ability_duration_bar.offset_bottom = -87
+	ability_duration_bar.offset_top = -132
+	ability_duration_bar.offset_bottom = -125
 	ability_duration_bar.visible = false
 	extra_duration_bar = _bar(Vector2(18, 0), Vector2(176, 7), Color("#72f5b4"), cl)
 	extra_duration_bar.anchor_top = 1.0
 	extra_duration_bar.anchor_bottom = 1.0
-	extra_duration_bar.offset_top = -73
-	extra_duration_bar.offset_bottom = -66
+	extra_duration_bar.offset_top = -104
+	extra_duration_bar.offset_bottom = -97
 	extra_duration_bar.visible = false
 	ability_duration_label = _label("Q • ДЕЙСТВУЕТ", 9, Vector2(18, 0), Vector2(176, 13), cl)
 	ability_duration_label.anchor_top = 1.0
 	ability_duration_label.anchor_bottom = 1.0
-	ability_duration_label.offset_top = -108
-	ability_duration_label.offset_bottom = -95
+	ability_duration_label.offset_top = -149
+	ability_duration_label.offset_bottom = -135
 	ability_duration_label.add_theme_color_override("font_color", Color("#c3a0ff"))
 	ability_duration_label.visible = false
 	extra_duration_label = _label("F • ДЕЙСТВУЕТ", 9, Vector2(18, 0), Vector2(176, 13), cl)
 	extra_duration_label.anchor_top = 1.0
 	extra_duration_label.anchor_bottom = 1.0
-	extra_duration_label.offset_top = -87
-	extra_duration_label.offset_bottom = -74
+	extra_duration_label.offset_top = -121
+	extra_duration_label.offset_bottom = -107
 	extra_duration_label.add_theme_color_override("font_color", Color("#72f5b4"))
 	extra_duration_label.visible = false
 	var light_caption := _label("СВЕТ", 9, Vector2.ZERO, Vector2(54, 14), cl)
@@ -1109,6 +1109,9 @@ func _read_input() -> Dictionary:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		# The post-match screen owns the mouse wheel completely: never zoom the arena there.
+		if view.get("ph", "play") == "over":
+			return
 		var over_result_scroll := result_detail_open and is_instance_valid(result_list_scroll) and result_list_scroll.get_global_rect().has_point(event.position)
 		if not over_result_scroll:
 			camera_zoom = clampf(camera_zoom + (0.06 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -0.06), 0.42, 1.25)
@@ -2271,6 +2274,13 @@ func _handle_events(evs: Array) -> void:
 				if is_instance_valid(fx_mat):
 					var tw := create_tween()
 					tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
+ 			"ability_failed":
+				if int(e.get("id", 0)) == local_id:
+					_show_banner("НИКОГО В РАДИУСЕ — АТАКА НЕ УДАЛАСЬ")
+					Sfx.play("hit", 0.65, -8.0)
+			"ability_notice":
+				if int(e.get("id", 0)) == local_id:
+					_show_banner(str(e.get("text", "СПОСОБНОСТЬ АКТИВИРОВАНА")))
 			"ability":
 				var ability_kind := int(e.get("kind", 0))
 				if ability_kind == 7:
