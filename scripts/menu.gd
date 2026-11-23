@@ -51,6 +51,7 @@ func _ready() -> void:
 
 	var main := _box("main")
 	_btn("Играть одному (с ботами)", main, func(): Sfx.play("click"); G.start_single())
+	_btn("Карты и редактор", main, func(): Sfx.play("click"); get_tree().change_scene_to_file("res://scenes/map_editor.tscn"))
 	_btn("Обучение", main, _start_tutorial_from_menu)
 	_btn("Создать комнату", main, _on_host)
 	_btn("Подключиться", main, func(): Sfx.play("click"); _show("join"))

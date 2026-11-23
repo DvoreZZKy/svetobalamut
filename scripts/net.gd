@@ -196,12 +196,15 @@ func start_match() -> void:
 	while cfg.size() < MIN_FILL:
 		cfg.append({"id": -(i + 1), "name": G.BOT_NAMES[i % G.BOT_NAMES.size()], "human": false})
 		i += 1
-	_start.rpc(cfg)
+	_start.rpc(cfg, MapData.get_selected_map())
 
 
 @rpc("authority", "call_local", "reliable")
-func _start(cfg: Array) -> void:
+func _start(cfg: Array, map_data: Dictionary) -> void:
 	G.cfg = cfg
+	MapData.select_map(str(map_data.get("id", "arena_original")))
+	if str(map_data.get("id", "")).begins_with("custom_"):
+		MapData.receive_map(map_data)
 	match_started.emit()
 
 

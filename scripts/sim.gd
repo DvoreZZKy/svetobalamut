@@ -4,6 +4,9 @@ extends RefCounted
 ## Клиенты эту симуляцию не считают — они рисуют снапшоты (см. snapshot()).
 
 const A := Vector2(1600, 900)
+var world_size: Vector2 = A
+var map_data: Dictionary = {}
+var danger_radius := 0.0
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
 	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.90,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
@@ -90,6 +93,9 @@ var chaos_enabled := true
 
 func reset(cfg: Array) -> void:
 	rng.randomize()
+	map_data = MapData.get_selected_map()
+	world_size = Vector2(map_data.get("size", A))
+	danger_radius = minf(world_size.x, world_size.y) * 0.48
 	players.clear()
 	bullets.clear()
 	eaters.clear()
@@ -124,7 +130,7 @@ func reset(cfg: Array) -> void:
 	for i in n:
 		var c: Dictionary = cfg[i]
 		var ang := TAU * i / n
-		var pos := A / 2.0 + Vector2(cos(ang) * 620.0, sin(ang) * 330.0)
+		var pos := world_size / 2.0 + Vector2(cos(ang) * world_size.x * 0.37, sin(ang) * world_size.y * 0.34)
 		var ci: int = int(c.get("color", shuffled[i])) if c.human else shuffled[i] % G.PROFILE_COLORS.size()
 		var kind: int = int(c.get("kind", ci % CLASS_STATS.size())) if c.human else rng.randi_range(0, CLASS_STATS.size() - 1)
 		var bot_hat := rng.randi_range(1, 4) if not c.human else int(c.get("hat", 0))
@@ -135,7 +141,7 @@ func reset(cfg: Array) -> void:
 func _new_player(id: int, pname: String, human: bool, kind: int, ci: int, pos: Vector2, hat: int = 0, outfit: int = 0) -> Dictionary:
 	return {
 		"id": id, "name": pname, "human": human, "kind": kind, "ci": ci, "hat": hat, "outfit": outfit,
-		"pos": pos, "vel": Vector2.ZERO, "aim": (A / 2.0 - pos).normalized(),
+		"pos": pos, "vel": Vector2.ZERO, "aim": (world_size / 2.0 - pos).normalized(),
 		"light": CLASS_STATS[posmod(kind, CLASS_STATS.size())].hp, "max_light": CLASS_STATS[posmod(kind, CLASS_STATS.size())].hp, "shield_hp": 0.0, "max_shield": 0.0,
 		"defense": CLASS_STATS[posmod(kind, CLASS_STATS.size())].def, "attack": CLASS_STATS[posmod(kind, CLASS_STATS.size())].atk,
 		"speed_mult": CLASS_STATS[posmod(kind, CLASS_STATS.size())].speed, "fire_rate": CLASS_STATS[posmod(kind, CLASS_STATS.size())].rate,
@@ -158,6 +164,7 @@ func step(dt: float) -> void:
 	if phase != "play":
 		return
 	elapsed_time += dt
+	_tick_danger_zone(dt)
 	if not endless:
 		time_left += dt
 	if chaos_enabled:
@@ -402,7 +409,7 @@ func _fire_class_attack(p: Dictionary) -> void:
 	elif kind == 15:
 		_spawn_class_bullet(p, aim, 650.0, 11.0, 0.72, 1.8, {"absorb_bubble": true})
 	elif kind == 16:
-		var turret_pos: Vector2 = (p.pos + aim * 105.0).clamp(Vector2(50, 50), A - Vector2(50, 50))
+		var turret_pos: Vector2 = (p.pos + aim * 105.0).clamp(Vector2(50, 50), world_size - Vector2(50, 50))
 		var found := false
 		for turret in attack_turrets:
 			if int(turret.owner) == int(p.id):
@@ -831,17 +838,45 @@ func _wall_bounce(p: Dictionary) -> void:
 	if pos.x < m:
 		pos.x = m
 		vel.x = absf(vel.x) * 0.5
-	elif pos.x > A.x - m:
+	elif pos.x > world_size.x - m:
 		pos.x = A.x - m
 		vel.x = -absf(vel.x) * 0.5
 	if pos.y < m:
 		pos.y = m
 		vel.y = absf(vel.y) * 0.5
-	elif pos.y > A.y - m:
+	elif pos.y > world_size.y - m:
 		pos.y = A.y - m
 		vel.y = -absf(vel.y) * 0.5
 	p.pos = pos
 	p.vel = vel
+
+
+
+func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
+	for item in map_data.get("objects", []):
+		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+		var object_radius := float(item.get("r", 48.0))
+		var delta := pos - center
+		var minimum := radius + object_radius
+		if delta.length_squared() < minimum * minimum:
+			var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
+			pos = center + direction * minimum
+	return pos
+
+
+func _tick_danger_zone(dt: float) -> void:
+	var delay := float(map_data.get("zone_delay", 35.0))
+	var duration := float(map_data.get("zone_duration", 180.0))
+	var maximum := minf(world_size.x, world_size.y) * 0.48
+	var minimum := minf(world_size.x, world_size.y) * 0.12
+	if elapsed_time > delay:
+		danger_radius = lerpf(maximum, minimum, clampf((elapsed_time - delay) / duration, 0.0, 1.0))
+		var center := world_size * 0.5
+		for p in players.values():
+			if not p.shadow and not p.decoy and (p.pos as Vector2).distance_to(center) > danger_radius:
+				p.light = maxf(0.0, float(p.light) - 7.5 * dt)
+				if p.light <= 0.0:
+					_make_shadow(p, 0, false)
 
 
 func _in_zone(pos: Vector2) -> bool:
@@ -1632,4 +1667,4 @@ func snapshot() -> Dictionary:
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
 	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "az": az, "at": at, "abm": abm, "fx": effects.duplicate(), "tl": time_left,
-		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time}
+		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time, "world": world_size, "zone": [world_size * 0.5, danger_radius], "map_objects": map_data.get("objects", [])}

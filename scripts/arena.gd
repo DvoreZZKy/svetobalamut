@@ -33,6 +33,8 @@ var eviews := {}
 var cis := {}
 
 var cam: Camera2D
+var camera_zoom := 0.78
+var map_objects: Array = []
 var ambient_layer: Node2D
 var ambient_motes: Array[Dictionary] = []
 var trail_layer: Node2D
@@ -189,7 +191,8 @@ func _ready() -> void:
 	add_child(arena_env)
 	cam = Camera2D.new()
 	cam.position = ARENA / 2.0
-	cam.zoom = Vector2(0.78, 0.78)
+	cam.zoom = Vector2(camera_zoom, camera_zoom)
+	map_objects = MapData.get_selected_map().get("objects", [])
 	add_child(cam)
 	ambient_layer = Node2D.new()
 	ambient_layer.z_index = 0
@@ -720,7 +723,8 @@ func _build_hud() -> void:
 
 # -------------------------------------------------------------- рисование --
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, ARENA), Color(0.012, 0.012, 0.035))
+	var world: Vector2 = Vector2(view.get("world", ARENA))
+	draw_rect(Rect2(Vector2.ZERO, world), Color(0.012, 0.012, 0.035))
 	if _is_potato():
 		# Keep the arena's gameplay zones visible, but draw them as cheap outlines:
 		# no filled polygons, inner decoration, ticks, or background grid.
@@ -735,9 +739,9 @@ func _draw() -> void:
 		draw_polyline(simple_border, Color(0.22, 0.25, 0.34, 0.8), 2.0, true)
 		return
 	var gc := Color(0.12, 0.28, 0.48, 0.14)
-	for x in range(0, 1601, 100):
+	for x in range(0, int(world.x) + 1, 100):
 		draw_line(Vector2(x, 0), Vector2(x, ARENA.y), gc, 1.5)
-	for y in range(0, 901, 100):
+	for y in range(0, int(world.y) + 1, 100):
 		draw_line(Vector2(0, y), Vector2(ARENA.x, y), gc, 1.5)
 	for z in Sim.ZONES:
 		var c := Vector2(z.x, z.y)
@@ -756,10 +760,18 @@ func _draw() -> void:
 		for tick in 4:
 			var axis := Vector2.from_angle(TAU * float(tick) / 4.0)
 			draw_line(c + axis * z.z * 0.82, c + axis * z.z * 0.94, Color(0.52, 0.34, 0.92, 0.38), 2.0, true)
+	for item in view.get("map_objects", map_objects):
+		var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
+		var r := float(item.get("r",48.0))
+		var kind := str(item.get("type","rock"))
+		var tint: Color = {"rock":Color("#5c8ba8"),"crystal":Color("#65edff"),"cover":Color("#b17aff"),"container":Color("#ff9d65"),"plant":Color("#6affb5"),"generator":Color("#ffe47a"),"teleporter":Color("#da7aff")}.get(kind,Color("#65edff"))
+		draw_circle(p,r+8.0,Color(tint,0.08))
+		draw_arc(p,r,0.0,TAU,32,tint,4.0,true)
+		draw_arc(p,r*0.72,0.0,TAU,24,Color(tint,0.45),2.0,true)
 	var border := PackedVector2Array([
-		Vector2(24,0), Vector2(ARENA.x-24,0), Vector2(ARENA.x,24),
-		Vector2(ARENA.x,ARENA.y-24), Vector2(ARENA.x-24,ARENA.y),
-		Vector2(24,ARENA.y), Vector2(0,ARENA.y-24), Vector2(0,24)
+		Vector2(24,0), Vector2(world.x-24,0), Vector2(world.x,24),
+		Vector2(world.x,world.y-24), Vector2(world.x-24,world.y),
+		Vector2(24,world.y), Vector2(0,world.y-24), Vector2(0,24)
 	])
 	border.append(border[0])
 	draw_polyline(border, Color(0.48, 0.2, 0.72), 3.0, true)
@@ -1014,6 +1026,9 @@ func _read_input() -> Dictionary:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		camera_zoom = clampf(camera_zoom + (0.06 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -0.06), 0.42, 1.25)
+		cam.zoom = Vector2.ONE * camera_zoom
 	if event is InputEventMouseMotion and not pause_open:
 		if G.tutorial_active:
 			aim_screen_pos = event.position.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
@@ -1094,6 +1109,20 @@ func _process(dt: float) -> void:
 		if cursor_canvas.visible:
 			cursor_canvas.position = aim_screen_pos - cursor_canvas.size * 0.5
 			cursor_canvas.queue_redraw()
+	var local_player: Dictionary = {}
+	for pd in view.get("pl", []):
+		if int(pd.get("i", 0)) == local_id:
+			local_player = pd
+			break
+	var world_size: Vector2 = Vector2(view.get("world", ARENA))
+	if not local_player.is_empty():
+		var target_pos: Vector2 = local_player.get("p", world_size * 0.5)
+		var half_view := get_viewport_rect().size / maxf(camera_zoom, 0.1) * 0.5
+		var max_cam := world_size - half_view
+		var target_cam := Vector2(
+			clampf(target_pos.x, half_view.x, max_cam.x) if max_cam.x >= half_view.x else world_size.x * 0.5,
+			clampf(target_pos.y, half_view.y, max_cam.y) if max_cam.y >= half_view.y else world_size.y * 0.5)
+		cam.position = cam.position.lerp(target_cam, 1.0 - exp(-5.5 * dt))
 	shake = maxf(0.0, shake - (shake * 8.0 + 25.0) * dt)
 	var s: float = shake if G.shake_on else 0.0
 	if s > 0.05:
