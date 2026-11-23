@@ -1751,6 +1751,7 @@ func _update_hud(dt: float) -> void:
 		match ability_kind:
 			2: ability_duration_max = 0.65
 			4: ability_duration_max = 2.2
+			8: ability_duration_max = 4.2
 			14: ability_duration_max = 3.2
 		var ability_duration := clampf(float(me.get("ab", 0.0)), 0.0, ability_duration_max)
 		var extra_duration := 0.0
@@ -2247,14 +2248,15 @@ func _handle_events(evs: Array) -> void:
 			"ability":
 				var ability_kind := int(e.get("kind", 0))
 				if ability_kind == 7:
-					Sfx.play("boom", 1.12, -3.0)
+					pass # The dedicated supernova event owns its sound and sharp shockwave.
 				elif ability_kind == 4:
 					Sfx.play("chaos", 1.25, -7.0)
 				else:
 					Sfx.play("dash", 1.0, -2.0)
 				var ability_color: Color = [Color(0.2, 0.9, 1.0), Color(1.0, 0.75, 0.25), Color(0.65, 0.3, 1.0), Color(0.4, 0.9, 1.0)][int(e.get("kind", 0)) % 4]
-				flash(pos, 190.0, ability_color, 0.45)
-				burst(pos, ability_color, 28 if int(e.get("kind", 0)) != 3 else 52, 520.0, 0.55, true)
+				if ability_kind != 7:
+					flash(pos, 190.0, ability_color, 0.45)
+					burst(pos, ability_color, 28 if ability_kind != 3 else 52, 520.0, 0.55, true)
 			"mirage_clone":
 				Sfx.play("possess", 1.25, -7.0)
 				flash(pos, 64.0, Color("#c49bff"), 0.18)
