@@ -817,21 +817,23 @@ func _draw() -> void:
 		var r := float(item.get("r",48.0))
 		var kind := str(item.get("type","rock"))
 		var tint: Color = {"rock":Color("#5c8ba8"),"crystal":Color("#65edff"),"cover":Color("#b17aff"),"container":Color("#ff9d65"),"plant":Color("#6affb5"),"generator":Color("#ffe47a"),"teleporter":Color("#da7aff")}.get(kind,Color("#65edff"))
-		draw_circle(p,r+8.0,Color(tint,0.08))
-		draw_arc(p,r,0.0,TAU,32,tint,4.0,true)
-		draw_arc(p,r*0.72,0.0,TAU,24,Color(tint,0.45),2.0,true)
+		var cave_formation := map_id == "shard_labyrinth" and kind in ["rock", "crystal", "plant"]
+		if not cave_formation:
+			draw_circle(p,r+8.0,Color(tint,0.08))
+			draw_arc(p,r,0.0,TAU,32,tint,4.0,true)
+			draw_arc(p,r*0.72,0.0,TAU,24,Color(tint,0.45),2.0,true)
 		if kind == "rock":
 			var rock_points := PackedVector2Array()
 			for point_index in 9:
 				var angle := TAU * float(point_index) / 9.0
 				var roughness := 0.82 + 0.12 * sin(float(point_index) * 2.7 + p.x * 0.01)
 				rock_points.append(p + Vector2.from_angle(angle) * r * roughness)
-			draw_colored_polygon(rock_points, Color("#26384e", 0.72))
-			draw_polyline(rock_points, tint, 3.0, true)
+			draw_colored_polygon(rock_points, Color("#26384e", 0.94 if cave_formation else 0.72))
+			draw_polyline(rock_points, tint.darkened(0.18) if cave_formation else tint, 2.0 if cave_formation else 3.0, true)
 		elif kind == "crystal":
 			var crystal_points := PackedVector2Array([p + Vector2(0, -r), p + Vector2(r * 0.72, 0), p + Vector2(0, r), p + Vector2(-r * 0.72, 0)])
-			draw_colored_polygon(crystal_points, Color(tint, 0.22))
-			draw_polyline(crystal_points, tint, 3.0, true)
+			draw_colored_polygon(crystal_points, Color(tint, 0.78 if cave_formation else 0.22))
+			draw_polyline(crystal_points, tint.lightened(0.12), 2.0 if cave_formation else 3.0, true)
 		elif kind == "plant":
 			draw_line(p + Vector2(0, r * 0.45), p + Vector2(0, -r * 0.55), tint, 4.0, true)
 			draw_arc(p + Vector2(-r * 0.25, -r * 0.2), r * 0.52, -2.8, 0.2, 20, tint, 4.0, true)
