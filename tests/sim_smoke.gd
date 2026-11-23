@@ -619,7 +619,6 @@ func _run() -> void:
 	sim.call("_tick_danger_zone", 1.0)
 	if float(zone_player.light) < 99.9:
 		_fail("danger zone activated before the two-minute delay")
-		simtest
 		return
 	sim.elapsed_time = 121.0
 	sim.call("_tick_danger_zone", 1.0)
