@@ -375,7 +375,7 @@ func _ready() -> void:
 	room_map_picker.item_selected.connect(func(index: int):
 		var available_maps := MapData.all_maps()
 		if index >= 0 and index < available_maps.size():
-			MapData.select_map(str(available_maps[index].get("id", "arena_original"))))
+			MapData.select_map(str(available_maps[index].get("id", "arena_original")))
 			lobby_info.text = "КАРТА КОМНАТЫ: " + str(available_maps[index].get("name", "Карта")))
 	lobby_actions.add_child(room_map_picker)
 
