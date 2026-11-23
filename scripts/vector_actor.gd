@@ -77,7 +77,7 @@ func _draw() -> void:
 			_poly([Vector2(-12,-17),Vector2(10,-20),Vector2(19,-5),Vector2(12,17),Vector2(-10,19),Vector2(-20,1)]+[jolt], dark, bright, 3.0)
 			_poly([Vector2(-9,-9),Vector2(7,-12),Vector2(12,3),Vector2(0,13),Vector2(-12,3)], tint, pale)
 			for side in [-1.0,1.0]:
-				var phase := anim_time*15.0 + side
+				var phase: float = anim_time*15.0 + side
 				_line(Vector2(side*17,-13),Vector2(side*(26+sin(phase)*5),-5),bright,2.5)
 				_line(Vector2(side*(26+sin(phase)*5),-5),Vector2(side*20,5),Color.WHITE,1.5)
 				_line(Vector2(side*20,5),Vector2(side*29,15),bright,2.5)
