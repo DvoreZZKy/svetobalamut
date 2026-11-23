@@ -70,7 +70,13 @@ func receive_map(data: Dictionary) -> void:
 
 func _sanitize_map(data: Dictionary) -> Dictionary:
  var size_value: Variant = data.get("size", Vector2(2400,1500))
- var size := size_value if size_value is Vector2 else Vector2(2400,1500)
+ var size: Vector2 = Vector2(2400,1500)
+ if size_value is Vector2:
+  size = size_value
+ elif size_value is Array and size_value.size() >= 2:
+  size = Vector2(float(size_value[0]),float(size_value[1]))
+ elif size_value is Dictionary:
+  size = Vector2(float(size_value.get("x",2400)),float(size_value.get("y",1500)))
  size.x = clampf(size.x,1600.0,5000.0)
  size.y = clampf(size.y,900.0,3000.0)
  var objects: Array = []
@@ -84,9 +90,15 @@ func _sanitize_map(data: Dictionary) -> Dictionary:
  return {"id":str(data.get("id","custom")),"name":str(data.get("name","Моя карта")).substr(0,32),"size":size,"theme":str(data.get("theme","cyan")),"zone_delay":clampf(float(data.get("zone_delay",35.0)),5.0,180.0),"zone_duration":clampf(float(data.get("zone_duration",180.0)),30.0,360.0),"objects":objects}
 
 func _write_maps() -> void:
+ var serializable: Array = []
+ for item in custom_maps:
+  var copy: Dictionary = item.duplicate(true)
+  var map_size: Vector2 = copy.get("size",Vector2(2400,1500))
+  copy["size"] = [map_size.x,map_size.y]
+  serializable.append(copy)
  var file := FileAccess.open(SAVE_DIR + "/library.json",FileAccess.WRITE)
  if file:
-  file.store_string(JSON.stringify(custom_maps))
+  file.store_string(JSON.stringify(serializable))
 
 func _load_maps() -> void:
  DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAVE_DIR))

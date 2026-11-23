@@ -732,17 +732,24 @@ func _draw() -> void:
 			var center := Vector2(z.x, z.y)
 			draw_arc(center, z.z, 0.0, TAU, 48, Color(0.30, 0.34, 0.46, 0.78), 2.0, true)
 		var simple_border := PackedVector2Array([
-			Vector2(24, 0), Vector2(ARENA.x - 24, 0), Vector2(ARENA.x, 24),
-			Vector2(ARENA.x, ARENA.y - 24), Vector2(ARENA.x - 24, ARENA.y),
-			Vector2(24, ARENA.y), Vector2(0, ARENA.y - 24), Vector2(0, 24), Vector2(24, 0)
+			Vector2(24, 0), Vector2(world.x - 24, 0), Vector2(world.x, 24),
+			Vector2(world.x, world.y - 24), Vector2(world.x - 24, world.y),
+			Vector2(24, world.y), Vector2(0, world.y - 24), Vector2(0, 24), Vector2(24, 0)
 		])
 		draw_polyline(simple_border, Color(0.22, 0.25, 0.34, 0.8), 2.0, true)
+		var simple_objects: Array = view.get("map_objects", map_objects)
+		for item in simple_objects:
+			var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
+			var r := float(item.get("r",48.0))
+			draw_arc(p,r,0.0,TAU,24,Color("#65edff"),2.5,true)
+		var simple_zone: Array = view.get("zone", [world * 0.5, minf(world.x,world.y)*0.48])
+		draw_arc(simple_zone[0], float(simple_zone[1]), 0.0, TAU, 64, Color("#ff4f9b",0.9), 4.0, true)
 		return
 	var gc := Color(0.12, 0.28, 0.48, 0.14)
 	for x in range(0, int(world.x) + 1, 100):
-		draw_line(Vector2(x, 0), Vector2(x, ARENA.y), gc, 1.5)
+		draw_line(Vector2(x, 0), Vector2(x, world.y), gc, 1.5)
 	for y in range(0, int(world.y) + 1, 100):
-		draw_line(Vector2(0, y), Vector2(ARENA.x, y), gc, 1.5)
+		draw_line(Vector2(0, y), Vector2(world.x, y), gc, 1.5)
 	for z in Sim.ZONES:
 		var c := Vector2(z.x, z.y)
 		var zone_poly := PackedVector2Array()
@@ -760,6 +767,8 @@ func _draw() -> void:
 		for tick in 4:
 			var axis := Vector2.from_angle(TAU * float(tick) / 4.0)
 			draw_line(c + axis * z.z * 0.82, c + axis * z.z * 0.94, Color(0.52, 0.34, 0.92, 0.38), 2.0, true)
+	var zone_info: Array = view.get("zone", [world * 0.5, minf(world.x,world.y)*0.48])
+	draw_arc(zone_info[0], float(zone_info[1]), 0.0, TAU, 100, Color("#ff4f9b",0.92), 5.0, true)
 	for item in view.get("map_objects", map_objects):
 		var p := Vector2(float(item.get("x",0.0)),float(item.get("y",0.0)))
 		var r := float(item.get("r",48.0))
@@ -1102,6 +1111,7 @@ func _process(dt: float) -> void:
 		_update_hud(dt)
 	# Markers (meteors and upgrades) must redraw even when no bullets are flying.
 	# Otherwise the last bullet disappearing can freeze the layer and hide later warnings.
+	queue_redraw()
 	bullet_layer.queue_redraw()
 	last_bullet_count = view.get("bl", []).size()
 	if is_instance_valid(cursor_canvas):

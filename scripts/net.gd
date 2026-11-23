@@ -202,9 +202,9 @@ func start_match() -> void:
 @rpc("authority", "call_local", "reliable")
 func _start(cfg: Array, map_data: Dictionary) -> void:
 	G.cfg = cfg
-	MapData.select_map(str(map_data.get("id", "arena_original")))
 	if str(map_data.get("id", "")).begins_with("custom_"):
 		MapData.receive_map(map_data)
+	MapData.select_map(str(map_data.get("id", "arena_original")))
 	match_started.emit()
 
 

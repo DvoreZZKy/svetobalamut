@@ -66,6 +66,11 @@ func _new_map() -> void:
  queue_redraw()
 
 func _save() -> void:
+ if not str(draft.get("id","")).begins_with("custom_"):
+  var custom_copy: Dictionary = MapData.new_custom_map()
+  custom_copy["objects"] = draft.get("objects", []).duplicate(true)
+  custom_copy["size"] = draft.get("size", Vector2(2400,1500))
+  draft = custom_copy
  draft.name = name_edit.text.strip_edges() if name_edit.text.strip_edges() != "" else "Моя карта"
  if MapData.save_custom_map(draft):
   info.text = "КАРТА СОХРАНЕНА ЛОКАЛЬНО • " + str(draft.objects.size()) + " объектов"
