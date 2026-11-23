@@ -274,6 +274,48 @@ func _run() -> void:
 	if not is_equal_approx(float(Sim.CLASS_STATS[1].speed), 0.83) or not is_equal_approx(float(Sim.CLASS_STATS[18].speed), 1.12):
 		_fail("Capsule or Phantom speed adjustment is missing")
 
+	# Impulse is a fragile skirmisher, not a chain-lightning delete button.
+	if not is_equal_approx(float(Sim.CLASS_STATS[4].hp), 112.0) or not is_equal_approx(float(Sim.CLASS_STATS[4].def), 0.94):
+		_fail("Impulse health/defense nerf is missing")
+	sim.reset([
+		{"id": 1, "name": "Impulse QA", "human": true, "color": 0, "kind": 4, "outfit": 0, "hat": 0},
+		{"id": 2, "name": "Impulse target", "human": true, "color": 1, "kind": 0, "outfit": 0, "hat": 0}
+	])
+	sim.chaos_enabled = false
+	var impulse: Dictionary = sim.players[1]
+	var impulse_target: Dictionary = sim.players[2]
+	impulse.pos = Vector2(500, 450)
+	impulse.aim = Vector2.RIGHT
+	impulse_target.pos = Vector2(650, 450)
+	var impulse_light_before := float(impulse_target.light)
+	sim._fire_class_attack(impulse)
+	var impulse_damage := impulse_light_before - float(impulse_target.light)
+	if impulse_damage <= 0.0 or impulse_damage >= 12.0:
+		_fail("Impulse basic chain attack still deals excessive burst damage: %.2f" % impulse_damage)
+
+	# Mirage's Q creates two temporary decoys; F remains a directional blink.
+	sim.reset([{"id": 1, "name": "Mirage QA", "human": true, "color": 0, "kind": 8, "outfit": 0, "hat": 0}])
+	sim.chaos_enabled = false
+	var mirage: Dictionary = sim.players[1]
+	var mirage_start: Vector2 = mirage.pos
+	sim._use_ability(mirage)
+	var mirage_decoys := 0
+	for candidate in sim.players.values():
+		if bool(candidate.get("decoy", false)):
+			mirage_decoys += 1
+	if mirage_decoys != 2:
+		_fail("Mirage Q did not create exactly two visible decoys")
+	sim._use_extra_ability(mirage)
+	if mirage.pos.distance_to(mirage_start) < 100.0:
+		_fail("Mirage F did not perform its escape blink")
+
+	# Every class projectile receives a more readable visual/collision radius.
+	sim.reset([{"id": 1, "name": "Projectile QA", "human": true, "color": 0, "kind": 0, "outfit": 0, "hat": 0}])
+	var projectile_owner: Dictionary = sim.players[1]
+	sim._spawn_class_bullet(projectile_owner, Vector2.RIGHT, 900.0, 6.0, 1.0, 1.0)
+	if sim.bullets.is_empty() or float(sim.bullets[0].radius) < 8.5:
+		_fail("class projectile radius was not increased for both visuals and hit detection")
+
 	# Expanded character roster: every new class has a distinct profile and both abilities activate.
 	if Sim.CLASS_STATS.size() != 19:
 		_fail("expected 19 playable classes, found %d" % Sim.CLASS_STATS.size())
