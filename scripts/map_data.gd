@@ -76,33 +76,33 @@ func _cave_objects() -> Array:
     var lower_parts: Array = []
     # Two continuous compound walls replace hundreds of separate rock/crystal nodes.
     for column in range(0, 45):
-    	var x := float(column) * 50.0
-    	var passage_center := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
-    	var passage_half := 158.0 + sin(x * 0.0051 + 0.8) * 22.0
-    	var ceiling_y := passage_center - passage_half
-    	var floor_y := passage_center + passage_half
-    	upper_poly.append(Vector2(x, 0.0))
-    	lower_poly.append(Vector2(x, 1600.0))
-    	if column % 3 == 0:
-    		upper_parts.append({"x":x,"y":maxf(50.0,ceiling_y - 55.0),"r":72.0})
-    		lower_parts.append({"x":x,"y":minf(1550.0,floor_y + 55.0),"r":72.0})
+        var x := float(column) * 50.0
+        var passage_center := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
+        var passage_half := 158.0 + sin(x * 0.0051 + 0.8) * 22.0
+        var ceiling_y := passage_center - passage_half
+        var floor_y := passage_center + passage_half
+        upper_poly.append(Vector2(x, 0.0))
+        lower_poly.append(Vector2(x, 1600.0))
+        if column % 3 == 0:
+            upper_parts.append({"x":x,"y":maxf(50.0,ceiling_y - 55.0),"r":72.0})
+            lower_parts.append({"x":x,"y":minf(1550.0,floor_y + 55.0),"r":72.0})
     for column in range(44, -1, -1):
-    	var x := float(column) * 50.0
-    	var passage_center := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
-    	var passage_half := 158.0 + sin(x * 0.0051 + 0.8) * 22.0
-    	upper_poly.append(Vector2(x, passage_center - passage_half))
-    	lower_poly.append(Vector2(x, passage_center + passage_half))
+        var x := float(column) * 50.0
+        var passage_center := 800.0 + sin(x * 0.0032) * 145.0 + sin(x * 0.0071) * 52.0
+        var passage_half := 158.0 + sin(x * 0.0051 + 0.8) * 22.0
+        upper_poly.append(Vector2(x, passage_center - passage_half))
+        lower_poly.append(Vector2(x, passage_center + passage_half))
     result.append({"type":"cave_wall","x":1100.0,"y":0.0,"r":0.0,"poly":upper_poly,"parts":upper_parts})
     result.append({"type":"cave_wall","x":1100.0,"y":1600.0,"r":0.0,"poly":lower_poly,"parts":lower_parts})
     for item in [
-    	{"type":"crystal","x":170.0,"y":790.0,"r":58.0},
-    	{"type":"crystal","x":2030.0,"y":820.0,"r":62.0},
-    	{"type":"generator","x":350.0,"y":800.0,"r":46.0},
-    	{"type":"generator","x":1880.0,"y":800.0,"r":46.0},
-    	{"type":"container","x":880.0,"y":300.0,"r":34.0},
-    	{"type":"container","x":1370.0,"y":1320.0,"r":34.0}
+        {"type":"crystal","x":170.0,"y":790.0,"r":58.0},
+        {"type":"crystal","x":2030.0,"y":820.0,"r":62.0},
+        {"type":"generator","x":350.0,"y":800.0,"r":46.0},
+        {"type":"generator","x":1880.0,"y":800.0,"r":46.0},
+        {"type":"container","x":880.0,"y":300.0,"r":34.0},
+        {"type":"container","x":1370.0,"y":1320.0,"r":34.0}
     ]:
-    	result.append(item)
+        result.append(item)
     return result
 
 func _orbit_objects() -> Array:

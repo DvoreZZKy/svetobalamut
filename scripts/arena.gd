@@ -107,10 +107,6 @@ class EdgeFeedback extends Control:
 		queue_redraw()
 
 	func _process(dt: float) -> void:
-	if zone_warning_until > 0.0 and Time.get_ticks_msec() / 1000.0 >= zone_warning_until:
-		zone_warning_panel.visible = false
-		zone_warning_label.visible = false
-		zone_warning_until = 0.0
 		damage_strength = move_toward(damage_strength, 0.0, dt * 2.8)
 		heal_strength = move_toward(heal_strength, 0.0, dt * 2.2)
 		if damage_strength > 0.01 or heal_strength > 0.01:
@@ -1167,6 +1163,10 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(dt: float) -> void:
+	if zone_warning_until > 0.0 and Time.get_ticks_msec() / 1000.0 >= zone_warning_until:
+		zone_warning_panel.visible = false
+		zone_warning_label.visible = false
+		zone_warning_until = 0.0
 	if not G.tutorial_active and Input.is_action_just_pressed("ui_cancel") and view.get("ph", "play") != "over":
 		_toggle_pause()
 	if pause_open and (not Net.online or G.tutorial_active):
