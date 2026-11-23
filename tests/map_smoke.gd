@@ -17,12 +17,14 @@ func _run() -> void:
 		return
 	var cave_found := false
 	var builtin_sizes: Array[String] = []
+	var unique_sizes := {}
 	for map_item in maps:
 		var map_id := str(map_item.get("id", ""))
 		if map_id.begins_with("custom_"):
 			continue
 		var map_size: Vector2 = Vector2(map_item.get("size", Vector2.ZERO))
 		builtin_sizes.append(str(map_size))
+		unique_sizes[str(map_size)] = true
 		if map_id == "shard_labyrinth":
 			cave_found = true
 			if str(map_item.get("name", "")) != "Пещера разломов" or map_size != Vector2(2200, 1600):
@@ -32,7 +34,7 @@ func _run() -> void:
 			if (map_item.get("objects", []) as Array).size() < 30:
 				push_error("Cave map is still too empty to form winding passages")
 				quit(1)
-	if not cave_found or builtin_sizes.size() != 6 or builtin_sizes.size() != builtin_sizes.duplicate().size():
+	if not cave_found or builtin_sizes.size() != 6 or unique_sizes.size() != 6:
 		push_error("Built-in maps do not have six distinct layouts and dimensions")
 		quit(1)
 		return
