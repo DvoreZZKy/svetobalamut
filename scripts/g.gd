@@ -29,7 +29,8 @@ var tutorial_return_to_lobby := false
 var tutorial_previous_mode := "single"
 
 var mode := "single"        # single | host | client
-var cfg: Array = []         # [{id:int, name:String, human:bool}]
+var cfg: Array = []
+var selected_map: Dictionary = {}         # [{id:int, name:String, human:bool}]
 
 
 func _ready() -> void:

@@ -14,6 +14,7 @@ var custom_maps: Array[Dictionary] = []
 
 func _ready() -> void:
  _load_maps()
+ G.selected_map = get_selected_map()
 
 func all_maps() -> Array:
  var out: Array = MAPS.duplicate(true)
@@ -30,6 +31,7 @@ func select_map(id: String) -> bool:
  for item in all_maps():
   if str(item.get("id","")) == id:
    selected_id = id
+   G.selected_map = item.duplicate(true)
    return true
  return false
 
@@ -50,6 +52,7 @@ func save_custom_map(data: Dictionary) -> bool:
  if not found:
   custom_maps.append(clean)
  selected_id = str(clean.id)
+ G.selected_map = clean.duplicate(true)
  _write_maps()
  maps_changed.emit()
  return true

@@ -97,9 +97,7 @@ var chaos_enabled := true
 
 func reset(cfg: Array) -> void:
 	rng.randomize()
-	var main_loop := Engine.get_main_loop() as SceneTree
-	var map_service: Node = main_loop.root.get_node_or_null("MapData") if main_loop != null else null
-	map_data = map_service.call("get_selected_map") if map_service != null else {}
+	map_data = G.selected_map.duplicate(true) if not G.selected_map.is_empty() else {}
 	world_size = Vector2(map_data.get("size", A))
 	danger_radius = minf(world_size.x, world_size.y) * 0.48
 	map_object_timer = 2.0
