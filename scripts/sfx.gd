@@ -1,7 +1,7 @@
 extends Node
 ## Звуки и музыка. SFX лежат в res://assets/sfx/<имя>.wav, музыка — любой файл в res://assets/music/.
 
-const NAMES := ["shot", "hit", "death", "dash", "possess", "chaos", "eat", "boom", "click", "win"]
+const NAMES := ["shot", "hit", "death", "dash", "possess", "chaos", "eat", "boom", "click", "win", "siren"]
 const EXT := ["ogg", "mp3", "wav"]
 
 var streams := {}

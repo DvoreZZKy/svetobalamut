@@ -2346,7 +2346,7 @@ func _handle_events(evs: Array) -> void:
 				zone_warning_until = Time.get_ticks_msec() / 1000.0 + 3.5
 				zone_warning_panel.visible = true
 				zone_warning_label.visible = true
-				Sfx.play("chaos", 0.72, 3.0)
+				Sfx.play("siren", 1.0, 2.0)
 			"generator_attack":
 				if int(e.get("id", 0)) == local_id:
 					_show_banner("ТУРЕЛЬ УСТАНОВЛЕНА В ТОЧКЕ ПРИЦЕЛА")
