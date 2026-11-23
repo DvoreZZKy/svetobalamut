@@ -107,6 +107,10 @@ class EdgeFeedback extends Control:
 		queue_redraw()
 
 	func _process(dt: float) -> void:
+	if zone_warning_until > 0.0 and Time.get_ticks_msec() / 1000.0 >= zone_warning_until:
+		zone_warning_panel.visible = false
+		zone_warning_label.visible = false
+		zone_warning_until = 0.0
 		damage_strength = move_toward(damage_strength, 0.0, dt * 2.8)
 		heal_strength = move_toward(heal_strength, 0.0, dt * 2.2)
 		if damage_strength > 0.01 or heal_strength > 0.01:
@@ -167,6 +171,9 @@ var result_category_header: Label
 var result_category_frame: PanelContainer
 var result_list: VBoxContainer
 var banner: Label
+var zone_warning_panel: ColorRect
+var zone_warning_label: Label
+var zone_warning_until := 0.0
 var score_lbl: RichTextLabel
 var help_lbl: Label
 var light_bar: NeonProgressBar
@@ -419,6 +426,23 @@ func _build_hud() -> void:
 	stopwatch_outline.z_index = -1
 	cl.add_child(stopwatch_outline)
 	banner = _label("", 70, Vector2.ZERO, Vector2(1280, 100), cl, true)
+	zone_warning_panel = ColorRect.new()
+	zone_warning_panel.color = Color(0.18, 0.015, 0.06, 0.82)
+	zone_warning_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	zone_warning_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	zone_warning_panel.visible = false
+	cl.add_child(zone_warning_panel)
+	zone_warning_label = _label("ВСЕМ ЩАС БУДЕТ ПЛОХО", 48, Vector2.ZERO, Vector2(1200, 90), cl, true)
+	zone_warning_label.anchor_left = 0.5
+	zone_warning_label.anchor_right = 0.5
+	zone_warning_label.anchor_top = 0.5
+	zone_warning_label.anchor_bottom = 0.5
+	zone_warning_label.offset_left = -600
+	zone_warning_label.offset_right = 600
+	zone_warning_label.offset_top = -45
+	zone_warning_label.offset_bottom = 45
+	zone_warning_label.add_theme_color_override("font_color", Color("#ffcfdf"))
+	zone_warning_label.visible = false
 	banner.anchor_left = 0.5
 	banner.anchor_right = 0.5
 	banner.offset_left = -640
@@ -1800,6 +1824,13 @@ func _update_hud(dt: float) -> void:
 			8: ability_duration_max = 4.2
 			14: ability_duration_max = 3.2
 		var ability_duration := clampf(float(me.get("ab", 0.0)), 0.0, ability_duration_max)
+		match ability_kind:
+			5, 10, 17: ability_duration = maxf(ability_duration, clampf(float(me.get("field_t", 0.0)), 0.0, 3.2))
+			6, 9: ability_duration = maxf(ability_duration, 2.8 if float(me.get("sh", 0.0)) > 0.0 else 0.0)
+			11: ability_duration = maxf(ability_duration, float(clampi(int(me.get("sp", 0)), 0, 5)) * 0.55)
+			12: ability_duration = maxf(ability_duration, clampf(float(me.get("buff_t", 0.0)), 0.0, 3.0))
+			15: ability_duration = maxf(ability_duration, clampf(float(me.get("abs", 0.0)), 0.0, 2.8))
+			16: ability_duration = maxf(ability_duration, clampf(float(me.get("turret_t", 0.0)), 0.0, 4.0))
 		var extra_duration := 0.0
 		match int(me.get("k", 0)):
 			0:
@@ -1810,10 +1841,14 @@ func _update_hud(dt: float) -> void:
 				extra_duration = clampf(float(me.get("phs", 0.0)), 0.0, 1.25)
 			5, 6, 10:
 				extra_duration = clampf(float(me.get("field_t", 0.0)), 0.0, 2.8)
+			9, 11:
+				extra_duration = float(clampi(int(me.get("sp", 0)), 0, 5)) * 0.55
+			3:
+				extra_duration = float(clampi(int(me.get("pr", 0)), 0, 3)) * 0.8
+			5, 6, 10, 17:
+				extra_duration = clampf(float(me.get("field_t", 0.0)), 0.0, 3.2)
 			16:
 				extra_duration = clampf(float(me.get("turret_t", 0.0)), 0.0, 6.0)
-			17:
-				extra_duration = clampf(float(me.get("field_t", 0.0)), 0.0, 2.8)
 		ability_duration_bar.visible = not is_shadow and not over and ability_duration > 0.0
 		extra_duration_bar.visible = not is_shadow and not over and extra_duration > 0.0
 		ability_duration_label.visible = ability_duration_bar.visible
@@ -1827,7 +1862,7 @@ func _update_hud(dt: float) -> void:
 		ability_duration_label.text = "%s • %.1fс" % [str(Sim.CLASS_STATS[ability_kind].get("ability", "Способность")), ability_duration]
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
 		var is_crystal := int(me.k) == 3 and not bool(me.s) and not over
-		capsule_ammo_lbl.visible = is_capsule or is_crystal
+		capsule_ammo_lbl.visible = is_capsule or is_crystal or ((ability_kind == 9 or ability_kind == 11 or ability_kind == 3) and not bool(me.s) and not over)
 		capsule_reload_bar.visible = is_capsule or is_crystal
 		if is_capsule:
 			var ammo := clampi(int(me.get("wa", 4)), 0, 4)
@@ -1838,6 +1873,22 @@ func _update_hud(dt: float) -> void:
 			var reload_left := clampf(float(me.get("wr", 0.0)), 0.0, 1.5)
 			capsule_reload_bar.value = 100.0 * (1.0 - reload_left / 1.5) if ammo < 4 else 100.0
 		elif is_crystal:
+			var prism_charges := clampi(int(me.get("pr", 0)), 0, 3)
+			var prism_text := ""
+			for charge_i in 3:
+				prism_text += "◆ " if charge_i < prism_charges else "◇ "
+			capsule_ammo_lbl.text = "ПРИЗМЫ  " + prism_text
+			capsule_ammo_lbl.add_theme_color_override("font_color", Color("#8cf7ff"))
+			capsule_reload_bar.value = 100.0 * float(prism_charges) / 3.0
+		elif ability_kind == 9 or ability_kind == 11:
+			var charges := clampi(int(me.get("sp", 0)), 0, 5)
+			var charge_text := ""
+			for charge_i in 5:
+				charge_text += "◆ " if charge_i < charges else "◇ "
+			capsule_ammo_lbl.text = ("ОСКОЛКИ  " if ability_kind == 9 else "РИКОШЕТЫ  ") + charge_text
+			capsule_ammo_lbl.add_theme_color_override("font_color", Color("#c6b4ff"))
+			capsule_reload_bar.value = 100.0 * float(charges) / 5.0
+		elif ability_kind == 3:
 			var prism_charges := clampi(int(me.get("pr", 0)), 0, 3)
 			var prism_text := ""
 			for charge_i in 3:
@@ -2291,6 +2342,11 @@ func _handle_events(evs: Array) -> void:
 				if is_instance_valid(fx_mat):
 					var tw := create_tween()
 					tw.tween_method(func(v: float): fx_mat.set_shader_parameter("aberr", v), 0.03, 0.0, 0.55)
+			"zone_warning":
+				zone_warning_until = Time.get_ticks_msec() / 1000.0 + 3.5
+				zone_warning_panel.visible = true
+				zone_warning_label.visible = true
+				Sfx.play("chaos", 0.72, 3.0)
 			"generator_attack":
 				if int(e.get("id", 0)) == local_id:
 					_show_banner("ТУРЕЛЬ УСТАНОВЛЕНА В ТОЧКЕ ПРИЦЕЛА")
