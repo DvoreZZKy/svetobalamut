@@ -14,7 +14,7 @@ const CLASS_STATS := [
 	{"name":"Капсула","hp":136.0,"def":0.88,"atk":1.30,"speed":0.83,"rate":0.56,"ability":"Энергощит"},
 	{"name":"Призрак","hp":126.0,"def":0.88,"atk":1.0,"speed":1.14,"rate":0.26,"ability":"Фазовый скачок"},
 	{"name":"Кристалл","hp":140.0,"def":0.96,"atk":1.38,"speed":1.0,"rate":0.46,"ability":"Звёздный залп"},
-	{"name":"Импульс","hp":123.0,"def":1.02,"atk":1.0,"speed":1.14,"rate":0.24,"ability":"Разгон"},
+	{"name":"Импульс","hp":112.0,"def":0.94,"atk":0.95,"speed":1.10,"rate":0.32,"ability":"Разгон"},
 	{"name":"Магнит","hp":132.0,"def":0.96,"atk":1.02,"speed":0.96,"rate":0.30,"ability":"Притяжение"},
 	{"name":"Слизень","hp":155.0,"def":0.86,"atk":1.03,"speed":0.86,"rate":0.34,"ability":"Липкая броня"},
 	{"name":"Сверхнова","hp":126.0,"def":1.08,"atk":1.18,"speed":0.94,"rate":0.38,"ability":"Вспышка"},
@@ -55,6 +55,16 @@ const MIN_SURVIVAL_TIME := 60.0
 const P_RADIUS := 28.0
 const MAX_EATERS_RAIN := 8
 const ZONES := [Vector3(400, 225, 95), Vector3(1200, 225, 95), Vector3(400, 675, 95), Vector3(1200, 675, 95)]
+
+
+static func regen_zones_for(world: Vector2) -> Array[Vector3]:
+	var radius := minf(world.x, world.y) * 0.105
+	return [
+		Vector3(world.x * 0.25, world.y * 0.25, radius),
+		Vector3(world.x * 0.75, world.y * 0.25, radius),
+		Vector3(world.x * 0.25, world.y * 0.75, radius),
+		Vector3(world.x * 0.75, world.y * 0.75, radius)
+	]
 const CHAOS := ["invert", "reverse", "blind", "bounce", "zerog", "rain", "steal", "doubles", "magnet", "bomb"]
 const DUR := {"invert": 6.0, "reverse": 6.0, "blind": 5.0, "bounce": 8.0, "zerog": 6.0, "magnet": 5.0}
 
@@ -379,7 +389,7 @@ func _spawn_class_bullet(p: Dictionary, direction: Vector2, speed: float, radius
 	var bullet: Dictionary = {"id": next_id, "pos": p.pos + dir * 34.0, "vel": dir * speed + p.vel * 0.18,
 		"owner": p.id, "life": life, "bn": 0, "ricochet": false,
 		"dmg": BULLET_DMG * float(p.attack) * damage_mult * (1.35 if str(p.get("buff", "")) == "overdrive" else 1.0),
-		"radius": radius, "vk": int(p.kind), "hit_ids": []}
+		"radius": maxf(radius * 1.3, radius + 2.5), "vk": int(p.kind), "hit_ids": []}
 	for key in extra:
 		bullet[key] = extra[key]
 	bullets.append(bullet)
@@ -402,7 +412,7 @@ func _fire_class_attack(p: Dictionary) -> void:
 	elif kind == 3:
 		_spawn_class_bullet(p, aim, 1180.0, 11.0, 1.0, 1.5, {"split_on_wall": true})
 	elif kind == 4:
-		_chain_lightning(p)
+		_chain_lightning(p, 9.5, 5.5)
 	elif kind == 5:
 		_spawn_class_bullet(p, aim, 980.0, 8.0, 0.92, 1.5, {"homing": 3.4})
 	elif kind == 6:
@@ -637,8 +647,7 @@ func _use_ability(p: Dictionary) -> void:
 		7:
 			_character_pulse(p, 230.0, 28.0, 420.0)
 		8:
-			p.pos = (p.pos + p.aim * 280.0).clamp(Vector2(40,40), world_size - Vector2(40,40))
-			p.inv = 0.28
+			_spawn_mirage_doubles(p)
 		9:
 			p.special_shots = 5
 		10:
@@ -691,7 +700,7 @@ func _use_extra_ability(p: Dictionary) -> void:
 			p.prism_shots = 3
 			events.append({"t": "extra_ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 3})
 		4:
-			_chain_lightning(p)
+			_chain_lightning(p, 18.0, 10.0)
 		5, 6:
 			p.field_t = 2.5
 			p.field_mode = 2
@@ -699,7 +708,8 @@ func _use_extra_ability(p: Dictionary) -> void:
 			_character_pulse(p, 280.0, 34.0, 520.0)
 		8:
 			p.pos = (p.pos + p.aim * 390.0).clamp(Vector2(40,40), world_size - Vector2(40,40))
-			p.inv = 0.35
+			p.inv = 0.45
+			events.append({"t": "extra_ability", "x": p.pos.x, "y": p.pos.y, "c": p.ci, "kind": 8})
 		9:
 			p.max_shield = 30.0
 			p.shield_hp = 30.0
@@ -734,6 +744,24 @@ func _use_extra_ability(p: Dictionary) -> void:
 
 
 
+func _spawn_mirage_doubles(p: Dictionary) -> void:
+	for clone_index in 2:
+		var side := -1.0 if clone_index == 0 else 1.0
+		var offset := p.aim.orthogonal() * side * 92.0
+		var clone_pos := (p.pos + offset).clamp(Vector2(60.0, 60.0), world_size - Vector2(60.0, 60.0))
+		var clone_id := -(2000 + next_id)
+		next_id += 1
+		var clone := _new_player(clone_id, "двойник", false, int(p.kind), int(p.ci), clone_pos, int(p.hat), int(p.outfit))
+		clone.decoy = true
+		clone.life = 4.2
+		clone.light = 38.0
+		clone.max_light = 38.0
+		clone.aim = p.aim
+		clone.vel = p.vel + offset.normalized() * 115.0
+		players[clone_id] = clone
+		events.append({"t": "mirage_clone", "x": clone_pos.x, "y": clone_pos.y, "c": p.ci})
+
+
 func _character_pulse(p: Dictionary, radius: float, damage: float, push: float) -> void:
 	for target in players.values():
 		if target.id == p.id or target.shadow or target.decoy or target.inv > 0.0:
@@ -745,6 +773,8 @@ func _character_pulse(p: Dictionary, radius: float, damage: float, push: float) 
 			_damage(target, damage * float(p.attack) * (1.0 - 0.35 * distance / radius), p.id, false)
 			target.vel += direction * push * (1.0 - 0.3 * distance / radius)
 	events.append({"t":"ability","x":p.pos.x,"y":p.pos.y,"c":p.ci,"kind":p.kind})
+	if int(p.kind) == 7:
+		events.append({"t":"supernova","x":p.pos.x,"y":p.pos.y,"c":p.ci,"r":radius})
 	shake_req = maxf(shake_req, 9.0)
 
 
@@ -761,13 +791,13 @@ func _drain_nearest(p: Dictionary, damage: float, healing: float) -> void:
 		events.append({"t":"heal","id":p.id,"amount":restored})
 
 
-func _chain_lightning(p: Dictionary) -> void:
+func _chain_lightning(p: Dictionary, first_damage: float = 9.5, second_damage: float = 5.5) -> void:
 	var first := _nearest(p, false)
 	if first.is_empty() or (first.pos as Vector2).distance_to(p.pos) > 300.0:
 		return
 	var origin: Vector2 = first.pos
 	_add_attack_beam(p.pos, origin, 4, 0.14)
-	_damage(first, 24.0 * float(p.attack), p.id, false)
+	_damage(first, first_damage * float(p.attack), p.id, false)
 	var second: Dictionary = {}
 	var best_distance := 220.0 * 220.0
 	for candidate in players.values():
@@ -779,7 +809,7 @@ func _chain_lightning(p: Dictionary) -> void:
 			second = candidate
 	if not second.is_empty():
 		_add_attack_beam(origin, second.pos, 4, 0.14)
-		_damage(second, 15.0 * float(p.attack), p.id, false)
+		_damage(second, second_damage * float(p.attack), p.id, false)
 
 
 func _tick_character_fields(p: Dictionary, dt: float) -> void:
@@ -934,7 +964,7 @@ func _tick_danger_zone(dt: float) -> void:
 
 
 func _in_zone(pos: Vector2) -> bool:
-	for z in ZONES:
+	for z in regen_zones_for(world_size):
 		if pos.distance_to(Vector2(z.x, z.y)) < z.z:
 			return true
 	return false
@@ -1566,7 +1596,7 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 	var inp := {"mv": Vector2.ZERO, "aim": p.pos + p.aim * 100.0, "fire": false, "dash": false, "poss": false, "ability": false, "extra_ability": false}
 	var b: Dictionary = p.bot
 	# Bots stay deliberately imperfect: they improve a little, but never become expert marksmen.
-	b.skill = minf(0.38, float(b.get("skill", 0.04)) + dt * 0.0008)
+	b.skill = minf(0.24, float(b.get("skill", 0.04)) + dt * 0.00045)
 	var skill: float = float(b.skill)
 	b.t -= dt
 	if p.shadow:
@@ -1620,17 +1650,18 @@ func _bot_think(p: Dictionary, dt: float) -> void:
 		elif d < b.want - 100.0:
 			mv -= dirv * 0.65
 		# Bots lead targets poorly and their aim drifts noticeably.
-		var lead: Vector2 = tgt.pos + tgt.vel * (d / BULLET_SPEED) * lerpf(0.12, 0.38, skill)
-		var aim_error := lerpf(175.0, 105.0, skill)
+		var lead: Vector2 = tgt.pos + tgt.vel * (d / BULLET_SPEED) * lerpf(0.06, 0.18, skill)
+		var aim_error := lerpf(270.0, 210.0, skill)
 		lead += Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * aim_error
 		inp.aim = lead
-		inp.fire = d < 620.0 and p.light > 20.0 and rng.randf() < 0.78
+		inp.fire = d < 580.0 and p.light > 20.0 and rng.randf() < 0.62
 		if p.kind == 1:
 			inp.fire = d < lerpf(185.0, 270.0, skill) and p.light > 20.0 and not p.fire_was_down and rng.randf() < 0.72
 	if p.light < 20.0:
-		var bz := Vector2(ZONES[0].x, ZONES[0].y)
+		var dynamic_zones := regen_zones_for(world_size)
+		var bz := Vector2(dynamic_zones[0].x, dynamic_zones[0].y)
 		var bdz := 1e18
-		for z in ZONES:
+		for z in dynamic_zones:
 			var zp := Vector2(z.x, z.y)
 			var dz := zp.distance_squared_to(p.pos)
 			if dz < bdz:
@@ -1722,7 +1753,7 @@ func snapshot() -> Dictionary:
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "sh": float(p.get("shield_hp", 0.0)), "shmax": float(p.get("max_shield", 0.0)), "acd": p.ability_cd, "ab": p.ability_t, "excd": float(p.get("extra_cd", 0.0)), "phs": float(p.get("phase_t", 0.0)), "abs": float(p.get("absorb_t", 0.0)), "lu_t": lure_remaining, "pr": int(p.get("prism_shots", 0)), "bot": not p.human,
-			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
+			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "field_t": float(p.get("field_t", 0.0)), "turret_t": float(p.get("turret_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var pu: Array = []
 	for pickup in pickups:
 		pu.append([pickup.pos, pickup.kind, pickup.t])
@@ -1752,4 +1783,4 @@ func snapshot() -> Dictionary:
 	for e in eaters:
 		ea.append([e.id, e.pos, e.vel, e.type, e.hp, e.flash])
 	return {"pl": pl, "bl": bl, "ea": ea, "lu": lu, "az": az, "at": at, "abm": abm, "fx": effects.duplicate(), "tl": time_left,
-		"ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time, "world": world_size, "zone": [world_size * 0.5, danger_radius], "map_objects": map_data.get("objects", [])}
+		"map_id": str(map_data.get("id", "arena_original")), "ph": phase, "wn": winner, "bomb": bomb_id, "bt": bomb_t, "mt": mt, "ob": ob, "pu": pu, "elapsed": elapsed_time, "world": world_size, "zone": [world_size * 0.5, danger_radius], "map_objects": map_data.get("objects", [])}
