@@ -109,10 +109,11 @@ func _ready() -> void:
 		_refresh_profile())
 	_btn("Сохранить и назад", profile, func(): G.save_settings(); _show("main"))
 	for profile_btn in [profile_color_btn, profile_kind_btn, profile_outfit_btn, profile_hat_btn]:
-		profile_btn.custom_minimum_size = Vector2(450, 38)
+		profile_btn.custom_minimum_size = Vector2(320, 42)
+		profile_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		profile_btn.add_theme_font_size_override("font_size", 18)
 	var save_profile_btn := profile.get_child(profile.get_child_count() - 1) as Button
-	save_profile_btn.custom_minimum_size = Vector2(450, 38)
+	save_profile_btn.custom_minimum_size = Vector2(260, 42)
 	save_profile_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	save_profile_btn.add_theme_font_size_override("font_size", 18)
 	_refresh_profile()
@@ -208,8 +209,8 @@ func _ready() -> void:
 	match_sens.toggled.connect(func(b: bool): G.match_mouse_sensitivity = b; G.save_settings())
 	mouse_tab.add_child(match_sens)
 	var controls_button := _btn("КЛАВИШИ И УПРАВЛЕНИЕ", mouse_tab, func(): _show("controls"))
-	controls_button.custom_minimum_size = Vector2(0, 54)
-	controls_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	controls_button.custom_minimum_size = Vector2(320, 48)
+	controls_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	controls_button.add_theme_font_size_override("font_size", 16)
 
 	var graphics_scroll := ScrollContainer.new()
@@ -314,7 +315,8 @@ func _ready() -> void:
 	_title(controls, "НАСТРОЙКА УПРАВЛЕНИЯ")
 	for action in ["up", "down", "left", "right", "dash", "ability", "extra_ability", "possess"]:
 		var bind_btn := _btn("", controls, func(): _begin_rebind(action))
-		bind_btn.custom_minimum_size = Vector2(450, 48)
+		bind_btn.custom_minimum_size = Vector2(360, 46)
+		bind_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		bind_btn.add_theme_font_size_override("font_size", 17)
 		control_buttons[action] = bind_btn
 		_update_bind_button(action)
@@ -756,7 +758,8 @@ func _title(parent: Node, text: String) -> Label:
 func _btn(text: String, parent: Node, cb: Callable) -> Button:
 	var b: Button = FacetButton.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(380, 58)
+	b.custom_minimum_size = Vector2(340, 50)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.add_theme_font_size_override("font_size", 21)
 	b.pressed.connect(cb)
 	parent.add_child(b)
