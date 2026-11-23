@@ -299,6 +299,7 @@ func _run() -> void:
 	var mirage: Dictionary = sim.players[1]
 	var mirage_start: Vector2 = mirage.pos
 	sim._use_ability(mirage)
+	sim.step(1.0 / 60.0) # Flush queued clones through the same safe frame boundary as gameplay.
 	var mirage_decoys := 0
 	for candidate in sim.players.values():
 		if bool(candidate.get("decoy", false)):
