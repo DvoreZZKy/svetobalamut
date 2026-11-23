@@ -22,6 +22,8 @@ jobs:
           include-templates: false
       - name: Import and parse project
         run: godot --headless --editor --path . --quit
+      - name: Parse every GDScript file
+        run: godot --headless --path . --script res://tests/parse_all_scripts.gd
       - name: Boot main scene headlessly
         run: godot --headless --path . --quit-after 3
       - name: Verify interactive tutorial startup
