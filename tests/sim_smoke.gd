@@ -271,6 +271,43 @@ func _run() -> void:
 		if float(roster_player.max_light) < 100.0 or float(roster_player.max_light) > 160.0:
 			_fail("class %d has invalid max light" % kind)
 
+	# Counter matchup matrix: every class counters exactly one class and is countered by exactly one.
+	if Sim.COUNTER_TARGETS.size() != Sim.CLASS_STATS.size():
+		_fail("counter matrix does not cover the full roster")
+	else:
+		var incoming_counters: Array[int] = []
+		for kind in Sim.CLASS_STATS.size():
+			var target_kind: int = int(Sim.COUNTER_TARGETS[kind])
+			if target_kind < 0 or target_kind >= Sim.CLASS_STATS.size() or target_kind == kind:
+				_fail("class %d has an invalid counter target" % kind)
+			if incoming_counters.has(target_kind):
+				_fail("class %d is countered by more than one class" % target_kind)
+			incoming_counters.append(target_kind)
+		if incoming_counters.size() != Sim.CLASS_STATS.size():
+			_fail("some classes have no natural counter")
+		for kind in Sim.CLASS_STATS.size():
+			var target_kind: int = int(Sim.COUNTER_TARGETS[kind])
+			var matchup_cfg: Array = [
+				{"id": 1, "name": "Counter", "human": true, "color": 0, "kind": kind, "outfit": 0, "hat": 0},
+				{"id": 2, "name": "Target", "human": true, "color": 1, "kind": target_kind, "outfit": 0, "hat": 0}
+			]
+			sim.reset(matchup_cfg)
+			sim.chaos_enabled = false
+			var counter_target: Dictionary = sim.players[2]
+			var counter_light_before: float = float(counter_target.light)
+			var base_damage: float = 10.0 * float(counter_target.defense) * 0.90
+			sim._damage(counter_target, 10.0, 1, false)
+			if not is_equal_approx(counter_light_before - float(counter_target.light), base_damage * Sim.COUNTER_DAMAGE_BONUS):
+				_fail("class %d did not receive its counter damage bonus against class %d" % [kind, target_kind])
+			# Reverse the duel: the countered class must deal reduced damage back.
+			sim.reset(matchup_cfg)
+			counter_target = sim.players[1]
+			counter_light_before = float(counter_target.light)
+			base_damage = 10.0 * float(counter_target.defense) * 0.90
+			sim._damage(counter_target, 10.0, 2, false)
+			if not is_equal_approx(counter_light_before - float(counter_target.light), base_damage * Sim.COUNTER_DAMAGE_RESIST):
+				_fail("class %d did not resist its countered class %d" % [kind, target_kind])
+
 	# Every class now has a mechanically distinct ordinary attack.
 	for kind in Sim.CLASS_STATS.size():
 		if kind == 1:

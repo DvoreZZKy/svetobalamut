@@ -26,6 +26,13 @@ const CLASS_STATS := [
 	{"name":"Полярность","hp":134.0,"def":0.94,"atk":1.0,"speed":1.0,"rate":0.32,"ability":"Отталкивание"},
 	{"name":"Фантом","hp":116.0,"def":0.90,"atk":1.08,"speed":1.24,"rate":0.28,"ability":"Фазирование"}
 ]
+
+## Every class has one counter and one class that counters it.
+## A counter deals 18% more damage; its counter deals 14% less.
+const COUNTER_TARGETS := [15, 3, 18, 10, 14, 6, 7, 4, 0, 12, 17, 9, 13, 16, 8, 2, 5, 11, 1]
+const COUNTER_DAMAGE_BONUS := 1.18
+const COUNTER_DAMAGE_RESIST := 0.86
+
 const SPEED := 470.0
 const DASH_SPEED := 1550.0
 const DASH_TIME := 0.18
@@ -893,7 +900,15 @@ func _damage(p: Dictionary, dmg: float, src: int, bounced: bool) -> void:
 		return
 	if float(p.get("phase_t", 0.0)) > 0.0:
 		return
-	var reduced: float = dmg * float(p.get("defense", 1.0)) * 0.90
+	var matchup_damage: float = dmg
+	if src != 0 and players.has(src):
+		var attacker_kind: int = posmod(int(players[src].get("kind", 0)), COUNTER_TARGETS.size())
+		var defender_kind: int = posmod(int(p.get("kind", 0)), COUNTER_TARGETS.size())
+		if int(COUNTER_TARGETS[attacker_kind]) == defender_kind:
+			matchup_damage *= COUNTER_DAMAGE_BONUS
+		elif int(COUNTER_TARGETS[defender_kind]) == attacker_kind:
+			matchup_damage *= COUNTER_DAMAGE_RESIST
+	var reduced: float = matchup_damage * float(p.get("defense", 1.0)) * 0.90
 	if p.kind == 1 and p.ability_t > 0.0:
 		reduced *= 0.72
 	var shield_before: float = float(p.get("shield_hp", 0.0))

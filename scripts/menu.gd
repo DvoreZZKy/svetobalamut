@@ -563,7 +563,13 @@ func _refresh_profile() -> void:
 		"Управляет дистанцией • Q: отталкивание • F: смена полярности",
 		"Фазовый • Q: короткая неуязвимость • F: пространственный скачок"
 	]
-	profile_info.text = "%s\n%s\n%s • %s" % [kinds[G.profile_kind], class_notes[G.profile_kind], outfits[G.profile_outfit], hats[G.profile_hat]]
+	var counter_kind: int = int(Sim.COUNTER_TARGETS[G.profile_kind])
+	var countered_by := 0
+	for candidate in Sim.COUNTER_TARGETS.size():
+		if int(Sim.COUNTER_TARGETS[candidate]) == G.profile_kind:
+			countered_by = candidate
+			break
+	profile_info.text = "%s\n%s\n✦ Контрит: %s  •  Уязвим к: %s\n%s • %s" % [kinds[G.profile_kind], class_notes[G.profile_kind], kinds[counter_kind], kinds[countered_by], outfits[G.profile_outfit], hats[G.profile_hat]]
 
 
 func _add_facet_panel(parent: Control, target: Control, fill: Color, edge: Color) -> void:
