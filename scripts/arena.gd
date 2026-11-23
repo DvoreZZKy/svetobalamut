@@ -142,6 +142,15 @@ var ability_duration_bar: NeonProgressBar
 var extra_duration_bar: NeonProgressBar
 var ability_duration_label: Label
 var extra_duration_label: Label
+var ability_caption: Label
+var extra_ability_caption: Label
+const EXTRA_ABILITY_NAMES := [
+	"Световая приманка", "Поглощение снарядов", "Фазовая защита", "Призматические выстрелы",
+	"Цепная молния", "Отталкивающий импульс", "Отталкивающий импульс", "Сверхновая",
+	"Пространственный скачок", "Защитный щит", "Гравитационное поле", "Веерный рикошет",
+	"Вулканический выброс", "Высасывание энергии", "Ударная волна", "Преобразование щита",
+	"Усиленная турель", "Смена полярности", "Фазовый скачок"
+]
 var extra_ability_latch := 0.0
 var capsule_ammo_lbl: Label
 var capsule_reload_bar: NeonProgressBar
@@ -572,23 +581,23 @@ func _build_hud() -> void:
 	dash_caption.offset_top = -46
 	dash_caption.offset_bottom = -32
 	dash_caption.add_theme_color_override("font_color", Color("#76eaff"))
-	var ability_caption := _label("Q", 9, Vector2.ZERO, Vector2(54, 14), cl)
+	ability_caption = _label("СПОСОБНОСТЬ", 9, Vector2.ZERO, Vector2(350, 14), cl)
 	ability_caption.anchor_left = 0.5
 	ability_caption.anchor_right = 0.5
 	ability_caption.anchor_top = 1.0
 	ability_caption.anchor_bottom = 1.0
 	ability_caption.offset_left = -190
-	ability_caption.offset_right = -138
+	ability_caption.offset_right = 160
 	ability_caption.offset_top = -31
 	ability_caption.offset_bottom = -17
 	ability_caption.add_theme_color_override("font_color", Color("#c3a0ff"))
-	var extra_ability_caption := _label("F", 9, Vector2.ZERO, Vector2(54, 14), cl)
+	extra_ability_caption = _label("ДОП. СПОСОБНОСТЬ", 9, Vector2.ZERO, Vector2(350, 14), cl)
 	extra_ability_caption.anchor_left = 0.5
 	extra_ability_caption.anchor_right = 0.5
 	extra_ability_caption.anchor_top = 1.0
 	extra_ability_caption.anchor_bottom = 1.0
 	extra_ability_caption.offset_left = -190
-	extra_ability_caption.offset_right = -138
+	extra_ability_caption.offset_right = 160
 	extra_ability_caption.offset_top = -16
 	extra_ability_caption.offset_bottom = -2
 	extra_ability_caption.add_theme_color_override("font_color", Color("#72f5b4"))
@@ -1087,8 +1096,10 @@ func _read_input() -> Dictionary:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
-		camera_zoom = clampf(camera_zoom + (0.06 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -0.06), 0.42, 1.25)
-		cam.zoom = Vector2.ONE * camera_zoom
+		var over_result_scroll := result_detail_open and is_instance_valid(result_list_scroll) and result_list_scroll.get_global_rect().has_point(event.position)
+		if not over_result_scroll:
+			camera_zoom = clampf(camera_zoom + (0.06 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -0.06), 0.42, 1.25)
+			cam.zoom = Vector2.ONE * camera_zoom
 	if event is InputEventMouseMotion and not pause_open:
 		if G.tutorial_active:
 			aim_screen_pos = event.position.clamp(Vector2.ZERO, get_viewport().get_visible_rect().size)
@@ -1746,7 +1757,9 @@ func _update_hud(dt: float) -> void:
 		ability_bar.set_fill_ratio(1.0 - ability_cooldown / 9.0)
 		var extra_cooldown := clampf(float(me.get("excd", 0.0)), 0.0, 13.0)
 		extra_ability_bar.set_fill_ratio(1.0 - extra_cooldown / 13.0)
-		var ability_kind := int(me.get("k", 0))
+		var ability_kind := clampi(int(me.get("k", 0)), 0, Sim.CLASS_STATS.size() - 1)
+		ability_caption.text = str(Sim.CLASS_STATS[ability_kind].get("ability", "Способность")).to_upper()
+		extra_ability_caption.text = str(EXTRA_ABILITY_NAMES[ability_kind]).to_upper()
 		var ability_duration_max := 2.8
 		match ability_kind:
 			2: ability_duration_max = 0.65
@@ -1777,8 +1790,8 @@ func _update_hud(dt: float) -> void:
 		if extra_duration_bar.visible:
 			var extra_duration_max := 3.8 if ability_kind == 0 else (2.4 if ability_kind == 1 else (1.25 if ability_kind == 2 else (6.0 if ability_kind == 16 else 2.8)))
 			extra_duration_bar.set_fill_ratio(extra_duration / extra_duration_max)
-			extra_duration_label.text = "F • %.1fс" % extra_duration
-		ability_duration_label.text = "Q • %.1fс" % ability_duration
+			extra_duration_label.text = "%s • %.1fс" % [EXTRA_ABILITY_NAMES[ability_kind], extra_duration]
+		ability_duration_label.text = "%s • %.1fс" % [str(Sim.CLASS_STATS[ability_kind].get("ability", "Способность")), ability_duration]
 		var is_capsule := int(me.k) == 1 and not bool(me.s) and not over
 		var is_crystal := int(me.k) == 3 and not bool(me.s) and not over
 		capsule_ammo_lbl.visible = is_capsule or is_crystal
