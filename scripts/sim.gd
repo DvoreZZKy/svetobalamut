@@ -430,7 +430,7 @@ func _parasite_basic_attack(p: Dictionary) -> void:
 		var distance := offset.length()
 		if distance > 350.0 or distance < 1.0:
 			continue
-		var alignment := p.aim.normalized().dot(offset / distance)
+		var alignment: float = p.aim.normalized().dot(offset / distance)
 		if alignment > best_dot:
 			best_dot = alignment
 			best = target
