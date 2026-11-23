@@ -7,6 +7,10 @@ const A := Vector2(1600, 900)
 var world_size: Vector2 = A
 var map_data: Dictionary = {}
 var danger_radius := 0.0
+var map_object_timer := 2.0
+var world_size: Vector2 = A
+var map_data: Dictionary = {}
+var danger_radius := 0.0
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
 	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.90,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
@@ -93,6 +97,12 @@ var chaos_enabled := true
 
 func reset(cfg: Array) -> void:
 	rng.randomize()
+	var main_loop := Engine.get_main_loop() as SceneTree
+	var map_service: Node = main_loop.root.get_node_or_null("MapData") if main_loop != null else null
+	map_data = map_service.call("get_selected_map") if map_service != null else {}
+	world_size = Vector2(map_data.get("size", A))
+	danger_radius = minf(world_size.x, world_size.y) * 0.48
+	map_object_timer = 2.0
 	map_data = MapData.get_selected_map()
 	world_size = Vector2(map_data.get("size", A))
 	danger_radius = minf(world_size.x, world_size.y) * 0.48
@@ -207,6 +217,7 @@ func step(dt: float) -> void:
 
 # ------------------------------------------------------------- игроки ----
 func _update_player(p: Dictionary, dt: float) -> void:
+	p["teleport_cd"] = maxf(0.0, float(p.get("teleport_cd", 0.0)) - dt)
 	var inp: Dictionary = inputs.get(p.id, {})
 	var mv: Vector2 = inp.get("mv", Vector2.ZERO)
 	var aim_pt: Vector2 = inp.get("aim", p.pos + p.aim * 100.0)
@@ -847,6 +858,22 @@ func _wall_bounce(p: Dictionary) -> void:
 	elif pos.y > world_size.y - m:
 		pos.y = world_size.y - m
 		vel.y = -absf(vel.y) * 0.5
+	var teleporters: Array = []
+	for item in map_data.get("objects", []):
+		if str(item.get("type", "")) == "teleporter":
+			teleporters.append(item)
+	if teleporters.size() >= 2 and float(p.get("teleport_cd", 0.0)) <= 0.0:
+		for i in teleporters.size():
+			var gate: Dictionary = teleporters[i]
+			var gate_pos := Vector2(float(gate.get("x", 0.0)), float(gate.get("y", 0.0)))
+			if pos.distance_to(gate_pos) <= float(gate.get("r", 48.0)) + 28.0:
+				var exit_gate: Dictionary = teleporters[(i + 1) % teleporters.size()]
+				var exit_pos := Vector2(float(exit_gate.get("x", 0.0)), float(exit_gate.get("y", 0.0)))
+				pos = exit_pos + Vector2.RIGHT * (float(exit_gate.get("r", 48.0)) + 42.0)
+				p["teleport_cd"] = 1.4
+				events.append({"t":"dash","x":pos.x,"y":pos.y,"c":p.ci})
+				break
+	pos = _resolve_map_objects(pos, 28.0)
 	p.pos = pos
 	p.vel = vel
 
@@ -880,6 +907,53 @@ func _tick_danger_zone(dt: float) -> void:
 				p.light = maxf(0.0, float(p.light) - 7.5 * dt)
 				if p.light <= 0.0:
 					_make_shadow(p, 0, false)
+
+
+
+func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
+	for item in map_data.get("objects", []):
+		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+		var object_type := str(item.get("type", "rock"))
+		if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
+			continue
+		var object_radius := float(item.get("r", 48.0))
+		var delta := pos - center
+		var minimum := radius + object_radius
+		if delta.length_squared() < minimum * minimum:
+			var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
+			pos = center + direction * minimum
+	return pos
+
+
+func _tick_danger_zone(dt: float) -> void:
+	map_object_timer -= dt
+	if map_object_timer <= 0.0:
+		map_object_timer = 2.2
+		for item in map_data.get("objects", []):
+			if str(item.get("type", "")) != "generator":
+				continue
+			var generator_pos := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+			for player in players.values():
+				if player.shadow or player.decoy or (player.pos as Vector2).distance_to(generator_pos) > 155.0:
+					continue
+				var old_light := float(player.light)
+				player.light = minf(float(player.max_light), old_light + 4.0)
+				var healed := float(player.light) - old_light
+				if healed > 0.01:
+					player.healing_total = float(player.get("healing_total", 0.0)) + healed
+					events.append({"t":"heal","id":player.id,"amount":healed})
+	var delay := float(map_data.get("zone_delay", 35.0))
+	var duration := float(map_data.get("zone_duration", 180.0))
+	var maximum := minf(world_size.x, world_size.y) * 0.48
+	var minimum := minf(world_size.x, world_size.y) * 0.12
+	if elapsed_time > delay:
+		danger_radius = lerpf(maximum, minimum, clampf((elapsed_time - delay) / duration, 0.0, 1.0))
+		var center := world_size * 0.5
+		for player in players.values():
+			if not player.shadow and not player.decoy and (player.pos as Vector2).distance_to(center) > danger_radius:
+				player.light = maxf(0.0, float(player.light) - 7.5 * dt)
+				if player.light <= 0.0:
+					_make_shadow(player, 0, false)
 
 
 func _in_zone(pos: Vector2) -> bool:

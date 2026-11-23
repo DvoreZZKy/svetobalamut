@@ -57,6 +57,7 @@ func _choose_map(index: int) -> void:
  var maps := MapData.all_maps()
  if index >= 0 and index < maps.size():
   draft = maps[index].duplicate(true)
+  MapData.select_map(str(draft.get("id", "arena_original")))
   name_edit.text = str(draft.get("name",""))
   queue_redraw()
 
