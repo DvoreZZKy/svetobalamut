@@ -518,6 +518,8 @@ func _run() -> void:
 		{"id": 2, "name": "Shooter", "human": true, "color": 1, "kind": 0, "outfit": 0, "hat": 0}
 	])
 	sim.chaos_enabled = false
+	sim.map_data["objects"] = []
+	sim._rebuild_map_collision_cache()
 	sim.bullets = [
 		{"id": 10, "pos": Vector2(500, 450), "vel": Vector2(0, 0), "owner": 1, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 7.0, "radius": 11.0, "vk": 15, "absorb_bubble": true, "hit_ids": []},
 		{"id": 11, "pos": Vector2(510, 450), "vel": Vector2.ZERO, "owner": 2, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 8.0, "radius": 6.0, "vk": 0, "hit_ids": []}

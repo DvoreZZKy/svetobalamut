@@ -1530,8 +1530,6 @@ func _update_bullets(dt: float) -> void:
 						b.radius = minf(21.0, float(b.radius) + 2.0)
 						b.dmg = float(b.dmg) + 1.0
 						break
-				if float(b.radius) >= 21.0:
-					break
 		if not dead:
 			for p in players.values():
 				if p.shadow or p.inv > 0.0 or float(p.get("phase_t", 0.0)) > 0.0:
