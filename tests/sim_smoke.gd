@@ -427,19 +427,50 @@ func _run() -> void:
 				if sim.bullets.is_empty() or int(sim.bullets[0].get("pierce", 0)) != 4:
 					_fail("phantom slash does not pierce multiple targets")
 
-	# Ricochet Q upgrades the next five basic attacks into three-shot bouncing volleys.
+	# Ricochet Q launches one heavy bank-shot that rebounds five times from arena and map walls.
 	sim.reset([{"id":1,"name":"Ricochet Q","human":true,"color":0,"kind":11,"outfit":0,"hat":0}])
 	sim.chaos_enabled = false
 	var ricochet_player: Dictionary = sim.players[1]
+	ricochet_player.pos = Vector2(500, 450)
+	ricochet_player.aim = Vector2.RIGHT
 	sim._use_ability(ricochet_player)
-	if int(ricochet_player.get("special_shots", 0)) != 5:
-		_fail("Ricochet Q did not grant five empowered shots")
+	if sim.bullets.size() != 1 or not bool(sim.bullets[0].get("ricochet", false)) or int(sim.bullets[0].get("ricochet_limit", 0)) != 5:
+		_fail("Ricochet Q did not launch its five-bounce heavy projectile")
+	if float(sim.bullets[0].get("dmg", 0.0)) < Sim.BULLET_DMG * 1.9:
+		_fail("Ricochet Q heavy projectile damage is too low")
+	# Ordinary shots remain straight; Q no longer modifies later basic attacks.
+	sim.bullets.clear()
 	sim._fire_class_attack(ricochet_player)
-	if sim.bullets.size() != 3:
-		_fail("Ricochet Q did not convert the next basic attack into a three-shot volley")
-	for ricochet_bullet in sim.bullets:
-		if not bool(ricochet_bullet.get("ricochet", false)):
-			_fail("Ricochet Q empowered volley contains a non-bouncing projectile")
+	if sim.bullets.size() != 1 or bool(sim.bullets[0].get("ricochet", false)):
+		_fail("Ricochet basic attack became bouncing without Q")
+	# A heavy ricochet reflects from circular rocks instead of disappearing.
+	sim.bullets = [{"id":50,"pos":Vector2(600,450),"vel":Vector2(500,0),"owner":1,"life":1.0,"bn":0,"ricochet":true,"ricochet_limit":5,"dmg":18.0,"radius":8.0,"vk":11,"hit_ids":[]}]
+	sim.map_data["objects"] = [{"type":"rock","x":650.0,"y":450.0,"r":35.0}]
+	sim._update_bullets(0.02)
+	if sim.bullets.size() != 1 or float(sim.bullets[0].vel.x) >= 0.0 or int(sim.bullets[0].bn) != 1:
+		_fail("Ricochet Q did not rebound from a circular rock")
+	# Merged cave-wall polygons are solid surfaces too.
+	sim.bullets = [{"id":51,"pos":Vector2(550,450),"vel":Vector2(1000,0),"owner":1,"life":1.0,"bn":0,"ricochet":true,"ricochet_limit":5,"dmg":18.0,"radius":8.0,"vk":11,"hit_ids":[]}]
+	var cave_poly := PackedVector2Array([Vector2(600,300),Vector2(700,300),Vector2(700,600),Vector2(600,600)])
+	sim.map_data["objects"] = [{"type":"cave_wall","poly":cave_poly}]
+	sim._update_bullets(0.06)
+	if sim.bullets.size() != 1 or float(sim.bullets[0].vel.x) >= 0.0 or int(sim.bullets[0].bn) != 1:
+		_fail("Ricochet Q did not rebound from a cave-wall polygon")
+	# Ordinary projectiles stop on the same rock.
+	sim.bullets = [{"id":52,"pos":Vector2(600,450),"vel":Vector2(500,0),"owner":1,"life":1.0,"bn":0,"ricochet":false,"dmg":9.0,"radius":8.0,"vk":0,"hit_ids":[]}]
+	sim.map_data["objects"] = [{"type":"rock","x":650.0,"y":450.0,"r":35.0}]
+	sim._update_bullets(0.02)
+	if not sim.bullets.is_empty():
+		_fail("ordinary projectile passed through a solid rock")
+	# Field direction is replicated so the renderer can draw particles flowing into the singularity.
+	sim.reset([{"id":1,"name":"Singularity field","human":true,"color":0,"kind":10,"outfit":0,"hat":0}])
+	sim.chaos_enabled = false
+	var singularity: Dictionary = sim.players[1]
+	sim._use_ability(singularity)
+	var field_snapshot: Dictionary = sim.snapshot()
+	var field_player: Dictionary = field_snapshot.pl[0]
+	if int(field_player.get("fm", 0)) != 1 or float(field_player.get("field_t", 0.0)) <= 0.0:
+		_fail("Singularity pull field state was not replicated for its particle effect")
 
 	# Slime, gravity and lava patches have active gameplay effects.
 	sim.reset([
@@ -626,17 +657,33 @@ func _run() -> void:
 		_fail("Supernova consumed its Q cooldown without a target in range")
 	if not sim.events.any(func(event): return str(event.get("t", "")) == "ability_failed" and int(event.get("id", 0)) == 1):
 		_fail("failed targeted ability did not publish player feedback")
-	# Generator's basic attack places a turret; Q also publishes an explanatory HUD notice.
-	sim.reset([{"id":1,"name":"Generator","human":true,"color":0,"kind":16,"outfit":0,"hat":0}])
+	# Generator turrets need real damage and must not emit explanatory text banners.
+	sim.reset([
+		{"id":1,"name":"Generator","human":true,"color":0,"kind":16,"outfit":0,"hat":0},
+		{"id":2,"name":"Generator target","human":true,"color":1,"kind":0,"outfit":0,"hat":0}
+	])
 	sim.chaos_enabled = false
 	var generator: Dictionary = sim.players[1]
+	var generator_target: Dictionary = sim.players[2]
+	generator.pos = Vector2(400,450)
+	generator_target.pos = Vector2(600,450)
 	generator.aim = Vector2.RIGHT
 	sim._fire_class_attack(generator)
-	if sim.attack_turrets.is_empty() or not sim.events.any(func(event): return str(event.get("t", "")) == "generator_attack"):
-		_fail("Generator basic attack did not place and announce its turret")
+	if sim.attack_turrets.is_empty() or sim.events.any(func(event): return str(event.get("t", "")) == "generator_attack" or str(event.get("t", "")) == "ability_notice"):
+		_fail("Generator basic attack emitted an unwanted text notice or failed to deploy")
+	sim.attack_turrets = [{"pos":Vector2(500,450),"owner":1,"t":2.0,"cd":0.0}]
+	sim._update_attack_turrets(1.0/60.0)
+	if sim.bullets.is_empty() or float(sim.bullets[0].get("dmg",0.0)) < 8.0 or not is_equal_approx(float(sim.attack_turrets[0].cd),0.48):
+		_fail("Generator deployed turret still deals too little damage or fires too slowly")
+	sim.bullets.clear()
+	generator.turret_t = 1.0
+	generator.turret_cd = 0.0
+	sim._tick_character_fields(generator,1.0/60.0)
+	if sim.bullets.is_empty() or float(sim.bullets[0].get("dmg",0.0)) < 8.0:
+		_fail("Generator Q turret still deals too little damage")
 	sim._use_ability(generator)
-	if not sim.events.any(func(event): return str(event.get("t", "")) == "ability_notice" and int(event.get("id", 0)) == 1):
-		_fail("Generator Q did not publish its ability explanation")
+	if sim.events.any(func(event): return str(event.get("t", "")) == "ability_notice"):
+		_fail("Generator Q emitted an unwanted ability text notice")
 	# Bots steer back inside the shrinking rectangle rather than wandering into the hazard.
 	sim.reset([{"id":1,"name":"Zone Bot","human":false,"color":0,"kind":0,"outfit":0,"hat":0}])
 	sim.chaos_enabled = false

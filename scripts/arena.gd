@@ -167,6 +167,7 @@ var result_category_header: Label
 var result_category_frame: PanelContainer
 var result_list: VBoxContainer
 var banner: Label
+var ability_error_panel: PanelContainer
 var zone_warning_panel: ColorRect
 var zone_warning_label: Label
 var zone_warning_until := 0.0
@@ -447,6 +448,37 @@ func _build_hud() -> void:
 	banner.anchor_bottom = 0.28
 	banner.pivot_offset = Vector2(640, 50)
 	banner.modulate.a = 0.0
+	ability_error_panel = PanelContainer.new()
+	ability_error_panel.anchor_left = 0.5
+	ability_error_panel.anchor_right = 0.5
+	ability_error_panel.anchor_top = 0.42
+	ability_error_panel.anchor_bottom = 0.42
+	ability_error_panel.offset_left = -220.0
+	ability_error_panel.offset_right = 220.0
+	ability_error_panel.offset_top = -25.0
+	ability_error_panel.offset_bottom = 25.0
+	ability_error_panel.pivot_offset = Vector2(220.0, 25.0)
+	ability_error_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ability_error_panel.visible = false
+	var error_style := StyleBoxFlat.new()
+	error_style.bg_color = Color("#171d26", 0.97)
+	error_style.border_color = Color("#858d98")
+	error_style.set_border_width_all(2)
+	error_style.set_corner_radius_all(3)
+	error_style.content_margin_left = 16.0
+	error_style.content_margin_right = 16.0
+	error_style.content_margin_top = 8.0
+	error_style.content_margin_bottom = 8.0
+	ability_error_panel.add_theme_stylebox_override("panel", error_style)
+	var error_label := Label.new()
+	error_label.text = "АТАКА НЕ УДАЛАСЬ"
+	error_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	error_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	error_label.add_theme_font_override("font", _bold_hud_font())
+	error_label.add_theme_font_size_override("font_size", 19)
+	error_label.add_theme_color_override("font_color", Color("#c8cdd4"))
+	ability_error_panel.add_child(error_label)
+	cl.add_child(ability_error_panel)
 	score_lbl = RichTextLabel.new()
 	score_lbl.bbcode_enabled = true
 	score_lbl.fit_content = false
@@ -1048,8 +1080,17 @@ func _draw_bullets() -> void:
 				bullet_layer.draw_circle(pos, radius, Color("#100c24"))
 				bullet_layer.draw_arc(pos, radius + 5.0, 0.0, TAU, 32, Color("#a77aff"), 2.0, true)
 			11:
-				bullet_layer.draw_arc(pos, radius + 2.0, 0.0, TAU, 28, Color.WHITE, 3.0, true)
-				bullet_layer.draw_line(pos + Vector2(-radius, 0), pos + Vector2(radius, 0), col, 2.0, true)
+				if b.size() > 9 and bool(b[9]):
+					var ric_dir := vel.normalized()
+					var ric_side := ric_dir.orthogonal()
+					var ric_diamond := PackedVector2Array([pos + ric_dir * (radius + 8.0), pos + ric_side * (radius * 0.85), pos - ric_dir * (radius + 8.0), pos - ric_side * (radius * 0.85)])
+					bullet_layer.draw_circle(pos, radius + 8.0, Color(0.25, 0.88, 1.0, 0.16))
+					bullet_layer.draw_arc(pos, radius + 8.0, 0.0, TAU, 32, Color("#8df6ff"), 3.5, true)
+					bullet_layer.draw_colored_polygon(ric_diamond, Color("#c7fbff"))
+					bullet_layer.draw_polyline(ric_diamond, Color.WHITE, 2.0, true)
+				else:
+					bullet_layer.draw_arc(pos, radius + 2.0, 0.0, TAU, 28, Color.WHITE, 3.0, true)
+					bullet_layer.draw_line(pos + Vector2(-radius, 0), pos + Vector2(radius, 0), col, 2.0, true)
 			12:
 				bullet_layer.draw_circle(pos, radius + 3.0, Color("#ff4b24", 0.45))
 				bullet_layer.draw_circle(pos, radius, Color("#ff792e"))
@@ -1095,6 +1136,21 @@ func _draw_bullets() -> void:
 			bullet_layer.draw_arc(effect_pos, 43.0, 0.0, TAU, 40, Color("#c18cff"), 4.0, true)
 		if int(pd.get("pr", 0)) > 0:
 			bullet_layer.draw_arc(effect_pos, 48.0, -0.65, 0.65, 24, Color("#8cf7ff"), 4.0, true)
+		var field_remaining := float(pd.get("field_t", 0.0))
+		var field_kind := int(pd.get("k", -1))
+		if field_remaining > 0.0 and [5, 10, 17].has(field_kind):
+			var field_mode := int(pd.get("fm", 0))
+			var field_color := Color("#a77aff") if field_kind == 10 else (Color("#ff687a") if field_kind == 17 else Color("#63eaff"))
+			var field_pulse := 1.0 + 0.035 * sin(t * 9.0)
+			bullet_layer.draw_arc(effect_pos, 305.0 * field_pulse, 0.0, TAU, 64, Color(field_color, 0.34), 2.2, true)
+			for particle_index in 12:
+				var particle_phase := fposmod(t * 0.82 + float(particle_index) / 12.0, 1.0)
+				var particle_dir := Vector2.from_angle(TAU * float(particle_index) / 12.0 + t * 0.22)
+				var particle_radius := lerpf(282.0, 38.0, particle_phase) if field_mode == 1 else lerpf(42.0, 282.0, particle_phase)
+				var particle_pos := effect_pos + particle_dir * particle_radius
+				var streak_dir := -particle_dir if field_mode == 1 else particle_dir
+				bullet_layer.draw_line(particle_pos, particle_pos + streak_dir * 20.0, Color(field_color, 0.72), 2.4, true)
+				bullet_layer.draw_circle(particle_pos, 3.2 if field_kind == 10 else 2.7, Color.WHITE)
 
 
 # ----------------------------------------------------------------- цикл ---
@@ -2351,16 +2407,10 @@ func _handle_events(evs: Array) -> void:
 				warning_tween.set_loops(4)
 				warning_tween.tween_property(zone_warning_panel, "color:a", 0.48, 0.22)
 				warning_tween.tween_property(zone_warning_panel, "color:a", 0.88, 0.22)
-			"generator_attack":
-				if int(e.get("id", 0)) == local_id:
-					_show_banner("ТУРЕЛЬ УСТАНОВЛЕНА В ТОЧКЕ ПРИЦЕЛА")
 			"ability_failed":
 				if int(e.get("id", 0)) == local_id:
-					_show_banner("НИКОГО В РАДИУСЕ — АТАКА НЕ УДАЛАСЬ")
+					_show_ability_error()
 					Sfx.play("hit", 0.65, -8.0)
-			"ability_notice":
-				if int(e.get("id", 0)) == local_id:
-					_show_banner(str(e.get("text", "СПОСОБНОСТЬ АКТИВИРОВАНА")))
 			"ability":
 				var ability_kind := int(e.get("kind", 0))
 				if ability_kind == 7:
@@ -2377,6 +2427,9 @@ func _handle_events(evs: Array) -> void:
 				Sfx.play("possess", 1.25, -7.0)
 				flash(pos, 64.0, Color("#c49bff"), 0.18)
 				burst(pos, Color("#c49bff"), 12, 220.0, 0.28)
+			"wall_bounce":
+				burst(pos, col, 9, 280.0, 0.18)
+				flash(pos, 24.0, col, 0.13)
 			"supernova":
 				Sfx.play("boom", 1.28, -1.0)
 				_outline_shockwave(pos, float(e.get("r", 230.0)), Color("#ffb45f"), 0.14)
@@ -2465,6 +2518,16 @@ func flash(pos: Vector2, radius: float, col: Color, dur := 0.4) -> void:
 	tw.tween_property(s, "scale", Vector2.ONE * radius / 64.0, dur).set_ease(Tween.EASE_OUT)
 	tw.tween_property(s, "modulate:a", 0.0, dur)
 	tw.chain().tween_callback(s.queue_free)
+
+
+func _show_ability_error() -> void:
+	ability_error_panel.visible = true
+	ability_error_panel.modulate = Color.WHITE
+	ability_error_panel.scale = Vector2.ONE * 0.94
+	var error_tween := create_tween().set_parallel(true)
+	error_tween.tween_property(ability_error_panel, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	error_tween.tween_property(ability_error_panel, "modulate:a", 0.0, 0.95).set_delay(0.38)
+	error_tween.chain().tween_callback(func(): ability_error_panel.visible = false)
 
 
 func _show_banner(text: String) -> void:

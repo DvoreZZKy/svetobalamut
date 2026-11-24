@@ -9,48 +9,6 @@ var map_data: Dictionary = {}
 var danger_half_extents := Vector2.ZERO
 var map_object_timer := 2.0
 const MAX_LIGHT := 125.0
-const ABILITY_Q_NOTICES := [
-	"Перегрузка: скорость и темп атак повышены",
-	"Энергощит: входящий урон уменьшен",
-	"Фазовый скачок: рывок вперёд с неуязвимостью",
-	"Звёздный залп: круг из десяти рикошетящих снарядов",
-	"Разгон: ускорение передвижения",
-	"Притяжение: поле притягивает ближайших противников",
-	"Липкая броня: получен временный щит",
-	"Вспышка: мощный взрыв вокруг персонажа",
-	"Смещение: созданы два отвлекающих двойника",
-	"Гранёный залп: следующие пять выстрелов усилены",
-	"Гравитационная яма: поле притягивает врагов",
-	"Отскок: следующие пять выстрелов рикошетят",
-	"Перегрев: временно повышен урон",
-	"Высасывание: ближайший противник теряет свет",
-	"Размах: ускорение и усиленный размах",
-	"Поглощение: щит поглощает снаряды",
-	"Автотурель: турель активна рядом с вами",
-	"Отталкивание: включено силовое поле",
-	"Фазирование: краткая неуязвимость"
-]
-const ABILITY_F_NOTICES := [
-	"Световая приманка: пожиратели отвлекаются на маяк",
-	"Поглощение снарядов: ловите выстрелы и превращайте их в свет",
-	"Фазовая защита: проходите сквозь угрозы",
-	"Призматические выстрелы: следующие три атаки раздваиваются",
-	"Цепная молния: удар по ближайшим врагам",
-	"Отталкивающий импульс: отбрасывает ближайших врагов",
-	"Отталкивающий импульс: отбрасывает ближайших врагов",
-	"Сверхновая: мощный круговой взрыв",
-	"Пространственный скачок: длинный телепорт вперёд",
-	"Защитный щит: получено 30 единиц щита",
-	"Гравитационное поле: притягивает ближайших врагов",
-	"Веерный рикошет: выпущено пять отражающихся снарядов",
-	"Вулканический выброс: оглушающий круговой взрыв",
-	"Высасывание энергии: наносит урон и восстанавливает свет",
-	"Ударная волна: отбрасывает врагов вокруг",
-	"Преобразование щита: запас щита превращён в свет",
-	"Усиленная турель: турель продлена до шести секунд",
-	"Смена полярности: поле меняет притяжение на отталкивание",
-	"Фазовый скачок: короткий телепорт с защитой"
-]
 const CLASS_STATS := [
 	{"name":"Светляк","hp":125.0,"def":0.95,"atk":0.90,"speed":1.12,"rate":0.22,"ability":"Перегрузка"},
 	{"name":"Капсула","hp":136.0,"def":0.88,"atk":1.30,"speed":0.83,"rate":0.56,"ability":"Энергощит"},
@@ -511,7 +469,6 @@ func _fire_class_attack(p: Dictionary) -> void:
 				break
 		if not found:
 			attack_turrets.append({"pos": turret_pos, "owner": p.id, "t": 4.0, "cd": 0.12})
-		events.append({"t":"generator_attack","id":p.id,"x":turret_pos.x,"y":turret_pos.y,"c":p.ci})
 	elif kind == 17:
 		var polarity := int(p.get("polarity_mode", 1))
 		_spawn_class_bullet(p, aim, 1160.0, 8.0, 0.9, 1.35, {"polarity": polarity})
@@ -611,9 +568,9 @@ func _update_attack_turrets(dt: float) -> void:
 					var direction: Vector2 = (target.pos - turret.pos).normalized()
 					bullets.append({"id": next_id, "pos": turret.pos + direction * 20.0, "vel": direction * 1080.0,
 						"owner": owner_id, "life": 0.9, "bn": 0, "ricochet": false,
-						"dmg": BULLET_DMG * float(owner.attack) * 0.38, "radius": 4.5, "vk": 16, "hit_ids": []})
+						"dmg": BULLET_DMG * float(owner.attack) * 0.95, "radius": 5.5, "vk": 16, "hit_ids": []})
 					next_id += 1
-			turret.cd = 0.68
+			turret.cd = 0.48
 		keep.append(turret)
 	attack_turrets = keep
 
@@ -749,7 +706,11 @@ func _use_ability(p: Dictionary) -> void:
 			p.field_t = 3.2
 			p.field_mode = 1
 		11:
-			p.special_shots = 5
+			var ricochet_dir: Vector2 = p.aim.normalized()
+			bullets.append({"id":next_id,"pos":p.pos + ricochet_dir * 38.0,"vel":ricochet_dir * 980.0,
+				"owner":p.id,"life":3.2,"bn":0,"ricochet":true,"ricochet_limit":5,
+				"dmg":BULLET_DMG * float(p.attack) * 2.0,"radius":13.0,"vk":11,"hit_ids":[]})
+			next_id += 1
 			events.append({"t":"ability","x":p.pos.x,"y":p.pos.y,"c":p.ci,"kind":11})
 		12:
 			p.buff = "overdrive"
@@ -770,7 +731,6 @@ func _use_ability(p: Dictionary) -> void:
 		18:
 			p.phase_t = 1.0
 			p.inv = maxf(float(p.inv), 1.0)
-	events.append({"t":"ability_notice","id":p.id,"text":str(ABILITY_Q_NOTICES[int(p.kind)])})
 
 
 func _use_extra_ability(p: Dictionary) -> void:
@@ -838,7 +798,6 @@ func _use_extra_ability(p: Dictionary) -> void:
 		18:
 			p.pos = (p.pos + p.aim * 260.0).clamp(Vector2(40,40), world_size - Vector2(40,40))
 			p.inv = maxf(float(p.inv), 0.55)
-	events.append({"t":"ability_notice","id":p.id,"text":str(ABILITY_F_NOTICES[int(p.kind)])})
 
 
 
@@ -937,9 +896,9 @@ func _tick_character_fields(p: Dictionary, dt: float) -> void:
 		var target := _nearest(p, false)
 		if not target.is_empty():
 			var direction: Vector2 = (target.pos - p.pos).normalized()
-			bullets.append({"id":next_id,"pos":p.pos + direction * 38.0,"vel":direction * 1050.0,"owner":p.id,"life":1.0,"bn":0,"ricochet":false,"dmg":BULLET_DMG * float(p.attack) * 0.55,"radius":5.0})
+			bullets.append({"id":next_id,"pos":p.pos + direction * 38.0,"vel":direction * 1120.0,"owner":p.id,"life":1.0,"bn":0,"ricochet":false,"dmg":BULLET_DMG * float(p.attack) * 0.95,"radius":5.5,"vk":16})
 			next_id += 1
-			p.turret_cd = 0.72
+			p.turret_cd = 0.48
 
 func _update_lures(dt: float) -> void:
 	var keep: Array = []
@@ -1056,6 +1015,55 @@ func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
 			var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
 			pos = center + direction * minimum
 	return pos
+
+
+func _find_bullet_surface_collision(pos: Vector2, radius: float) -> Dictionary:
+	var objects: Array = map_data.get("objects", [])
+	for object_index in objects.size():
+		var item: Dictionary = objects[object_index]
+		var object_type := str(item.get("type", "rock"))
+		if object_type == "cave_wall":
+			var wall_poly := PackedVector2Array()
+			for point in item.get("poly", []):
+				wall_poly.append(Vector2(point))
+			if wall_poly.size() < 3:
+				continue
+			var inside_wall := Geometry2D.is_point_in_polygon(pos, wall_poly)
+			var nearest := Vector2.ZERO
+			var nearest_distance := INF
+			var centroid := Vector2.ZERO
+			for point in wall_poly:
+				centroid += point
+			centroid /= float(wall_poly.size())
+			for edge_index in wall_poly.size():
+				var a: Vector2 = wall_poly[edge_index]
+				var b: Vector2 = wall_poly[(edge_index + 1) % wall_poly.size()]
+				var edge := b - a
+				var edge_length_sq := edge.length_squared()
+				var along := clampf((pos - a).dot(edge) / edge_length_sq, 0.0, 1.0) if edge_length_sq > 0.001 else 0.0
+				var candidate := a + edge * along
+				var distance_sq := pos.distance_squared_to(candidate)
+				if distance_sq < nearest_distance:
+					nearest_distance = distance_sq
+					nearest = candidate
+			if inside_wall or nearest_distance <= radius * radius:
+				var normal := (nearest - pos).normalized() if inside_wall else (pos - nearest).normalized()
+				if normal.length_squared() < 0.001:
+					normal = (nearest - centroid).normalized()
+				if normal.length_squared() < 0.001:
+					normal = Vector2.UP
+				return {"point": nearest, "normal": normal, "index": object_index, "type": object_type}
+			continue
+		if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
+			continue
+		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+		var object_radius := float(item.get("r", 48.0))
+		var delta := pos - center
+		var combined_radius := object_radius + radius
+		if delta.length_squared() <= combined_radius * combined_radius:
+			var normal := delta.normalized() if delta.length_squared() > 0.001 else Vector2.UP
+			return {"point": center + normal * object_radius, "normal": normal, "index": object_index, "type": object_type}
+	return {}
 
 
 func _find_free_spawn_position(origin: Vector2, player_index: int) -> Vector2:
@@ -1395,17 +1403,21 @@ func _update_bullets(dt: float) -> void:
 			b.pos += b.vel * dt + b.vel.normalized().orthogonal() * sin(float(b.wave_t) * 8.0) * 78.0 * dt
 		else:
 			b.pos += b.vel * dt
-		var object_hit := false
-		var object_list: Array = map_data.get("objects", [])
-		for object_index in object_list.size():
-			var item: Dictionary = object_list[object_index]
-			var object_type := str(item.get("type", "rock"))
-			if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
-				continue
-			var object_center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
-			var object_radius := float(item.get("r", 48.0))
-			if b.pos.distance_squared_to(object_center) <= pow(object_radius + float(b.get("radius", 6.0)), 2.0):
+		var bounce_on: bool = effects.has("bounce") or bool(b.get("ricochet", false))
+		var bounce_limit: int = int(b.get("ricochet_limit", 2)) if bool(b.get("ricochet", false)) else 4
+		var bullet_radius := float(b.get("radius", 6.0))
+		var bp: Vector2 = b.pos
+		var bv: Vector2 = b.vel
+		var dead: bool = b.life <= 0.0
+		var surface_hit := _find_bullet_surface_collision(bp, bullet_radius) if not dead else {}
+		if not surface_hit.is_empty():
+			var object_index := int(surface_hit.get("index", -1))
+			var object_list: Array = map_data.get("objects", [])
+			if object_index >= 0 and object_index < object_list.size():
+				var item: Dictionary = object_list[object_index]
+				var object_type := str(surface_hit.get("type", "rock"))
 				if object_type == "container" or object_type == "crystal":
+					var object_center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
 					var remaining_hp := maxf(0.0, float(item.get("hp", 65.0)) - float(b.get("dmg", BULLET_DMG)))
 					item["hp"] = remaining_hp
 					object_list[object_index] = item
@@ -1413,14 +1425,16 @@ func _update_bullets(dt: float) -> void:
 						object_list.remove_at(object_index)
 						var drop_kind := "battery" if object_type == "container" else "shield"
 						pickups.append({"pos": object_center, "kind": drop_kind, "t": 12.0})
-				map_data["objects"] = object_list
-				object_hit = true
-				break
-		var dead: bool = b.life <= 0.0 or object_hit
-		var bounce_on: bool = effects.has("bounce") or bool(b.get("ricochet", false))
-		var bounce_limit: int = 2 if bool(b.get("ricochet", false)) else 4
-		var bp: Vector2 = b.pos
-		var bv: Vector2 = b.vel
+					map_data["objects"] = object_list
+			if bounce_on and int(b.get("bn", 0)) < bounce_limit:
+				var surface_normal: Vector2 = surface_hit.get("normal", Vector2.UP)
+				bv = bv.bounce(surface_normal)
+				bp = Vector2(surface_hit.get("point", bp)) + surface_normal * (bullet_radius + 3.0)
+				b.bn = int(b.get("bn", 0)) + 1
+				if bool(b.get("ricochet", false)):
+					events.append({"t":"wall_bounce","x":bp.x,"y":bp.y,"c":int(b.get("vk",0))})
+			else:
+				dead = true
 		var hit_wall := bp.x < 0.0 or bp.x > world_size.x or bp.y < 0.0 or bp.y > world_size.y
 		if hit_wall and bool(b.get("split_on_wall", false)):
 			var split_dir: Vector2 = bv.normalized()
@@ -1932,7 +1946,7 @@ func snapshot() -> Dictionary:
 			"s": p.shadow, "k": p.kind, "c": p.ci, "hat": p.hat, "outfit": p.outfit,
 			"iv": p.inv, "dc": p.dash_cd, "pt": p.pts, "wc": 0.0, "wa": int(p.wave_ammo), "wr": float(p.wave_reload_t),
 			"hpmax": p.max_light, "sh": float(p.get("shield_hp", 0.0)), "shmax": float(p.get("max_shield", 0.0)), "acd": p.ability_cd, "ab": p.ability_t, "excd": float(p.get("extra_cd", 0.0)), "phs": float(p.get("phase_t", 0.0)), "abs": float(p.get("absorb_t", 0.0)), "lu_t": lure_remaining, "pr": int(p.get("prism_shots", 0)), "sp": int(p.get("special_shots", 0)), "bot": not p.human,
-			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "field_t": float(p.get("field_t", 0.0)), "turret_t": float(p.get("turret_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
+			"ki": p.kills, "dm": float(p.get("damage_total", 0.0)), "hl": float(p.get("healing_total", 0.0)), "buff": str(p.get("buff", "")), "buff_t": float(p.get("buff_t", 0.0)), "field_t": float(p.get("field_t", 0.0)), "fm": int(p.get("field_mode", 0)), "turret_t": float(p.get("turret_t", 0.0)), "dr": p.derp_t, "d": p.decoy, "h": p.hit_t, "dt": p.dash_t > 0.0})
 	var pu: Array = []
 	for pickup in pickups:
 		pu.append([pickup.pos, pickup.kind, pickup.t])
@@ -1948,7 +1962,7 @@ func snapshot() -> Dictionary:
 	var bl: Array = []
 	for b in bullets:
 		var visual_kind := int(b.get("vk", players.get(b.owner, {}).get("kind", 0)))
-		bl.append([b.id, b.pos, b.vel, b.owner, b.bn, visual_kind, float(b.get("radius", 6.0)), bool(b.get("absorb_bubble", false)), int(b.get("polarity", 0))])
+		bl.append([b.id, b.pos, b.vel, b.owner, b.bn, visual_kind, float(b.get("radius", 6.0)), bool(b.get("absorb_bubble", false)), int(b.get("polarity", 0)), bool(b.get("ricochet", false))])
 	var az: Array = []
 	for zone in attack_zones:
 		az.append([zone.pos, str(zone.kind), float(zone.r), float(zone.t)])
