@@ -446,6 +446,7 @@ func _run() -> void:
 	# A heavy ricochet reflects from circular rocks instead of disappearing.
 	sim.bullets = [{"id":50,"pos":Vector2(600,450),"vel":Vector2(500,0),"owner":1,"life":1.0,"bn":0,"ricochet":true,"ricochet_limit":5,"dmg":18.0,"radius":8.0,"vk":11,"hit_ids":[]}]
 	sim.map_data["objects"] = [{"type":"rock","x":650.0,"y":450.0,"r":35.0}]
+	sim._rebuild_map_collision_cache()
 	sim._update_bullets(0.02)
 	if sim.bullets.size() != 1 or float(sim.bullets[0].vel.x) >= 0.0 or int(sim.bullets[0].bn) != 1:
 		_fail("Ricochet Q did not rebound from a circular rock")
@@ -453,12 +454,14 @@ func _run() -> void:
 	sim.bullets = [{"id":51,"pos":Vector2(550,450),"vel":Vector2(1000,0),"owner":1,"life":1.0,"bn":0,"ricochet":true,"ricochet_limit":5,"dmg":18.0,"radius":8.0,"vk":11,"hit_ids":[]}]
 	var cave_poly := PackedVector2Array([Vector2(600,300),Vector2(700,300),Vector2(700,600),Vector2(600,600)])
 	sim.map_data["objects"] = [{"type":"cave_wall","poly":cave_poly}]
+	sim._rebuild_map_collision_cache()
 	sim._update_bullets(0.06)
 	if sim.bullets.size() != 1 or float(sim.bullets[0].vel.x) >= 0.0 or int(sim.bullets[0].bn) != 1:
 		_fail("Ricochet Q did not rebound from a cave-wall polygon")
 	# Ordinary projectiles stop on the same rock.
 	sim.bullets = [{"id":52,"pos":Vector2(600,450),"vel":Vector2(500,0),"owner":1,"life":1.0,"bn":0,"ricochet":false,"dmg":9.0,"radius":8.0,"vk":0,"hit_ids":[]}]
 	sim.map_data["objects"] = [{"type":"rock","x":650.0,"y":450.0,"r":35.0}]
+	sim._rebuild_map_collision_cache()
 	sim._update_bullets(0.02)
 	if not sim.bullets.is_empty():
 		_fail("ordinary projectile passed through a solid rock")
