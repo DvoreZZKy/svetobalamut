@@ -462,11 +462,20 @@ func _run() -> void:
 	sim._update_bullets(0.02)
 	if not sim.bullets.is_empty():
 		_fail("ordinary projectile passed through a solid rock")
-	# Field direction is replicated so the renderer can draw particles flowing into the singularity.
-	sim.reset([{"id":1,"name":"Singularity field","human":true,"color":0,"kind":10,"outfit":0,"hat":0}])
+	# Singularity field is active in the simulation and replicated for inward-flowing particles.
+	sim.reset([
+		{"id":1,"name":"Singularity field","human":true,"color":0,"kind":10,"outfit":0,"hat":0},
+		{"id":2,"name":"Singularity target","human":true,"color":1,"kind":0,"outfit":0,"hat":0}
+	])
 	sim.chaos_enabled = false
 	var singularity: Dictionary = sim.players[1]
+	var singularity_target: Dictionary = sim.players[2]
+	singularity.pos = Vector2(500,450)
+	singularity_target.pos = Vector2(600,450)
 	sim._use_ability(singularity)
+	sim._update_player(singularity,1.0/60.0)
+	if singularity_target.vel.x >= 0.0:
+		_fail("Singularity Q did not pull a nearby opponent inward")
 	var field_snapshot: Dictionary = sim.snapshot()
 	var field_player: Dictionary = field_snapshot.pl[0]
 	if int(field_player.get("fm", 0)) != 1 or float(field_player.get("field_t", 0.0)) <= 0.0:
@@ -676,12 +685,11 @@ func _run() -> void:
 	if sim.bullets.is_empty() or float(sim.bullets[0].get("dmg",0.0)) < 8.0 or not is_equal_approx(float(sim.attack_turrets[0].cd),0.48):
 		_fail("Generator deployed turret still deals too little damage or fires too slowly")
 	sim.bullets.clear()
-	generator.turret_t = 1.0
-	generator.turret_cd = 0.0
-	sim._tick_character_fields(generator,1.0/60.0)
-	if sim.bullets.is_empty() or float(sim.bullets[0].get("dmg",0.0)) < 8.0:
-		_fail("Generator Q turret still deals too little damage")
 	sim._use_ability(generator)
+	for tick in 7:
+		sim._update_player(generator,1.0/60.0)
+	if sim.bullets.is_empty() or float(sim.bullets[0].get("dmg",0.0)) < 8.0:
+		_fail("Generator Q turret did not activate or still deals too little damage")
 	if sim.events.any(func(event): return str(event.get("t", "")) == "ability_notice"):
 		_fail("Generator Q emitted an unwanted ability text notice")
 	# Bots steer back inside the shrinking rectangle rather than wandering into the hazard.

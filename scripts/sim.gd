@@ -354,6 +354,7 @@ func _update_player(p: Dictionary, dt: float) -> void:
 			p.vel += (b.pos - p.pos).normalized() * 750.0 * dt
 	p.pos += p.vel * dt
 	_wall_bounce(p)
+	_tick_character_fields(p, dt)
 
 	var shot_cost: float = SHOT_COST
 	if p.kind == 1:
