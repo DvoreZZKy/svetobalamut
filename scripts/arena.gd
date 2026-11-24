@@ -1192,12 +1192,17 @@ func _draw_aim_cursor() -> void:
 
 
 func _read_input() -> Dictionary:
+	var local_shadow := false
+	for player_view in view.get("pl", []):
+		if int(player_view.get("i", 0)) == local_id:
+			local_shadow = bool(player_view.get("s", false))
+			break
 	return {
 		"mv": Input.get_vector("left", "right", "up", "down"),
 		"aim": get_canvas_transform().affine_inverse() * aim_screen_pos,
 		"fire": Input.is_action_pressed("fire"),
 		"dash": Input.is_action_pressed("dash"),
-		"poss": Input.is_action_pressed("possess") or (bool(view.get("pl", []).filter(func(p): return int(p.i) == local_id and p.s).size() > 0) and Input.is_action_pressed("fire")),
+		"poss": Input.is_action_pressed("possess") or (local_shadow and Input.is_action_pressed("fire")),
 		"ability": Input.is_action_just_pressed("ability"),
 		"extra_ability": Input.is_action_just_pressed("extra_ability"),
 	}
@@ -1255,23 +1260,31 @@ func _process(dt: float) -> void:
 		if not (G.tutorial_active and Engine.time_scale <= 0.001):
 			sim.step(minf(dt, 0.05))
 		sim.shake_req = 0.0
-		view = sim.snapshot()
+		# A complete snapshot allocates fresh arrays/dictionaries for every entity.
+		# The host only transmits at 20 Hz, so building one every render frame was wasted work.
+		snap_timer -= dt
+		var snapshot_due := snap_timer <= 0.0
+		if snapshot_due:
+			snap_timer = 0.05
+			view = sim.snapshot()
+			snap_age = 0.0
+		else:
+			snap_age = minf(snap_age + dt, 0.12)
 		var ev: Array = sim.events
 		sim.events = []
 		_handle_events(ev)
 		net_ev.append_array(ev)
-		snap_timer -= dt
 		if Net.online and not G.tutorial_active:
-			if snap_timer <= 0.0:
-				snap_timer = 0.05
+			if snapshot_due:
 				Net.broadcast_snap(view)
 				Net.broadcast_events(net_ev)  # reliable channel, batched at snapshot rate
 				net_ev = []
 		else:
 			net_ev.clear()  # solo/tutorial: nobody consumes the batch, don't let it grow forever
-		snap_age = 0.0
-		if Input.is_action_just_pressed("restart") and view.ph == "over":
+		if Input.is_action_just_pressed("restart") and view.get("ph", "play") == "over":
 			sim.reset(G.cfg)
+			snap_timer = 0.0
+			snap_age = 0.0
 			_clear_views()
 	else:
 		Net.send_input(inp)
@@ -1485,10 +1498,9 @@ func _update_views(dt: float) -> void:
 		var vel: Vector2 = pd.v
 		var tpos: Vector2 = pd.p + vel * snap_age
 		var line: Line2D = pv.line
-		if is_client:
-			pv.pos = pv.pos.lerp(tpos, minf(1.0, 24.0 * dt))
-		else:
-			pv.pos = tpos
+		# Interpolate/extrapolate from the 20 Hz state snapshots on every peer,
+		# including solo/host, so reducing snapshot allocations does not make motion stutter.
+		pv.pos = pv.pos.lerp(tpos, minf(1.0, 24.0 * dt))
 		if line.get_point_count() > 0 and (line.get_point_position(line.get_point_count() - 1) - pv.pos).length() > 350.0:
 			line.clear_points()
 		var shadow: bool = pd.s
