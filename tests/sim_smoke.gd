@@ -519,12 +519,14 @@ func _run() -> void:
 	])
 	sim.chaos_enabled = false
 	sim.bullets = [
-		{"id": 10, "pos": Vector2(500, 450), "vel": Vector2(650, 0), "owner": 1, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 7.0, "radius": 11.0, "vk": 15, "absorb_bubble": true, "hit_ids": []},
+		{"id": 10, "pos": Vector2(500, 450), "vel": Vector2(0, 0), "owner": 1, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 7.0, "radius": 11.0, "vk": 15, "absorb_bubble": true, "hit_ids": []},
 		{"id": 11, "pos": Vector2(510, 450), "vel": Vector2.ZERO, "owner": 2, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 8.0, "radius": 6.0, "vk": 0, "hit_ids": []}
 	]
+	for extra_index in 80:
+		sim.bullets.append({"id": 100 + extra_index, "pos": Vector2(900.0 + float(extra_index % 10) * 65.0, 100.0 + float(extra_index / 10) * 65.0), "vel": Vector2.ZERO, "owner": 2, "life": 1.0, "bn": 0, "ricochet": false, "dmg": 2.0, "radius": 4.0, "vk": 0, "hit_ids": []})
 	sim._update_bullets(1.0 / 60.0)
-	if sim.bullets.size() != 1 or float(sim.bullets[0].radius) <= 11.0:
-		_fail("sponge bubble did not absorb and grow after eating a projectile")
+	if sim.bullets.size() != 81 or float(sim.bullets[0].radius) <= 11.0:
+		_fail("sponge bubble failed to absorb a nearby projectile while ignoring distant bullets")
 
 	# Crystal's charged primary shot still splits into three fragments at a wall.
 	sim.reset([{"id": 1, "name": "Crystal", "human": true, "color": 0, "kind": 3, "outfit": 0, "hat": 0}])

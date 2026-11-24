@@ -6,7 +6,10 @@ extends RefCounted
 const A := Vector2(1600, 900)
 var world_size: Vector2 = A
 var map_data: Dictionary = {}
+var map_collision_cache: Array = []
+var teleporter_cache: Array = []
 var danger_half_extents := Vector2.ZERO
+const BULLET_GRID_SIZE := 64.0
 var map_object_timer := 2.0
 const MAX_LIGHT := 125.0
 const CLASS_STATS := [
@@ -124,6 +127,7 @@ func reset(cfg: Array) -> void:
 		runtime_object["max_hp"] = object_hp
 		runtime_objects.append(runtime_object)
 	map_data["objects"] = runtime_objects
+	_rebuild_map_collision_cache()
 	danger_half_extents = world_size * 0.5
 	map_object_timer = 2.0
 	players.clear()
@@ -940,6 +944,46 @@ func _update_shadow(p: Dictionary, dt: float, mv: Vector2, want_poss: bool) -> v
 			events.append({"t": "possess", "x": best.pos.x, "y": best.pos.y, "c": p.ci})
 
 
+func _rebuild_map_collision_cache() -> void:
+	map_collision_cache.clear()
+	teleporter_cache.clear()
+	var objects: Array = map_data.get("objects", [])
+	for object_index in objects.size():
+		var item: Dictionary = objects[object_index]
+		var object_type := str(item.get("type", "rock"))
+		if object_type == "teleporter":
+			teleporter_cache.append(item)
+			continue
+		if object_type == "cave_wall":
+			var wall_poly := PackedVector2Array()
+			var min_x := INF
+			var min_y := INF
+			var max_x := -INF
+			var max_y := -INF
+			var centroid := Vector2.ZERO
+			for raw_point in item.get("poly", []):
+				var point := Vector2(raw_point)
+				wall_poly.append(point)
+				centroid += point
+				min_x = minf(min_x, point.x)
+				min_y = minf(min_y, point.y)
+				max_x = maxf(max_x, point.x)
+				max_y = maxf(max_y, point.y)
+			if wall_poly.size() >= 3:
+				centroid /= float(wall_poly.size())
+				map_collision_cache.append({
+					"index": object_index, "type": object_type, "poly": wall_poly,
+					"centroid": centroid, "bounds": Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
+				})
+		elif ["rock", "crystal", "cover", "container", "plant"].has(object_type):
+			var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
+			var object_radius := float(item.get("r", 48.0))
+			map_collision_cache.append({
+				"index": object_index, "type": object_type, "center": center, "radius": object_radius,
+				"bounds": Rect2(center - Vector2.ONE * object_radius, Vector2.ONE * object_radius * 2.0)
+			})
+
+
 func _wall_bounce(p: Dictionary) -> void:
 	var m := 30.0
 	var pos: Vector2 = p.pos
@@ -956,10 +1000,7 @@ func _wall_bounce(p: Dictionary) -> void:
 	elif pos.y > world_size.y - m:
 		pos.y = world_size.y - m
 		vel.y = -absf(vel.y) * 0.5
-	var teleporters: Array = []
-	for item in map_data.get("objects", []):
-		if str(item.get("type", "")) == "teleporter":
-			teleporters.append(item)
+	var teleporters: Array = teleporter_cache
 	if teleporters.size() >= 2 and float(p.get("teleport_cd", 0.0)) <= 0.0:
 		for i in teleporters.size():
 			var gate: Dictionary = teleporters[i]
@@ -978,64 +1019,55 @@ func _wall_bounce(p: Dictionary) -> void:
 
 
 func _resolve_map_objects(pos: Vector2, radius: float) -> Vector2:
-	for item in map_data.get("objects", []):
-		var object_type := str(item.get("type", "rock"))
+	for collider in map_collision_cache:
+		var bounds: Rect2 = collider.bounds
+		if not bounds.grow(radius).has_point(pos):
+			continue
+		var object_type := str(collider.type)
 		if object_type == "cave_wall":
-			var wall_poly := PackedVector2Array()
-			for point in item.get("poly", []):
-				wall_poly.append(Vector2(point))
-			if wall_poly.size() >= 3:
-				var inside_wall := Geometry2D.is_point_in_polygon(pos, wall_poly)
-				var nearest := pos
-				var nearest_distance := INF
-				for edge_index in wall_poly.size():
-					var a: Vector2 = wall_poly[edge_index]
-					var b: Vector2 = wall_poly[(edge_index + 1) % wall_poly.size()]
-					var edge := b - a
-					var edge_length_sq := edge.length_squared()
-					var t := clampf((pos - a).dot(edge) / edge_length_sq, 0.0, 1.0) if edge_length_sq > 0.001 else 0.0
-					var candidate := a + edge * t
-					var distance := pos.distance_squared_to(candidate)
-					if distance < nearest_distance:
-						nearest_distance = distance
-						nearest = candidate
-				if inside_wall or nearest_distance < radius * radius:
-					var away := pos - nearest
-					if inside_wall:
-						away = -away
-					if away.length_squared() < 0.001:
-						away = Vector2.UP
-					pos = nearest + away.normalized() * (radius + 3.0)
-			continue
-		if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
-			continue
-		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
-		var minimum := radius + float(item.get("r", 48.0))
-		var delta := pos - center
-		if delta.length_squared() < minimum * minimum:
-			var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
-			pos = center + direction * minimum
+			var wall_poly: PackedVector2Array = collider.poly
+			var inside_wall := Geometry2D.is_point_in_polygon(pos, wall_poly)
+			var nearest := pos
+			var nearest_distance := INF
+			for edge_index in wall_poly.size():
+				var a: Vector2 = wall_poly[edge_index]
+				var b: Vector2 = wall_poly[(edge_index + 1) % wall_poly.size()]
+				var edge := b - a
+				var edge_length_sq := edge.length_squared()
+				var along := clampf((pos - a).dot(edge) / edge_length_sq, 0.0, 1.0) if edge_length_sq > 0.001 else 0.0
+				var candidate := a + edge * along
+				var distance := pos.distance_squared_to(candidate)
+				if distance < nearest_distance:
+					nearest_distance = distance
+					nearest = candidate
+			if inside_wall or nearest_distance < radius * radius:
+				var away := pos - nearest
+				if inside_wall:
+					away = -away
+				if away.length_squared() < 0.001:
+					away = Vector2.UP
+				pos = nearest + away.normalized() * (radius + 3.0)
+		else:
+			var center: Vector2 = collider.center
+			var minimum := radius + float(collider.radius)
+			var delta := pos - center
+			if delta.length_squared() < minimum * minimum:
+				var direction := delta.normalized() if delta.length_squared() > 0.01 else Vector2.RIGHT
+				pos = center + direction * minimum
 	return pos
 
 
 func _find_bullet_surface_collision(pos: Vector2, radius: float) -> Dictionary:
-	var objects: Array = map_data.get("objects", [])
-	for object_index in objects.size():
-		var item: Dictionary = objects[object_index]
-		var object_type := str(item.get("type", "rock"))
+	for collider in map_collision_cache:
+		var bounds: Rect2 = collider.bounds
+		if not bounds.grow(radius).has_point(pos):
+			continue
+		var object_type := str(collider.type)
 		if object_type == "cave_wall":
-			var wall_poly := PackedVector2Array()
-			for point in item.get("poly", []):
-				wall_poly.append(Vector2(point))
-			if wall_poly.size() < 3:
-				continue
+			var wall_poly: PackedVector2Array = collider.poly
 			var inside_wall := Geometry2D.is_point_in_polygon(pos, wall_poly)
 			var nearest := Vector2.ZERO
 			var nearest_distance := INF
-			var centroid := Vector2.ZERO
-			for point in wall_poly:
-				centroid += point
-			centroid /= float(wall_poly.size())
 			for edge_index in wall_poly.size():
 				var a: Vector2 = wall_poly[edge_index]
 				var b: Vector2 = wall_poly[(edge_index + 1) % wall_poly.size()]
@@ -1050,20 +1082,18 @@ func _find_bullet_surface_collision(pos: Vector2, radius: float) -> Dictionary:
 			if inside_wall or nearest_distance <= radius * radius:
 				var normal := (nearest - pos).normalized() if inside_wall else (pos - nearest).normalized()
 				if normal.length_squared() < 0.001:
-					normal = (nearest - centroid).normalized()
+					normal = (nearest - Vector2(collider.centroid)).normalized()
 				if normal.length_squared() < 0.001:
 					normal = Vector2.UP
-				return {"point": nearest, "normal": normal, "index": object_index, "type": object_type}
-			continue
-		if not ["rock", "crystal", "cover", "container", "plant"].has(object_type):
-			continue
-		var center := Vector2(float(item.get("x", 0.0)), float(item.get("y", 0.0)))
-		var object_radius := float(item.get("r", 48.0))
-		var delta := pos - center
-		var combined_radius := object_radius + radius
-		if delta.length_squared() <= combined_radius * combined_radius:
-			var normal := delta.normalized() if delta.length_squared() > 0.001 else Vector2.UP
-			return {"point": center + normal * object_radius, "normal": normal, "index": object_index, "type": object_type}
+				return {"point": nearest, "normal": normal, "index": int(collider.index), "type": object_type}
+		else:
+			var center: Vector2 = collider.center
+			var object_radius := float(collider.radius)
+			var delta := pos - center
+			var combined_radius := object_radius + radius
+			if delta.length_squared() <= combined_radius * combined_radius:
+				var normal := delta.normalized() if delta.length_squared() > 0.001 else Vector2.UP
+				return {"point": center + normal * object_radius, "normal": normal, "index": int(collider.index), "type": object_type}
 	return {}
 
 
@@ -1375,9 +1405,15 @@ func _match_event_tick(dt: float) -> void:
 func _update_bullets(dt: float) -> void:
 	var keep: Array = []
 	var bright := _brightest(0)
-	var consumed_ids: Array = []
+	var consumed_lookup: Dictionary = {}
+	var bullet_grid: Dictionary = {}
+	for candidate in bullets:
+		var candidate_cell := Vector2i(floori(float(candidate.pos.x) / BULLET_GRID_SIZE), floori(float(candidate.pos.y) / BULLET_GRID_SIZE))
+		var candidate_bucket: Array = bullet_grid.get(candidate_cell, [])
+		candidate_bucket.append(candidate)
+		bullet_grid[candidate_cell] = candidate_bucket
 	for b in bullets:
-		if consumed_ids.has(int(b.id)):
+		if consumed_lookup.has(int(b.id)):
 			continue
 		b.life -= dt
 		if float(b.get("homing", 0.0)) > 0.0:
@@ -1426,7 +1462,10 @@ func _update_bullets(dt: float) -> void:
 						object_list.remove_at(object_index)
 						var drop_kind := "battery" if object_type == "container" else "shield"
 						pickups.append({"pos": object_center, "kind": drop_kind, "t": 12.0})
-					map_data["objects"] = object_list
+						map_data["objects"] = object_list
+						_rebuild_map_collision_cache()
+					else:
+						map_data["objects"] = object_list
 			if bounce_on and int(b.get("bn", 0)) < bounce_limit:
 				var surface_normal: Vector2 = surface_hit.get("normal", Vector2.UP)
 				bv = bv.bounce(surface_normal)
@@ -1478,14 +1517,20 @@ func _update_bullets(dt: float) -> void:
 					events.append({"t": "capsule_absorb", "x": b.pos.x, "y": b.pos.y, "c": p.ci, "id": p.id})
 					break
 		if not dead and bool(b.get("absorb_bubble", false)):
-			for other in bullets:
-				if int(other.id) == int(b.id) or int(other.owner) == int(b.owner) or consumed_ids.has(int(other.id)):
-					continue
-				var absorb_distance := float(b.get("radius", 11.0)) + float(other.get("radius", 6.0)) + 4.0
-				if (other.pos as Vector2).distance_squared_to(b.pos) <= absorb_distance * absorb_distance:
-					consumed_ids.append(int(other.id))
-					b.radius = minf(21.0, float(b.radius) + 2.0)
-					b.dmg = float(b.dmg) + 1.0
+			var bubble_cell := Vector2i(floori(float(b.pos.x) / BULLET_GRID_SIZE), floori(float(b.pos.y) / BULLET_GRID_SIZE))
+			for cell_y in range(bubble_cell.y - 1, bubble_cell.y + 2):
+				for cell_x in range(bubble_cell.x - 1, bubble_cell.x + 2):
+					var nearby: Array = bullet_grid.get(Vector2i(cell_x, cell_y), [])
+					for other in nearby:
+						if int(other.id) == int(b.id) or int(other.owner) == int(b.owner) or consumed_lookup.has(int(other.id)):
+							continue
+					var absorb_distance := float(b.get("radius", 11.0)) + float(other.get("radius", 6.0)) + 4.0
+					if (other.pos as Vector2).distance_squared_to(b.pos) <= absorb_distance * absorb_distance:
+						consumed_lookup[int(other.id)] = true
+						b.radius = minf(21.0, float(b.radius) + 2.0)
+						b.dmg = float(b.dmg) + 1.0
+						break
+				if float(b.radius) >= 21.0:
 					break
 		if not dead:
 			for p in players.values():
@@ -1546,10 +1591,10 @@ func _update_bullets(dt: float) -> void:
 		if not dead:
 			keep.append(b)
 	bullets = keep
-	if not consumed_ids.is_empty():
+	if not consumed_lookup.is_empty():
 		var filtered: Array = []
 		for kept_bullet in bullets:
-			if not consumed_ids.has(int(kept_bullet.id)):
+			if not consumed_lookup.has(int(kept_bullet.id)):
 				filtered.append(kept_bullet)
 		bullets = filtered
 

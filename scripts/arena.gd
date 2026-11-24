@@ -21,6 +21,7 @@ var last_seq := 0
 var shake := 0.0
 var t := 0.0
 var last_bullet_count := -1
+var world_redraw_timer := 0.0
 var ability_latch := 0.0
 var capsule_charge_ring: Line2D
 var last_score_text := ""
@@ -1035,7 +1036,7 @@ func _draw_bullets() -> void:
 		var radius: float = float(b[6]) if b.size() > 6 else 6.0
 		if b[4] > 0:
 			col = Color(1, 1, 1)
-		if _is_potato():
+		if G.graphics_quality >= 2:
 			var simple_dir := vel.normalized()
 			bullet_layer.draw_line(pos - simple_dir * (radius + 8.0), pos + simple_dir * (radius + 4.0), col, 5.0, false)
 			bullet_layer.draw_circle(pos, radius * 0.95, col)
@@ -1138,11 +1139,13 @@ func _draw_bullets() -> void:
 			bullet_layer.draw_arc(effect_pos, 48.0, -0.65, 0.65, 24, Color("#8cf7ff"), 4.0, true)
 		var field_remaining := float(pd.get("field_t", 0.0))
 		var field_kind := int(pd.get("k", -1))
-		if field_remaining > 0.0 and [5, 10, 17].has(field_kind):
+		if field_remaining > 0.0 and [5, 10, 17].has(field_kind) and G.graphics_quality < 3:
 			var field_mode := int(pd.get("fm", 0))
 			var field_color := Color("#a77aff") if field_kind == 10 else (Color("#ff687a") if field_kind == 17 else Color("#63eaff"))
 			var field_pulse := 1.0 + 0.035 * sin(t * 9.0)
-			bullet_layer.draw_arc(effect_pos, 305.0 * field_pulse, 0.0, TAU, 64, Color(field_color, 0.34), 2.2, true)
+			bullet_layer.draw_arc(effect_pos, 305.0 * field_pulse, 0.0, TAU, 32 if G.graphics_quality >= 2 else 64, Color(field_color, 0.34), 2.2, true)
+			if G.graphics_quality >= 2:
+				continue
 			for particle_index in 12:
 				var particle_phase := fposmod(t * 0.82 + float(particle_index) / 12.0, 1.0)
 				var particle_dir := Vector2.from_angle(TAU * float(particle_index) / 12.0 + t * 0.22)
@@ -1286,7 +1289,10 @@ func _process(dt: float) -> void:
 		_update_hud(dt)
 	# Markers (meteors and upgrades) must redraw even when no bullets are flying.
 	# Otherwise the last bullet disappearing can freeze the layer and hide later warnings.
-	queue_redraw()
+	world_redraw_timer -= dt
+	if world_redraw_timer <= 0.0:
+		world_redraw_timer = 0.10
+		queue_redraw()
 	bullet_layer.queue_redraw()
 	last_bullet_count = view.get("bl", []).size()
 	if is_instance_valid(cursor_canvas):
