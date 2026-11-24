@@ -1518,18 +1518,24 @@ func _update_bullets(dt: float) -> void:
 					break
 		if not dead and bool(b.get("absorb_bubble", false)):
 			var bubble_cell := Vector2i(floori(float(b.pos.x) / BULLET_GRID_SIZE), floori(float(b.pos.y) / BULLET_GRID_SIZE))
+			var bubble_absorbed := false
 			for cell_y in range(bubble_cell.y - 1, bubble_cell.y + 2):
 				for cell_x in range(bubble_cell.x - 1, bubble_cell.x + 2):
 					var nearby: Array = bullet_grid.get(Vector2i(cell_x, cell_y), [])
 					for other in nearby:
 						if int(other.id) == int(b.id) or int(other.owner) == int(b.owner) or consumed_lookup.has(int(other.id)):
 							continue
-					var absorb_distance := float(b.get("radius", 11.0)) + float(other.get("radius", 6.0)) + 4.0
-					if (other.pos as Vector2).distance_squared_to(b.pos) <= absorb_distance * absorb_distance:
-						consumed_lookup[int(other.id)] = true
-						b.radius = minf(21.0, float(b.radius) + 2.0)
-						b.dmg = float(b.dmg) + 1.0
+						var absorb_distance := float(b.get("radius", 11.0)) + float(other.get("radius", 6.0)) + 4.0
+						if (other.pos as Vector2).distance_squared_to(b.pos) <= absorb_distance * absorb_distance:
+							consumed_lookup[int(other.id)] = true
+							b.radius = minf(21.0, float(b.radius) + 2.0)
+							b.dmg = float(b.dmg) + 1.0
+							bubble_absorbed = true
+							break
+					if bubble_absorbed:
 						break
+				if bubble_absorbed:
+					break
 		if not dead:
 			for p in players.values():
 				if p.shadow or p.inv > 0.0 or float(p.get("phase_t", 0.0)) > 0.0:
